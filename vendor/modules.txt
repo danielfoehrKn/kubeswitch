@@ -1,0 +1,31 @@
+# github.com/gdamore/encoding v1.0.0
+github.com/gdamore/encoding
+# github.com/gdamore/tcell v1.2.0
+github.com/gdamore/tcell
+github.com/gdamore/tcell/termbox
+github.com/gdamore/tcell/terminfo
+github.com/gdamore/tcell/terminfo/a/ansi
+github.com/gdamore/tcell/terminfo/base
+github.com/gdamore/tcell/terminfo/dynamic
+github.com/gdamore/tcell/terminfo/v/vt100
+github.com/gdamore/tcell/terminfo/v/vt102
+github.com/gdamore/tcell/terminfo/v/vt220
+github.com/gdamore/tcell/terminfo/x/xterm
+# github.com/ktr0731/go-fuzzyfinder v0.2.0
+github.com/ktr0731/go-fuzzyfinder
+github.com/ktr0731/go-fuzzyfinder/matching
+github.com/ktr0731/go-fuzzyfinder/scoring
+# github.com/lucasb-eyer/go-colorful v1.0.2
+github.com/lucasb-eyer/go-colorful
+# github.com/mattn/go-runewidth v0.0.4
+github.com/mattn/go-runewidth
+# github.com/pkg/errors v0.8.1
+github.com/pkg/errors
+# golang.org/x/sys v0.0.0-20191008105621-543471e840be
+golang.org/x/sys/unix
+# golang.org/x/text v0.3.0
+golang.org/x/text/encoding
+golang.org/x/text/encoding/internal/identifier
+golang.org/x/text/transform
+# gopkg.in/yaml.v2 v2.2.2
+gopkg.in/yaml.v2

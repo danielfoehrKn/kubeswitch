@@ -1,0 +1,9 @@
+/.kube-secrets
+/tmp
+/dev
+**/dev
+
+.vscode
+.idea
+.DS_Store
+*~
