@@ -2,6 +2,8 @@
 
 Enables switching between kubeconfigs with fuzzy search similar to [kubectx.](https://github.com/ahmetb/kubectx)
 
+![demo](https://user-images.githubusercontent.com/33809186/71584820-b852dd00-2b14-11ea-98f3-7ad9a5d8a2bf.png)
+
 **Features**
 
 - Display fzf style fuzzy search dialog 
