@@ -16,9 +16,9 @@ import (
 )
 
 const SEPERATOR = "/"
+const kubeconfigCurrentContext = "current-context:"
 
-
-/* ATTENTION: The fuzzyfinder (dialog for selection) cannot be displayed in Goland IDE.
+/*
 	1) build the project an run it : make build
  	2) ./kubectlSwitch  <pathToKubectlConfig1> <pathToKubectlConfig2>
 */
@@ -26,7 +26,7 @@ const SEPERATOR = "/"
 func main() {
 	// arguments: all kubeconfig filepaths
 	args := os.Args[1:]
-	if len(args) == 0 || len(args[0]) == 0{
+	if len(args) == 0 || len(args[0]) == 0 {
 		return
 	}
 
@@ -80,39 +80,15 @@ func main() {
 	}
 
 	// map selection back to Kubeconfig
-	currentContextName := allKubeconfigContextNames[idx]
-	kubeconfigPath := contextToPathMapping[currentContextName]
+	selectedContext := allKubeconfigContextNames[idx]
+	kubeconfigPath := contextToPathMapping[selectedContext]
 
-	// set current context in this kubeconfig
-	config, err := parseKubeconfig(kubeconfigPath)
-	if err != nil {
-		log.Fatal(err)
-	}
+	// remove the folder name from the context name
+	split := strings.Split(selectedContext, SEPERATOR)
+	selectedContext = split[len(split)-1]
 
-	// current context for selection was in format <parentFolder>/<name>   -> we only need the name
-	split := strings.Split(currentContextName, SEPERATOR)
-	config.CurrentContext = split[len(split) -1]
-
-	//migration from folder/name to name
-	for i, context := range config.Contexts {
-		split := strings.Split(context.Name, SEPERATOR)
-		var s string
-		if len(split) > 0 {
-			s = split[len(split)-1]
-		} else {
-			s = split[0]
-		}
-		config.Contexts[i].Name = s
-	}
-
-	// write back the currentContext to the kubeconfig
-	bytes, err := yaml.Marshal(config)
-	if err != nil {
-		log.Fatalf("error: %v", err)
-	}
-	err = ioutil.WriteFile(kubeconfigPath, bytes, 0644)
-	if err != nil {
-		log.Fatalf("error: %v", err)
+	if err := setCurrentContext(kubeconfigPath, selectedContext); err != nil {
+		log.Fatalf("failed to write current context to kubeconfig: %v", err)
 	}
 
 	// set the selected KubeconfigPath as the KUBECONFIG Environment variable
@@ -154,10 +130,52 @@ func getContextNames(config *types.KubeConfig, parentFoldername string) []string
 		split := strings.Split(context.Name, SEPERATOR)
 		if len(split) > 1 {
 			// already has the directory name in there. override it in case it changed
-			contextNames = append(contextNames, fmt.Sprintf("%s%s%s", parentFoldername, SEPERATOR, split[len(split) -1]))
+			contextNames = append(contextNames, fmt.Sprintf("%s%s%s", parentFoldername, SEPERATOR, split[len(split)-1]))
 		} else {
 			contextNames = append(contextNames, fmt.Sprintf("%s%s%s", parentFoldername, SEPERATOR, context.Name))
 		}
 	}
 	return contextNames
+}
+
+func setCurrentContext(kubeconfigPath, ctxnName string) error {
+	currentContext := fmt.Sprintf("%s %s", kubeconfigCurrentContext, ctxnName)
+
+	input, err := ioutil.ReadFile(kubeconfigPath)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	lines := strings.Split(string(input), "\n")
+
+	foundCurrentContext := false
+	for i, line := range lines {
+		if !strings.HasPrefix(line, "#") && strings.Contains(line, kubeconfigCurrentContext) {
+			foundCurrentContext = true
+			lines[i] = currentContext
+		}
+	}
+
+	if !foundCurrentContext {
+		return appendCurrentContext(kubeconfigPath, currentContext)
+	}
+
+	output := strings.Join(lines, "\n")
+	err = ioutil.WriteFile(kubeconfigPath, []byte(output), 0644)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	return nil
+}
+
+func appendCurrentContext(kubeconfigPath, currentContext string) error {
+	file, err := os.OpenFile(kubeconfigPath, os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	if _, err := file.WriteString(currentContext); err != nil {
+		return err
+	}
+	return nil
 }
