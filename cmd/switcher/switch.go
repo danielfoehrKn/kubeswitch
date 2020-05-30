@@ -3,9 +3,9 @@ package switcher
 import (
 	"os"
 
-	"github.com/spf13/cobra"
-
 	"github.com/danielfoehrkn/kubectlSwitch/pkg"
+
+	"github.com/spf13/cobra"
 )
 
 var (

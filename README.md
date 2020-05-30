@@ -99,7 +99,7 @@ $ tree .kube/switch
 ```
 
 Using the `switch` utility allows me to easily find the `kubeconfig` I am looking for.
-Because the directory names are part of the search result it can be easily identified - without having to remember context names in the `kubeconfig` file.
+Because the directory name are part of the search result, the target `kubeconfig` can be identified without having to remember context names.
 In addition, the selection can be verified by looking at the live preview.
 Please take a look at the gif above how that looks like.
 
@@ -107,19 +107,19 @@ Please take a look at the gif above how that looks like.
 # switch
 ```
 
-If you think that could be helpful in managing you `kubeconfig` files, try it out and let me know what you think of it.
+If you think that could be helpful in managing you `kubeconfig` files, try it out and let me know what you think.
 
 ### How it works
 
-The tool sets the `KUBECONFIG` environment variable in your current shell session to the selected `kubeconfig`. 
-This way you can target different Kubernetes clusters in each terminal window.
-  
-First, the `switch` script calls the `switcher` binary with the user provided flags.
-The `switcher` then recursively searches for `kubeconfig` files in the configured directory and displays a fuzzy search.
-The selected `kubeconfig` filepath is captured ny the `switch` script as the output of the `switcher` binary.
+The tool sets the `KUBECONFIG` environment variable in the current shell session to the selected `kubeconfig`. 
+This way different Kubernetes clusters can be targeted in each terminal window.
 
-In turn the `switch` script finally sets the KUBECONFIG` environment variable`in the current shell session.
-To be able to do that, the `switch` script has to be sourced.
+There are two separate tools involved. THe first one is `switch.sh`, a tiny bash script, and then there is the `switcher` binary.
+The only thing the `switch` script does, is calling the `switcher` binary, capturing the path to the user selected `kubeconfig` and then setting 
+the `KUBECONFIG` environment variable.
+In order for the script to set the environment variable in the current shell session, it has to be sourced.
+
+The `switcher`'s job is to displays a fuzzy search based on a recursive directory search for `kubeconfig` files in the configured directory.
 
 ### Difference to [kubectx.](https://github.com/ahmetb/kubectx)
 
