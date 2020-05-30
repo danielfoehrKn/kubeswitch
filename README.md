@@ -10,7 +10,6 @@
 - Live preview (does not include credentials).
 - Different cluster per terminal window.
 
-This is how it looks:
 
 ![demo GIF](resources/switch-demo.gif)
 
@@ -114,7 +113,7 @@ If you think that could be helpful in managing you `kubeconfig` files, try it ou
 The tool sets the `KUBECONFIG` environment variable in the current shell session to the selected `kubeconfig`. 
 This way different Kubernetes clusters can be targeted in each terminal window.
 
-There are two separate tools involved. THe first one is `switch.sh`, a tiny bash script, and then there is the `switcher` binary.
+There are two separate tools involved. The first one is `switch.sh`, a tiny bash script, and then there is the `switcher` binary.
 The only thing the `switch` script does, is calling the `switcher` binary, capturing the path to the user selected `kubeconfig` and then setting 
 the `KUBECONFIG` environment variable.
 In order for the script to set the environment variable in the current shell session, it has to be sourced.
