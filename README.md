@@ -1,26 +1,135 @@
-## Kubectl Switch
+# Kubectl switch
 
-Enables switching between kubeconfigs with fuzzy search similar to [kubectx.](https://github.com/ahmetb/kubectx)
+`switch` is a tiny standalone tool, designed to conveniently switch between hundreds of `kubeconfig` files without having to remember `kubeconfig` context names.
 
-![demo](https://user-images.githubusercontent.com/33809186/71584820-b852dd00-2b14-11ea-98f3-7ad9a5d8a2bf.png)
+## Features
 
-**Features**
+- Recursive search for `kubeconfig` files in a configurable location on your local filesystem.
+- Fuzzy search.
+- `Kubeconfig` is prefixed with folder name for better recognition.
+- Live preview (does not include credentials).
+- Different cluster per terminal window.
 
-- Display fzf style fuzzy search dialog 
-- Show live preview of selected kubeconfig
-- One target cluster per terminal window/tab possible ([kubectx](https://github.com/ahmetb/kubectx) only supports a single context globally)
+This is how it looks:
 
-**How it works**
+![demo GIF](resources/switch-demo.gif)
 
-I currently use this tool together with a bashscript that searches a set directory and hands over all found kubeconfigs to this tool.
-The _switch tool_ then displays a selection dialog and sets the current-context in the selected kubeconfig file.
-The path to the selected kubeconfig is written to stdout to be read by the bashscript.
-As a result the KUBECONFIG environment variable is set.
+## Installation
 
-You can find the bashscript [here.](https://github.com/danielfoehrKn/bashscripts/blob/master/functions/switch.sh#L4)
+Mac users can just use `homebrew` for installation.
 
-**Limitations/ Planned**
+If you are running Linux, you would need to download the `switcher` binary yourself, put it in your path, and then source the `switch` script.
+#### Option 1
 
-- Getting rid of the bashscript to have a standalone tooling.
-Requires implementing the _find utility_ with golang.
-- Configurable search directory (currently needs to be configured in bashscript)
+Install the `switcher` binary.
+```
+ $ brew install danielfoehrkn/switch/switcher
+```
+
+Grab the `switch` bash script [from here](https://github.com/danielfoehrKn/kubectlSwitch/blob/master/hack/switch/switch.sh), place it somewhere on your local filesystem and **source** it.
+Where you source the script depends on your terminal (e.g .bashrc or .zsrhc).
+
+`
+$ source <my-path>/switch.sh
+`
+
+#### Option 2
+
+Install both the `switcher` tool and the `switch` script with `homebrew`. 
+```
+ $ brew install danielfoehrkn/switch/switch
+```
+
+Source the `switch` script from the `homebrew` installation path.
+
+```
+$ source /usr/local/Cellar/switch/v0.0.1/switch.sh
+```
+
+Updating the version of the `switch` utility via `brew` (e.g changing from version 0.0.1 to 0.0.2) requires you to change the sourced path. 
+
+## Usage 
+
+```
+$ switch -h
+Usage:
+  -kubeconfig-directory directory containing the kubeconfig files. Default is ~/.kube/switch
+  -kubeconfig-name only shows kubeconfig files with exactly this name. Defaults to 'config'.
+  -executable-path path to the 'switch' executable. If unset tries to use 'switch' from the path.
+  -help shows available flags.
+```
+
+This is part of the directory tree of how I order my `kubeconfig` files. 
+You can see that they are ordered hierarchically. 
+Each landscape (dev, canary and live) in its own directory containing one directory per `kubeconfig`.
+Every `kubeconfig` is named `config`.
+
+```
+$ tree .kube/switch
+├── canary
+│   ├── canary-seed-aws-eu-1
+│   │   └── config
+│   ├── canary-seed-aws-eu-2
+│   │   └── config
+│   ├── canary-seed-az-eu-3
+│   │   └── config
+│   ├── canary-virtual-garden
+│   │   └── config
+│   └── ns2
+│       ├── ns2-canary-garden
+│       │   └── config
+│       ├── ns2-canary-seed-aws
+│       │   └── config
+│       └── ns2-canary-virtual-garden
+│           └── config
+├── dev
+│   ├── dev-seed-alicloud
+│   │   └── config
+│   ├── dev-seed-aws
+│   │   └── config
+│   ├── dev-seed-az
+│   │   └── config
+├── live
+│   ├── live-garden
+│   │   └── config
+│   ├── live-seed-aws-eu1
+│   │   └── config
+│   ├── live-seed-aws-eu2
+│   │   └── config
+```
+
+Using the `switch` utility allows me to easily find the `kubeconfig` I am looking for.
+Because the directory names are part of the search result it can be easily identified - without having to remember context names in the `kubeconfig` file.
+In addition, the selection can be verified by looking at the live preview.
+Please take a look at the gif above how that looks like.
+
+```
+# switch
+```
+
+If you think that could be helpful in managing you `kubeconfig` files, try it out and let me know what you think of it.
+
+### How it works
+
+The tool sets the `KUBECONFIG` environment variable in your current shell session to the selected `kubeconfig`. 
+This way you can target different Kubernetes clusters in each terminal window.
+  
+First, the `switch` script calls the `switcher` binary with the user provided flags.
+The `switcher` then recursively searches for `kubeconfig` files in the configured directory and displays a fuzzy search.
+The selected `kubeconfig` filepath is captured ny the `switch` script as the output of the `switcher` binary.
+
+In turn the `switch` script finally sets the KUBECONFIG` environment variable`in the current shell session.
+To be able to do that, the `switch` script has to be sourced.
+
+### Difference to [kubectx.](https://github.com/ahmetb/kubectx)
+
+While [kubectx.](https://github.com/ahmetb/kubectx) is designed to switch between contexts in a kubeconfig file, 
+this tool is best for dealing with many individual `kubeconfig` files.
+
+### Limitations
+
+- `homebrew` places the `switch` script into `/usr/local/Cellar/switch/v0.0.1/switch.sh`. 
+This is undesirable as the file location contains the version. Hence for each version you currently need to change your configuration.
+- Make sure that within one folder, there are no identical `kubeconfig` context names. Put them in separate folders. 
+Within one `kubeconfig` file, the context name is unique. So the easiest way is to just put each `kubeconfig` file in 
+its own directory with a meaningful name.
