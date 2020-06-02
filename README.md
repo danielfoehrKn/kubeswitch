@@ -6,10 +6,9 @@
 
 - Recursive search for `kubeconfig` files in a configurable location on your local filesystem.
 - Fuzzy search.
-- `Kubeconfig` is prefixed with folder name for better recognition.
+- `Kubeconfig` is prefixed with the parent folder name. Context names in `kubeconfig` files do not always identify the cluster in a way that you can easily find it - especially when they are generated. 
 - Live preview (does not include credentials).
-- Different cluster per terminal window.
-
+- Different context/cluster per terminal window.
 
 ![demo GIF](resources/switch-demo.gif)
 
