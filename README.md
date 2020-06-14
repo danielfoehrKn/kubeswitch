@@ -1,6 +1,6 @@
-# Kubectl switch
+# Kubeconfig switch
 
-`switch` is a tiny standalone tool, designed to conveniently switch between hundreds of `kubeconfig` files without having to remember `kubeconfig` context names.
+`switch` is a tiny standalone tool, designed to conveniently switch between the context of hundreds of `kubeconfig` files without having to remember context names.
 
 ## Features
 
@@ -26,7 +26,7 @@ Install the `switcher` binary.
  $ brew install danielfoehrkn/switch/switcher
 ```
 
-Grab the `switch` bash script [from here](https://github.com/danielfoehrKn/kubectlSwitch/blob/master/hack/switch/switch.sh), place it somewhere on your local filesystem and **source** it.
+Grab the `switch` bash script [from here](https://github.com/danielfoehrKn/kubeconfig-switch/blob/master/hack/switch/switch.sh), place it somewhere on your local filesystem and **source** it.
 Where you source the script depends on your terminal (e.g .bashrc or .zsrhc).
 
 `
@@ -43,10 +43,10 @@ Install both the `switcher` tool and the `switch` script with `homebrew`.
 Source the `switch` script from the `homebrew` installation path.
 
 ```
-$ source /usr/local/Cellar/switch/v0.0.1/switch.sh
+$ source /usr/local/Cellar/switch/v0.0.3/switch.sh
 ```
 
-Updating the version of the `switch` utility via `brew` (e.g changing from version 0.0.1 to 0.0.2) requires you to change the sourced path. 
+Updating the version of the `switch` utility via `brew` (e.g changing from version 0.0.2 to 0.0.3) requires you to change the sourced path. 
 
 ## Usage 
 
@@ -134,7 +134,7 @@ Each terminal window can target a different cluster and namespace.
 
 ### Limitations
 
-- `homebrew` places the `switch` script into `/usr/local/Cellar/switch/v0.0.1/switch.sh`. 
+- `homebrew` places the `switch` script into `/usr/local/Cellar/switch/v0.0.3/switch.sh`. 
 This is undesirable as the file location contains the version. Hence for each version you currently need to change your configuration.
 - Make sure that within one directory, there are no identical `kubeconfig` context names. Put them in separate folders. 
 Within one `kubeconfig` file, the context name is unique. So the easiest way is to just put each `kubeconfig` file in 
