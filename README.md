@@ -4,11 +4,13 @@
 
 ## Features
 
-- Recursive search for `kubeconfig` files in a configurable location on your local filesystem.
-- Fuzzy search.
-- `Kubeconfig` is prefixed with the parent folder name. Context names in `kubeconfig` files do not always identify the cluster in a way that you can easily find it - especially when they are generated. 
+- Fuzzy search for `kubeconfig` files in a configurable location on your local filesystem.
+- Isolation between terminal sessions
+  - Each terminal window can target a different cluster
+  - Each terminal window can target the same cluster and set a [different namespace preference](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#setting-the-namespace-preference) 
+  e.g via the tool [kubens](https://github.com/ahmetb/kubectx) 
+- `Kubeconfig` is prefixed with the (immediate) parent folder name. Context names in `kubeconfig` files do not always identify the cluster in a way that you can easily find it - especially when they are generated. 
 - Live preview (does not include credentials).
-- Different context/cluster per terminal window.
 
 ![demo GIF](resources/switch-demo.gif)
 
@@ -51,10 +53,11 @@ Updating the version of the `switch` utility via `brew` (e.g changing from versi
 ```
 $ switch -h
 Usage:
-  -kubeconfig-directory directory containing the kubeconfig files. Default is ~/.kube/switch
+  -kubeconfig-directory directory containing the kubeconfig files. Default is ~/.kube
   -kubeconfig-name only shows kubeconfig files with exactly this name. Defaults to 'config'.
   -executable-path path to the 'switch' executable. If unset tries to use 'switch' from the path.
   -help shows available flags.
+  clean removes all the temporary kubeconfig files created in the directory ~/.kube/switch_tmp.
 ```
 
 This is part of the directory tree of how I order my `kubeconfig` files. 
@@ -109,7 +112,7 @@ If you think that could be helpful in managing you `kubeconfig` files, try it ou
 
 ### How it works
 
-The tool sets the `KUBECONFIG` environment variable in the current shell session to the selected `kubeconfig`. 
+The tool sets the `KUBECONFIG` environment variable in the current shell session to a temporary copy of the selected `kubeconfig` file. 
 This way different Kubernetes clusters can be targeted in each terminal window.
 
 There are two separate tools involved. The first one is `switch.sh`, a tiny bash script, and then there is the `switcher` binary.
@@ -118,16 +121,21 @@ the `KUBECONFIG` environment variable.
 In order for the script to set the environment variable in the current shell session, it has to be sourced.
 
 The `switcher`'s job is to displays a fuzzy search based on a recursive directory search for `kubeconfig` files in the configured directory.
+A temporary copy of the selected `kubeconfig` file is created in `~/.kube/switch_tmp`.
+To clean all created temporary files use `switch clean`.
 
 ### Difference to [kubectx.](https://github.com/ahmetb/kubectx)
 
 While [kubectx.](https://github.com/ahmetb/kubectx) is designed to switch between contexts in a kubeconfig file, 
 this tool is best for dealing with many individual `kubeconfig` files.
 
+Another difference is, that multiple terminal windows targeting the same cluster do not interfere with each other.
+Each terminal window can target a different cluster and namespace.
+
 ### Limitations
 
 - `homebrew` places the `switch` script into `/usr/local/Cellar/switch/v0.0.1/switch.sh`. 
 This is undesirable as the file location contains the version. Hence for each version you currently need to change your configuration.
-- Make sure that within one folder, there are no identical `kubeconfig` context names. Put them in separate folders. 
+- Make sure that within one directory, there are no identical `kubeconfig` context names. Put them in separate folders. 
 Within one `kubeconfig` file, the context name is unique. So the easiest way is to just put each `kubeconfig` file in 
 its own directory with a meaningful name.
