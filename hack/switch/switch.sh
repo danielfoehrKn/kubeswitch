@@ -3,11 +3,12 @@
 usage()
 {
    echo "Usage:"
-   echo -e "  --kubeconfig-directory directory containing the kubeconfig files. Default is $HOME/.kube/switch"
+   echo -e "  --kubeconfig-directory directory containing the kubeconfig files. Default is $HOME/.kube"
    echo -e "  --kubeconfig-name only shows kubeconfig files with exactly this name. Defaults to 'config'."
    echo -e "  --executable-path path to the 'switch' executable. If unset tries to use 'switch' from the path."
    echo -e "  --show-preview if it should show a preview. Preview is sanitized from credentials. Defaults to true."
    echo -e "  --help shows available flags."
+   echo -e "  clean removes all the temporary kubeconfig files created in the directory $HOME/.kube/switch_tmp."
 }
 
 switch(){
@@ -19,6 +20,7 @@ switch(){
   KUBECONFIG_NAME=''
   EXECUTABLE_PATH=''
   SHOW_PREVIEW=''
+  CLEAN=''
 
   while test $# -gt 0; do
              case "$1" in
@@ -40,6 +42,10 @@ switch(){
                   --show-preview)
                       shift
                       SHOW_PREVIEW=$1
+                      shift
+                      ;;
+                  clean)
+                      CLEAN=$1
                       shift
                       ;;
                   --help)
@@ -81,6 +87,12 @@ switch(){
   if [ -z "$EXECUTABLE_PATH" ]
   then
      EXECUTABLE_PATH=$DEFAULT_EXECUTABLE_PATH
+  fi
+
+  if [ -n "$CLEAN" ]
+  then
+     $EXECUTABLE_PATH clean
+     return
   fi
 
   # execute golang binary handing over all the flags

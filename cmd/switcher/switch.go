@@ -9,10 +9,10 @@ import (
 )
 
 var (
-	kubeconfigDir     string
-	kubeconfigName     string
-	showPreview     bool
-	cmd = &cobra.Command{
+	kubeconfigDir  string
+	kubeconfigName string
+	showPreview    bool
+	rootCommand    = &cobra.Command{
 		Use:   "switch",
 		Short: "Launch the kubeconfig switcher",
 		Long: `Simple tool for switching between kubeconfig files.`,
@@ -22,23 +22,35 @@ var (
 	}
 )
 
+func init() {
+	deleteCmd := &cobra.Command{
+		Use:   "clean",
+		Short: "Cleans all temporary kubeconfig files",
+		Long: `Cleans the temporary kubeconfig files created in the directory $HOME/.kube/switch_tmp`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return pkg.Clean()
+		},
+	}
+	rootCommand.AddCommand(deleteCmd)
+}
+
 func NewCommandStartSwitcher() *cobra.Command {
-	return cmd
+	return rootCommand
 }
 
 func init() {
-	cmd.Flags().StringVar(
+	rootCommand.Flags().StringVar(
 		&kubeconfigDir,
 		"kubeconfig-directory",
-		os.ExpandEnv("$HOME/.kube/switch"),
+		os.ExpandEnv("$HOME/.kube"),
 		"directory containing the kubeconfig files.")
 
-	cmd.Flags().StringVar(
+	rootCommand.Flags().StringVar(
 		&kubeconfigName,
 		"kubeconfig-name",
 		"config",
 		"only shows kubeconfig files with exactly this name.")
-	cmd.Flags().BoolVar(
+	rootCommand.Flags().BoolVar(
 		&showPreview,
 		"show-preview",
 		true,

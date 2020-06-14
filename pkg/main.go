@@ -17,6 +17,7 @@ import (
 
 const separator = "/"
 const kubeconfigCurrentContext = "current-context:"
+const temporaryKubeconfigDir = "$HOME/.kube/.switch_tmp"
 
 func Switcher(kubeconfigDirectory, kubeconfigName string, showPreview bool) error {
 	kubeconfigPaths, err := findFilePathsInDirectory(kubeconfigDirectory, kubeconfigName)
@@ -81,7 +82,7 @@ func Switcher(kubeconfigDirectory, kubeconfigName string, showPreview bool) erro
 		log.Fatal(err)
 	}
 
-	// map selection back to Kubeconfig
+	// map selection back to kubeconfig
 	selectedContext := allKubeconfigContextNames[idx]
 	kubeconfigPath := contextToPathMapping[selectedContext]
 
@@ -89,12 +90,13 @@ func Switcher(kubeconfigDirectory, kubeconfigName string, showPreview bool) erro
 	split := strings.Split(selectedContext, separator)
 	selectedContext = split[len(split)-1]
 
-	if err := setCurrentContext(kubeconfigPath, selectedContext); err != nil {
+	tempKubeconfigPath, err := setCurrentContext(kubeconfigPath, selectedContext)
+	if err != nil {
 		log.Fatalf("failed to write current context to kubeconfig: %v", err)
 	}
 
 	// print kubeconfig path to std.out -> captured by calling bash script to set KUBECONFIG ENV Variable
-	fmt.Print(kubeconfigPath)
+	fmt.Print(tempKubeconfigPath)
 
 	return nil
 }
@@ -135,7 +137,7 @@ func getContextNames(config *types.KubeConfig, parentFoldername string) []string
 	return contextNames
 }
 
-func setCurrentContext(kubeconfigPath, ctxnName string) error {
+func setCurrentContext(kubeconfigPath string, ctxnName string) (string, error) {
 	currentContext := fmt.Sprintf("%s %s", kubeconfigCurrentContext, ctxnName)
 
 	input, err := ioutil.ReadFile(kubeconfigPath)
@@ -153,16 +155,31 @@ func setCurrentContext(kubeconfigPath, ctxnName string) error {
 		}
 	}
 
-	if !foundCurrentContext {
-		return appendCurrentContext(kubeconfigPath, currentContext)
+	output := strings.Join(lines, "\n")
+	tempDir := os.ExpandEnv(temporaryKubeconfigDir)
+	err = os.Mkdir(tempDir, 0700)
+	if err != nil && !os.IsExist(err) {
+		log.Fatalln(err)
 	}
 
-	output := strings.Join(lines, "\n")
-	err = ioutil.WriteFile(kubeconfigPath, []byte(output), 0644)
+	// write temporary kubeconfig file
+	file, err := ioutil.TempFile(tempDir, "config.*.tmp")
 	if err != nil {
 		log.Fatalln(err)
 	}
-	return nil
+
+	_, err = file.Write([]byte(output))
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	// if written file does not have the current context set,
+	// add the context at the last line of the file
+	if !foundCurrentContext {
+		return file.Name(), appendCurrentContext(file.Name(), currentContext)
+	}
+
+	return file.Name(), nil
 }
 
 func appendCurrentContext(kubeconfigPath, currentContext string) error {
