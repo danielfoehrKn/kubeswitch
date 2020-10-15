@@ -7,7 +7,7 @@ echo "Executing golangci-lint"
 golangci-lint run "${SOURCE_TREES[@]}"
 
 echo "Checking for format issues with importsort"
-unsorted_files="$(importsort -l ./main.go)"
+unsorted_files="$(importsort -l ./pkg/main.go)"
 if [[ "$unsorted_files" ]]; then
     echo "Unformatted files detected:"
     echo "$unsorted_files"

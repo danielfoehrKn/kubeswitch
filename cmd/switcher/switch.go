@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"github.com/danielfoehrkn/kubectlSwitch/pkg"
-
 	"github.com/spf13/cobra"
 )
 
@@ -49,7 +48,7 @@ func init() {
 		&kubeconfigName,
 		"kubeconfig-name",
 		"config",
-		"only shows kubeconfig files with exactly this name.")
+		"only shows kubeconfig files with this name. Accepts wilcard arguments '*' and '?'. Defaults to 'config'.")
 	rootCommand.Flags().BoolVar(
 		&showPreview,
 		"show-preview",

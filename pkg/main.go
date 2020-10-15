@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/danielfoehrkn/kubectlSwitch/types"
-
 	"github.com/ktr0731/go-fuzzyfinder"
 	"gopkg.in/yaml.v2"
 )
@@ -19,14 +18,14 @@ const separator = "/"
 const kubeconfigCurrentContext = "current-context:"
 const temporaryKubeconfigDir = "$HOME/.kube/.switch_tmp"
 
-func Switcher(kubeconfigDirectory, kubeconfigName string, showPreview bool) error {
-	kubeconfigPaths, err := findFilePathsInDirectory(kubeconfigDirectory, kubeconfigName)
+func Switcher(kubeconfigDirectory, kubeconfigFileName string, showPreview bool) error {
+	kubeconfigPaths, err := findFilePathsInDirectory(kubeconfigDirectory, kubeconfigFileName)
 	if err != nil {
 		return err
 	}
 
 	if len(kubeconfigPaths) == 0 {
-		return fmt.Errorf("no kubeconfig files with name %q found in directory %q", kubeconfigName, kubeconfigDirectory)
+		return fmt.Errorf("no kubeconfig files with name %q found in directory %q", kubeconfigFileName, kubeconfigDirectory)
 	}
 
 	contextToPathMapping := make(map[string]string)
@@ -194,15 +193,21 @@ func appendCurrentContext(kubeconfigPath, currentContext string) error {
 	return nil
 }
 
-func findFilePathsInDirectory(dir, kubeconfigName string) ([]string, error) {
+func findFilePathsInDirectory(dir, kubeconfigFileName string) ([]string, error) {
 	var kubeconfigPaths []string
 	if err := filepath.Walk(dir,
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
-			if !info.IsDir() && info.Name() == kubeconfigName{
-				kubeconfigPaths = append(kubeconfigPaths, path)
+			if !info.IsDir() {
+				matched, err := filepath.Match(kubeconfigFileName, info.Name())
+				if err != nil {
+					return err
+				}
+				if matched {
+					kubeconfigPaths = append(kubeconfigPaths, path)
+				}
 			}
 			return nil
 		}); err != nil {

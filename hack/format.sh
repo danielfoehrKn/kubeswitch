@@ -1,4 +1,7 @@
 #!/bin/bash
 set -e
 
-importsort -w ./main.go
+importsort -w ./cmd/main.go
+importsort -w ./cmd/switcher/switch.go
+importsort -w ./pkg/clean.go
+importsort -w ./pkg/main.go

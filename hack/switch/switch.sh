@@ -4,7 +4,7 @@ usage()
 {
    echo "Usage:"
    echo -e "  --kubeconfig-directory directory containing the kubeconfig files. Default is $HOME/.kube"
-   echo -e "  --kubeconfig-name only shows kubeconfig files with exactly this name. Defaults to 'config'."
+   echo -e "  --kubeconfig-name shows kubeconfig files with this name. Accepts wilcard arguments '*' and '?'. Defaults to 'config'."
    echo -e "  --executable-path path to the 'switch' executable. If unset tries to use 'switch' from the path."
    echo -e "  --show-preview if it should show a preview. Preview is sanitized from credentials. Defaults to true."
    echo -e "  --help shows available flags."

@@ -8,7 +8,7 @@ check:
 
 .PHONY: build
 build:
-	@go build
+	@go build ./cmd/main.go > ./hack/switch/switcher
 
 .PHONY: all
 all: format check build
