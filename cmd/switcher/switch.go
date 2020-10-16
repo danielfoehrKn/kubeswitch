@@ -8,9 +8,17 @@ import (
 )
 
 var (
+	// root command
 	kubeconfigDir  string
 	kubeconfigName string
 	showPreview    bool
+
+	// hook command
+	configPath string
+	stateDir string
+	hookName string
+	runImmediately bool
+
 	rootCommand    = &cobra.Command{
 		Use:   "switch",
 		Short: "Launch the kubeconfig switcher",
@@ -30,7 +38,42 @@ func init() {
 			return pkg.Clean()
 		},
 	}
+
+	hookCmd := &cobra.Command{
+		Use:   "hooks",
+		Short: "Runs configured hooks",
+		Long: `Runs hooks configured in the configuration path`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return pkg.Hooks(configPath, stateDir, hookName, runImmediately)
+		},
+	}
+
+	hookCmd.Flags().StringVar(
+		&configPath,
+		"config-path",
+		os.ExpandEnv("$HOME/.kube/switch-config.yaml"),
+		"path to the configuration file.")
+
+	hookCmd.Flags().StringVar(
+		&stateDir,
+		"state-directory",
+		os.ExpandEnv("$HOME/.kube/switch-state"),
+		"path to the state directory.")
+
+	hookCmd.Flags().StringVar(
+		&hookName,
+		"name",
+		"",
+		"specify the name of the hook that should be run.")
+
+	hookCmd.Flags().BoolVar(
+		&runImmediately,
+		"run-immediately",
+		true,
+		"run all hooks right away. Do not respecting the hooks execution configuration (e.g run only every 2 days).")
+
 	rootCommand.AddCommand(deleteCmd)
+	rootCommand.AddCommand(hookCmd)
 }
 
 func NewCommandStartSwitcher() *cobra.Command {
