@@ -53,14 +53,6 @@ func Hooks(configPath string, stateDirectory string, flagHookName string, runImm
 	}
 
 	for _, hook := range hooksToBeExecuted {
-		if hook.Path == nil || len(*hook.Path) == 0 {
-			return fmt.Errorf("cannot execute hook %q - no executable path set", hook.Name)
-		}
-
-		if _, err := os.Stat(*hook.Path); err != nil {
-			return fmt.Errorf("cannot find executable for hook with name %q. File does not exist: %q", hook.Name, *hook.Path)
-		}
-
 		stateFileName := getHookStateFileName(hook.Name, stateDirectory)
 		if err := updateHookState(hook.Name, stateFileName); err != nil {
 			return err
@@ -114,7 +106,7 @@ func LoadConfigFromFile(filename string) (*types.Config, error) {
 func getHooksToBeExecuted(hooks []types.Hook, stateDir string) []types.Hook {
 	var hooksToBeExecuted []types.Hook
 	for _, hook := range hooks {
-		if hook.Type !=  types.HookTypeExecutable {
+		if hook.Type !=  types.HookTypeExecutable && hook.Type !=  types.HookTypeInlineCommand {
 			continue
 		}
 
@@ -138,6 +130,7 @@ func getHooksToBeExecuted(hooks []types.Hook, stateDir string) []types.Hook {
 		}
 
 		if time.Now().UTC().After(hookState.LastExecutionTime.UTC().Add(*hook.Execution.Interval)) {
+			logger.Infof("Hook %q has not been run in %s.", hook.Name, hook.Execution.Interval.String())
 			hooksToBeExecuted = append(hooksToBeExecuted, hook)
 		}
 	}
@@ -206,7 +199,23 @@ func getHookStateFileName(hookName string, stateDir string) string {
 func executeHook(hook types.Hook) error {
 	logger.Infof("Executing hook %q...", hook.Name)
 
-	cmd := exec.Command(*hook.Path, hook.Arguments...)
+	var cmd *exec.Cmd
+	if hook.Type ==  types.HookTypeInlineCommand {
+		arguments := []string{"-c"}
+		arguments = append(arguments, hook.Arguments...)
+		cmd = exec.Command("bash", arguments...)
+	} else {
+		// HookTypeExecutable
+		if hook.Path == nil || len(*hook.Path) == 0 {
+			return fmt.Errorf("cannot execute hook %q - no executable path set", hook.Name)
+		}
+
+		if _, err := os.Stat(*hook.Path); err != nil {
+			return fmt.Errorf("cannot find executable for hook with name %q. File does not exist: %q", hook.Name, *hook.Path)
+		}
+		cmd = exec.Command(*hook.Path, hook.Arguments...)
+	}
+
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		fmt.Println(err)

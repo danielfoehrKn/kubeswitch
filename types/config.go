@@ -6,7 +6,7 @@ type HookType string
 
 const (
 	HookTypeExecutable    HookType = "Executable"
-	HookTypeCommand HookType = "Command"
+	HookTypeInlineCommand HookType = "InlineCommand"
 )
 
 

@@ -2,7 +2,7 @@ kind: SwitchConfig
 hooks:
   - name: demo-hook
     type: Executable
-    path: /Users/d060239/go/src/github.com/danielfoehrkn/kubeconfig-switch/resources/config/demo-executable.sh
+    path: /Users/d060239/go/src/github.com/danielfoehrkn/kubeconfig-switch/resources/config/hook-with-args/demo-executable.sh
     arguments:
       - "--name bernd"
     execution:

@@ -1,0 +1,7 @@
+kind: SwitchConfig
+hooks:
+  - name: garbage-collection
+    type: Executable
+    path: /Users/d060239/go/src/github.com/danielfoehrkn/kubeconfig-switch/resources/config/hook-garbage-collection/garbage-collector.sh
+    execution:
+      interval: 168h # once a week
