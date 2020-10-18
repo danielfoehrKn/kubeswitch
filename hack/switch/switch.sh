@@ -1,14 +1,31 @@
 #!/usr/bin/env bash
 
+hookUsage()
+{
+  echo -e "  --hook-config-path path to the hook configuration file. (default \"$HOME/.kube/switch-config.yaml\")"
+  echo -e "  --hook-state-directory path to the state directory. (default \"$HOME/.kube/switch-state\")"
+}
+
 usage()
 {
    echo "Usage:"
-   echo -e "  --kubeconfig-directory directory containing the kubeconfig files. Default is $HOME/.kube"
-   echo -e "  --kubeconfig-name shows kubeconfig files with this name. Accepts wilcard arguments '*' and '?'. Defaults to 'config'."
-   echo -e "  --executable-path path to the 'switch' executable. If unset tries to use 'switch' from the path."
-   echo -e "  --show-preview if it should show a preview. Preview is sanitized from credentials. Defaults to true."
+
+   # usage for `switch hooks`
+   if [ -n "$1" ]
+  then
+    hookUsage
+    echo -e "  --hook-name the name of the hook that should be run."
+    echo -e "  --run-hooks-immediately run hooks right away. Do not respect the hooks execution configuration. (default \"true\")."
+    return
+  fi
+
+   echo -e "  --kubeconfig-directory directory containing the kubeconfig files. (default \"$HOME/.kube\")"
+   echo -e "  --kubeconfig-name shows kubeconfig files with this name. Accepts wilcard arguments '*' and '?'. (default \"config\")"
+   echo -e "  --executable-path path to the 'switcher' executable. If unset tries to use 'switcher' from the path."
+   echo -e "  --show-preview if it should show a preview. Preview is sanitized from credentials. (default \"true\")"
+   hookUsage
    echo -e "  --help shows available flags."
-   echo -e "  clean removes all the temporary kubeconfig files created in the directory $HOME/.kube/switch_tmp."
+   echo -e "  clean removes all the temporary kubeconfig files created in the directory \"$HOME/.kube/switch_tmp\"."
 }
 
 switch(){
@@ -21,6 +38,13 @@ switch(){
   EXECUTABLE_PATH=''
   SHOW_PREVIEW=''
   CLEAN=''
+
+  # Hooks
+  HOOKS=''
+  CONFIG_PATH=''
+  STATE_DIRECTORY=''
+  NAME=''
+  RUN_IMMEDIATELY=''
 
   while test $# -gt 0; do
              case "$1" in
@@ -48,20 +72,56 @@ switch(){
                       CLEAN=$1
                       shift
                       ;;
+                  hooks)
+                      HOOKS=$1
+                      shift
+                      ;;
+                  --hook-config-path)
+                      shift
+                      CONFIG_PATH=$1
+                      shift
+                      ;;
+                  --hook-state-directory)
+                      shift
+                      STATE_DIRECTORY=$1
+                      shift
+                      ;;
+                  --hook-name)
+                      shift
+                      # hook name
+                      NAME=$1
+                      shift
+                      ;;
+                  --run-hooks-immediately)
+                      shift
+                      RUN_IMMEDIATELY=$1
+                      shift
+                      ;;
                   --help)
-                     usage
+                     usage $HOOKS
                      return
                      ;;
                   -h)
-                     usage
+                     usage $HOOKS
                      return
                      ;;
                   *)
-                     usage
+                     usage $HOOKS
                      return
                      ;;
             esac
     done
+
+  if [ -z "$EXECUTABLE_PATH" ]
+  then
+     EXECUTABLE_PATH=$DEFAULT_EXECUTABLE_PATH
+  fi
+
+  if [ -n "$CLEAN" ]
+  then
+     $EXECUTABLE_PATH clean
+     return
+  fi
 
   KUBECONFIG_DIRECTORY_FLAG=''
   if [ -n "$KUBECONFIG_DIRECTORY" ]
@@ -77,26 +137,68 @@ switch(){
      KUBECONFIG_NAME_FLAG=--kubeconfig-name
   fi
 
-  SHOW_PREVIEW_FLAG=''
+  SHOW_PREVIEW_FLAG=--show-preview
   if [ -n "$SHOW_PREVIEW" ]
   then
      SHOW_PREVIEW="$SHOW_PREVIEW"
-     SHOW_PREVIEW_FLAG=--show-preview
+  else
+     SHOW_PREVIEW="true"
   fi
 
-  if [ -z "$EXECUTABLE_PATH" ]
+  CONFIG_PATH_FLAG=''
+  if [ -n "$CONFIG_PATH" ]
   then
-     EXECUTABLE_PATH=$DEFAULT_EXECUTABLE_PATH
+     CONFIG_PATH="$CONFIG_PATH"
+     CONFIG_PATH_FLAG=--config-path
   fi
 
-  if [ -n "$CLEAN" ]
+  STATE_DIRECTORY_FLAG=''
+  if [ -n "$STATE_DIRECTORY" ]
   then
-     $EXECUTABLE_PATH clean
+     STATE_DIRECTORY="$STATE_DIRECTORY"
+     STATE_DIRECTORY_FLAG=--state-directory
+  fi
+
+  if [ -n "$HOOKS" ]
+  then
+     echo "Running hooks."
+
+     NAME_FLAG=''
+     if [ -n "$NAME" ]
+     then
+        NAME="$NAME"
+        NAME_FLAG=--name
+     fi
+
+     RUN_IMMEDIATELY_FLAG=--run-immediately
+     if [ -n "$RUN_IMMEDIATELY" ]
+     then
+        RUN_IMMEDIATELY="$RUN_IMMEDIATELY"
+     else
+        RUN_IMMEDIATELY="true"
+     fi
+
+     RESPONSE=$($EXECUTABLE_PATH hooks \
+     $RUN_IMMEDIATELY_FLAG=${RUN_IMMEDIATELY} \
+     $CONFIG_PATH_FLAG ${CONFIG_PATH} \
+     $STATE_DIRECTORY_FLAG ${STATE_DIRECTORY} \
+     $NAME_FLAG ${NAME})
+
+      if [ -n "$RESPONSE" ]
+      then
+         echo $RESPONSE
+      fi
      return
   fi
 
+  # always run hooks command with --run-immediately=false
+  $EXECUTABLE_PATH hooks \
+     --run-immediately=false \
+     $CONFIG_PATH_FLAG ${CONFIG_PATH} \
+     $STATE_DIRECTORY_FLAG ${STATE_DIRECTORY}
+
   # execute golang binary handing over all the flags
-  NEW_KUBECONFIG=$($EXECUTABLE_PATH $KUBECONFIG_DIRECTORY_FLAG ${KUBECONFIG_DIRECTORY} $KUBECONFIG_NAME_FLAG ${KUBECONFIG_NAME} $SHOW_PREVIEW_FLAG ${SHOW_PREVIEW})
+  NEW_KUBECONFIG=$($EXECUTABLE_PATH $KUBECONFIG_DIRECTORY_FLAG ${KUBECONFIG_DIRECTORY} $KUBECONFIG_NAME_FLAG ${KUBECONFIG_NAME} $SHOW_PREVIEW_FLAG=${SHOW_PREVIEW})
   if [[ "$?" = "0" ]]; then
       export KUBECONFIG=${NEW_KUBECONFIG}
       currentContext=$(kubectl config current-context)

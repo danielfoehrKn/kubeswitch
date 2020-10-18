@@ -7,8 +7,15 @@ check:
 	@./hack/check.sh
 
 .PHONY: build
-build:
-	@go build ./cmd/main.go
+build: build-switcher build-hooks
+
+.PHONY: build-switcher
+build-switcher:
+	@go build -o switcher ./cmd/main.go
+
+.PHONY: build-hooks
+build-hooks:
+	@go build -o hook-gardener-landscape-sync ./hooks/gardener-landscape-sync/main.go
 
 .PHONY: all
 all: format check build

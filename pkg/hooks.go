@@ -18,8 +18,7 @@ var (
 )
 
 func Hooks(configPath string, stateDirectory string, flagHookName string, runImmediately bool) error {
-	// tempDir := os.ExpandEnv(temporaryKubeconfigDir)
-	config, err := LoadConfigFromFile(configPath)
+	config, err := LoadConfigFromFile(configPath, runImmediately)
 	if err != nil {
 		return err
 	}
@@ -76,11 +75,13 @@ func getHookForName(c *types.Config, name string) *types.Hook {
 }
 
 // LoadConfigFromFile takes a filename and de-serializes the contents into a Configuration object.
-func LoadConfigFromFile(filename string) (*types.Config, error) {
+func LoadConfigFromFile(filename string, runImmediately bool) (*types.Config, error) {
 	// a config file is not required. Its ok if it does not exist.
 	if _, err := os.Stat(filename); err != nil  {
 		if os.IsNotExist(err) {
-			logger.Infof("Configuration file not found under path: %q", filename)
+			if runImmediately {
+				logger.Infof("Configuration file not found under path: %q", filename)
+			}
 			return nil, nil
 		}
 		return nil, err

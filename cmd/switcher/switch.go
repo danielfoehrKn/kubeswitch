@@ -64,13 +64,13 @@ func init() {
 		&hookName,
 		"name",
 		"",
-		"specify the name of the hook that should be run.")
+		"the name of the hook that should be run.")
 
 	hookCmd.Flags().BoolVar(
 		&runImmediately,
 		"run-immediately",
 		true,
-		"run all hooks right away. Do not respecting the hooks execution configuration (e.g run only every 2 days).")
+		"run hooks right away. Do not respect the hooks execution configuration.")
 
 	rootCommand.AddCommand(deleteCmd)
 	rootCommand.AddCommand(hookCmd)
@@ -86,7 +86,6 @@ func init() {
 		"kubeconfig-directory",
 		os.ExpandEnv("$HOME/.kube"),
 		"directory containing the kubeconfig files.")
-
 	rootCommand.Flags().StringVar(
 		&kubeconfigName,
 		"kubeconfig-name",
