@@ -231,7 +231,7 @@ func runHook() error {
 	// check which shoots are deleted and which are added
 	addedShoots := shootIdentifiers.Difference(oldShootIdentifiers)
 	removedShoots := oldShootIdentifiers.Difference(shootIdentifiers)
-	logger.Infof("Summary: Wrote kubeconfigs for %d shoots on %d seeds to directory %q. Deleted %d and added %d Shoots.", shootIdentifiers.Len(), len(seedNames), fmt.Sprintf("%s/%s", exportDirectory, landscapeName), len(removedShoots), len(addedShoots))
+	fmt.Printf("\u001B[1;33m%s\u001B[0m: \n - Wrote kubeconfigs for \u001B[1;32m%d shoots\u001B[0m on \033[1;34m%d seeds\033[0m to directory %q.\n - \u001B[1;31mDeleted %d Shoots\u001B[0m. \n - \u001B[1;32mAdded %d Shoots\u001B[0m. \n \n", "Summary", shootIdentifiers.Len(), len(seedNames), fmt.Sprintf("%s/%s", exportDirectory, landscapeName), len(removedShoots), len(addedShoots))
 	return nil
 }
 
