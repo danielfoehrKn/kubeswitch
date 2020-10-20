@@ -110,6 +110,14 @@ Customization is possible by using `Hooks` (think Git pre-commit hooks).
 Hooks can call an arbitrary executable or execute commands at a certain time (e.g every 6 hours) prior to the search via `switch`.
 For more information [take a look here](./hooks/README.md). 
 
+
+### Hot Reload
+
+For large directories with many kubeconfig files, the kubeconfigs are added to the search set on the fly.
+For smaller directory sizes, the search feels instantaneous.
+
+ ![demo GIF](resources/hot-reload.gif)
+
 ### How it works
 
 The tool sets the `KUBECONFIG` environment variable in the current shell session to a temporary copy of the selected `kubeconfig` file. 

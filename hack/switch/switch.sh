@@ -28,7 +28,7 @@ usage()
    echo -e "  clean removes all the temporary kubeconfig files created in the directory \"$HOME/.kube/switch_tmp\"."
 }
 
-switch(){
+function switch(){
 #  if the executable path is not set, the switcher binary has to be on the path
 # this is the case when installing it via homebrew
   DEFAULT_EXECUTABLE_PATH='switcher'
