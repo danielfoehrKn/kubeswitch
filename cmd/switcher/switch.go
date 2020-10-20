@@ -14,15 +14,15 @@ var (
 	showPreview    bool
 
 	// hook command
-	configPath string
-	stateDir string
-	hookName string
+	configPath     string
+	stateDir       string
+	hookName       string
 	runImmediately bool
 
-	rootCommand    = &cobra.Command{
+	rootCommand = &cobra.Command{
 		Use:   "switch",
 		Short: "Launch the kubeconfig switcher",
-		Long: `Simple tool for switching between kubeconfig files.`,
+		Long:  `Simple tool for switching between kubeconfig files.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return pkg.Switcher(kubeconfigDir, kubeconfigName, showPreview)
 		},
@@ -33,7 +33,7 @@ func init() {
 	deleteCmd := &cobra.Command{
 		Use:   "clean",
 		Short: "Cleans all temporary kubeconfig files",
-		Long: `Cleans the temporary kubeconfig files created in the directory $HOME/.kube/switch_tmp`,
+		Long:  `Cleans the temporary kubeconfig files created in the directory $HOME/.kube/switch_tmp`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return pkg.Clean()
 		},
@@ -42,7 +42,7 @@ func init() {
 	hookCmd := &cobra.Command{
 		Use:   "hooks",
 		Short: "Runs configured hooks",
-		Long: `Runs hooks configured in the configuration path`,
+		Long:  `Runs hooks configured in the configuration path`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return pkg.Hooks(configPath, stateDir, hookName, runImmediately)
 		},

@@ -8,7 +8,7 @@ import (
 
 func Clean() error {
 	tempDir := os.ExpandEnv(temporaryKubeconfigDir)
-	files,_ := ioutil.ReadDir(tempDir)
+	files, _ := ioutil.ReadDir(tempDir)
 	err := os.RemoveAll(tempDir)
 	if err != nil {
 		return err

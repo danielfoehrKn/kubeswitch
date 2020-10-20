@@ -14,7 +14,7 @@ import (
 )
 
 var (
- 	logger = logrus.New()
+	logger = logrus.New()
 )
 
 func Hooks(configPath string, stateDirectory string, flagHookName string, runImmediately bool) error {
@@ -77,7 +77,7 @@ func getHookForName(c *types.Config, name string) *types.Hook {
 // LoadConfigFromFile takes a filename and de-serializes the contents into a Configuration object.
 func LoadConfigFromFile(filename string, runImmediately bool) (*types.Config, error) {
 	// a config file is not required. Its ok if it does not exist.
-	if _, err := os.Stat(filename); err != nil  {
+	if _, err := os.Stat(filename); err != nil {
 		if os.IsNotExist(err) {
 			if runImmediately {
 				logger.Infof("Configuration file not found under path: %q", filename)
@@ -107,7 +107,7 @@ func LoadConfigFromFile(filename string, runImmediately bool) (*types.Config, er
 func getHooksToBeExecuted(hooks []types.Hook, stateDir string) []types.Hook {
 	var hooksToBeExecuted []types.Hook
 	for _, hook := range hooks {
-		if hook.Type !=  types.HookTypeExecutable && hook.Type !=  types.HookTypeInlineCommand {
+		if hook.Type != types.HookTypeExecutable && hook.Type != types.HookTypeInlineCommand {
 			continue
 		}
 
@@ -139,7 +139,7 @@ func getHooksToBeExecuted(hooks []types.Hook, stateDir string) []types.Hook {
 }
 
 func getHookState(hookStateFilepath string) (*types.HookState, error) {
-	if _, err := os.Stat(hookStateFilepath); err != nil  {
+	if _, err := os.Stat(hookStateFilepath); err != nil {
 		if os.IsNotExist(err) {
 			// occurs during first execution of the hook
 			logger.Infof("Configuration file not found under path: %q", hookStateFilepath)
@@ -175,7 +175,7 @@ func updateHookState(hookName, stateFileName string) error {
 	defer file.Close()
 
 	state := &types.HookState{
-		HookName: hookName,
+		HookName:          hookName,
 		LastExecutionTime: time.Now().UTC(),
 	}
 
@@ -189,7 +189,7 @@ func updateHookState(hookName, stateFileName string) error {
 		return err
 	}
 
-	return  nil
+	return nil
 }
 
 func getHookStateFileName(hookName string, stateDir string) string {
@@ -201,7 +201,7 @@ func executeHook(hook types.Hook) error {
 	logger.Infof("Executing hook %q...", hook.Name)
 
 	var cmd *exec.Cmd
-	if hook.Type ==  types.HookTypeInlineCommand {
+	if hook.Type == types.HookTypeInlineCommand {
 		arguments := []string{"-c"}
 		arguments = append(arguments, hook.Arguments...)
 		cmd = exec.Command("bash", arguments...)

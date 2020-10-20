@@ -31,10 +31,10 @@ var (
 	cleanDirectory       bool
 	shootKubeconfigName  string
 
-	rootCommand    = &cobra.Command{
+	rootCommand = &cobra.Command{
 		Use:   "sync",
 		Short: "Sync the kubeconfig of Shoot clusters to the local filesystem.",
-		Long: `Hook for the \"switch\" tool for Gardener landscapes to sync the kubeconfigs of Shoot clusters to the local filesystem.`,
+		Long:  `Hook for the \"switch\" tool for Gardener landscapes to sync the kubeconfigs of Shoot clusters to the local filesystem.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runHook()
 		},
@@ -90,7 +90,6 @@ func runHook() error {
 
 	landscapeDirectory := fmt.Sprintf("%s/%s", exportDirectory, landscapeName)
 
-
 	scheme := runtime.NewScheme()
 	utilruntime.Must(corev1.AddToScheme(scheme))
 	utilruntime.Must(gardencorev1beta1.AddToScheme(scheme))
@@ -111,7 +110,7 @@ func runHook() error {
 		return fmt.Errorf(fmt.Sprintf("unable to create kubernetes client: %v", err))
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30 * time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	selector := labels.SelectorFromSet(labels.Set{"gardener.cloud/role": "kubeconfig"})
@@ -124,13 +123,13 @@ func runHook() error {
 
 	shootNameToSecret := make(map[string]corev1.Secret, len(secretList.Items))
 	for _, secret := range secretList.Items {
-		if  _, exists := secret.Data[secrets.DataKeyKubeconfig]; !exists {
+		if _, exists := secret.Data[secrets.DataKeyKubeconfig]; !exists {
 			logger.Warnf("Secret %s/%s does not contain a kubeconfig. Skipping.", secret.Namespace, secret.Name)
 			continue
 		}
 
 		var shootName string
-		if len(secret.ObjectMeta.OwnerReferences) == 0 || secret.ObjectMeta.OwnerReferences[0].Kind != "Shoot"{
+		if len(secret.ObjectMeta.OwnerReferences) == 0 || secret.ObjectMeta.OwnerReferences[0].Kind != "Shoot" {
 			if !strings.Contains(secret.Namespace, ".kubeconfig") {
 				logger.Warnf("Secret %s/%s could not be associated with any Shoot. Skipping.", secret.Namespace, secret.Name)
 				continue
@@ -252,7 +251,7 @@ func getShootIdentifier(landscape, project, shoot string) string {
 	return fmt.Sprintf("%s-shoot-%s-%s", landscape, project, shoot)
 }
 
-func getKubeconfigDirectory(rootDirectory, landscape, seedName , identifier, kubeconfigName string) string {
+func getKubeconfigDirectory(rootDirectory, landscape, seedName, identifier, kubeconfigName string) string {
 	// <landscape>/shoots/<seed>/<landscape>-shoot-<project-name>-<shoot-name>
 	return fmt.Sprintf("%s/%s/shoots/seed-%s/%s", rootDirectory, landscape, seedName, identifier)
 }
@@ -295,7 +294,7 @@ func getPreviousShootIdentifiersFromFilesystem(dir, landscape string) (sets.Stri
 				return err
 			}
 			// parent directories of directories with the kubeconfig are created with a uniform prefix
-			if info.IsDir() && strings.Contains(info.Name(), fmt.Sprintf("%s-shoot-", landscape)){
+			if info.IsDir() && strings.Contains(info.Name(), fmt.Sprintf("%s-shoot-", landscape)) {
 				shootIdentifiers.Insert(info.Name())
 			}
 			return nil

@@ -1,6 +1,5 @@
 package types
 
-
 type KubeUser struct {
 	// only parse the name, not the credentials
 	Name string `yaml:"name"`
@@ -11,14 +10,14 @@ type KubeCluster struct {
 	Cluster struct {
 		CertificateAuthorityData string `yaml:"certificate-authority-data,omitempty"`
 		Server                   string `yaml:"server"`
-		Insecure 				 bool   `yaml:"insecure-skip-tls-verify,omitempty"`
+		Insecure                 bool   `yaml:"insecure-skip-tls-verify,omitempty"`
 	} `yaml:"cluster"`
 }
 
 type KubeConfig struct {
-	TypeMeta TypeMeta `yaml:",inline"`
-	CurrentContext string `yaml:"current-context"`
-	Contexts []struct {
+	TypeMeta       TypeMeta `yaml:",inline"`
+	CurrentContext string   `yaml:"current-context"`
+	Contexts       []struct {
 		Name    string `yaml:"name"`
 		Context struct {
 			Cluster string `yaml:"cluster"`
