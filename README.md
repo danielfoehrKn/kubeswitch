@@ -5,12 +5,12 @@
 ## Features
 
 - Fuzzy search for `kubeconfig` files in a configurable location on the local filesystem.
-- Isolation between terminal sessions
+- Terminal Window isolation
   - Each terminal window can target a different cluster (does not override the current-context in a shared kubeconfig).
   - Each terminal window can target the same cluster and set a [different namespace preference](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#setting-the-namespace-preference) 
   e.g via the tool [kubens](https://github.com/ahmetb/kubectx).
 - Efficient recursive search with hot reload (adding files when they are found - especially useful when searching large directories).
-- Contexts are easily identifiable. The `context` is prefixed with the (immediate) parent folder name to allow to easily find the context ypu are looking for. 
+- Contexts are easily identifiable. The `context` is prefixed with the (immediate) parent folder name to allow to easily find the context you are looking for. 
 - Live preview of the kubeconfig file (**sanitized from credentials**).
 - Extensible with Hooks (comparable with Git pre-commit hooks).
 
