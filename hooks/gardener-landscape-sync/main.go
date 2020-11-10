@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 var (
@@ -167,9 +168,12 @@ func runHook() error {
 	}
 
 	shootIdentifiers := sets.NewString()
-	seedNames := map[string]struct{}{}
+	shootedSeedIdentifiers := sets.NewString()
 
-	oldShootIdentifiers, err := getPreviousShootIdentifiersFromFilesystem(exportDirectory, landscapeName)
+	seedNames := map[string]struct{}{}
+	shootedSeedNames := map[string]struct{}{}
+
+	oldShootIdentifiers, oldSeedIdentifiers, err := getPreviousIdentifiersFromFilesystem(exportDirectory, landscapeName)
 	if err != nil {
 		logger.Warnf("Failed to get existing kubeconfigs from the filesystem under path %q: %v", exportDirectory, err)
 	}
@@ -197,9 +201,22 @@ func runHook() error {
 			continue
 		}
 
-		shootIdentifier := getShootIdentifier(landscapeName, projectName, shoot.Name)
-
-		kubeconfigDirectory := getKubeconfigDirectory(exportDirectory, landscapeName, seedName, shootIdentifier, shootKubeconfigName)
+		var (
+			identifier string
+			kubeconfigDirectory string
+		)
+		// check for shooted seed
+		isShootedSeed := isShootedSeed(shoot)
+		if isShootedSeed {
+			identifier = getSeedIdentifier(landscapeName, shoot.Name)
+			kubeconfigDirectory = getSeedKubeconfigDirectory(exportDirectory, landscapeName, identifier)
+			if _, ok := shootedSeedNames[shoot.Name]; !ok {
+				shootedSeedNames[shoot.Name] = struct{}{}
+			}
+		} else {
+			identifier = getShootIdentifier(landscapeName, projectName, shoot.Name)
+			kubeconfigDirectory = getShootKubeconfigDirectory(exportDirectory, landscapeName, seedName, identifier)
+		}
 
 		var (
 			secret      = corev1.Secret{}
@@ -220,18 +237,36 @@ func runHook() error {
 		if err := writeKubeconfigFile(kubeconfigDirectory, shootKubeconfigName, secret); err != nil {
 			return fmt.Errorf("unable to write kubeconfig to path: %s: %v", kubeconfigDirectory, err)
 		}
-		shootIdentifiers.Insert(shootIdentifier)
+		if isShootedSeed {
+			shootedSeedIdentifiers.Insert(identifier)
+		} else {
+			shootIdentifiers.Insert(identifier)
+		}
 
-		if len(shootIdentifiers)%30 == 0 {
-			logger.Infof("Wrote %d kubeconfigs.", len(shootIdentifiers))
+		if shootIdentifiers.Len() %30 == 0 {
+			logger.Infof("Wrote %d shoot kubeconfigs.", len(shootIdentifiers))
 		}
 	}
 
 	// check which shoots are deleted and which are added
 	addedShoots := shootIdentifiers.Difference(oldShootIdentifiers)
 	removedShoots := oldShootIdentifiers.Difference(shootIdentifiers)
-	fmt.Printf("\u001B[1;33m%s\u001B[0m: \n - Wrote kubeconfigs for \u001B[1;32m%d shoots\u001B[0m on \033[1;34m%d seeds\033[0m to directory %q.\n - \u001B[1;31mDeleted %d Shoots\u001B[0m. \n - \u001B[1;32mAdded %d Shoots\u001B[0m. \n \n", "Summary", shootIdentifiers.Len(), len(seedNames), fmt.Sprintf("%s/%s", exportDirectory, landscapeName), len(removedShoots), len(addedShoots))
+	fmt.Printf("\u001B[1;33m%s\u001B[0m: \n - Wrote kubeconfigs for \u001B[1;32m%d shoots\u001B[0m on \033[1;34m%d seeds\033[0m (%d shooted seeds) to directory %q.\n - \u001B[1;31mDeleted %d Shoots\u001B[0m. \n - \u001B[1;32mAdded %d Shoots\u001B[0m. \n", "Summary", shootIdentifiers.Len(), len(seedNames), len(shootedSeedNames), fmt.Sprintf("%s/%s", exportDirectory, landscapeName), len(removedShoots), len(addedShoots))
+
+	// check which shooted seeds are deleted and which are added
+	addedShootedSeeds := shootedSeedIdentifiers.Difference(oldSeedIdentifiers)
+	removedShootedSeeds := oldSeedIdentifiers.Difference(shootedSeedIdentifiers)
+	fmt.Printf(" - \u001B[1;31mDeleted %d Shooted Seeds\u001B[0m. \n - \u001B[1;32mAdded %d Shooted Seeds\u001B[0m.", len(removedShootedSeeds), len(addedShootedSeeds))
+	fmt.Printf("\n \n")
 	return nil
+}
+
+func isShootedSeed(shoot gardencorev1beta1.Shoot) bool {
+	if shoot.Namespace == v1beta1constants.GardenNamespace && shoot.Annotations != nil {
+		_, ok := v1beta1constants.GetShootUseAsSeedAnnotation(shoot.Annotations)
+		return ok
+	}
+	return false
 }
 
 func cleanExistingKubeconfigs(dir string) error {
@@ -251,9 +286,19 @@ func getShootIdentifier(landscape, project, shoot string) string {
 	return fmt.Sprintf("%s-shoot-%s-%s", landscape, project, shoot)
 }
 
-func getKubeconfigDirectory(rootDirectory, landscape, seedName, identifier, kubeconfigName string) string {
+func getShootKubeconfigDirectory(rootDirectory, landscape, seedName, identifier string) string {
 	// <landscape>/shoots/<seed>/<landscape>-shoot-<project-name>-<shoot-name>
 	return fmt.Sprintf("%s/%s/shoots/seed-%s/%s", rootDirectory, landscape, seedName, identifier)
+}
+
+// <landscape>-seed-<seed-name>
+func getSeedIdentifier(landscape, shoot string) string {
+	return fmt.Sprintf("%s-seed-%s", landscape, shoot)
+}
+
+func getSeedKubeconfigDirectory(rootDirectory, landscape, identifier string) string {
+	// <landscape>/seeds/<landscape>-seed-<seed-name>
+	return fmt.Sprintf("%s/%s/shooted-seeds/%s", rootDirectory, landscape, identifier)
 }
 
 func writeKubeconfigFile(directory, kubeconfigName string, kubeconfigSecret corev1.Secret) error {
@@ -277,15 +322,16 @@ func writeKubeconfigFile(directory, kubeconfigName string, kubeconfigSecret core
 	return nil
 }
 
-func getPreviousShootIdentifiersFromFilesystem(dir, landscape string) (sets.String, error) {
+func getPreviousIdentifiersFromFilesystem(dir, landscape string) (sets.String, sets.String, error) {
 	shootIdentifiers := sets.NewString()
+	seedIdentifiers := sets.NewString()
 	directory := fmt.Sprintf("%s/%s", dir, landscape)
 
 	if _, err := os.Stat(directory); err != nil {
 		if os.IsNotExist(err) {
-			return shootIdentifiers, nil
+			return shootIdentifiers, seedIdentifiers, nil
 		}
-		return nil, err
+		return nil, nil, err
 	}
 
 	if err := filepath.Walk(directory,
@@ -297,9 +343,12 @@ func getPreviousShootIdentifiersFromFilesystem(dir, landscape string) (sets.Stri
 			if info.IsDir() && strings.Contains(info.Name(), fmt.Sprintf("%s-shoot-", landscape)) {
 				shootIdentifiers.Insert(info.Name())
 			}
+			if info.IsDir() && strings.Contains(path, "shooted-seeds") && strings.Contains(info.Name(), fmt.Sprintf("%s-seed-", landscape)) {
+				seedIdentifiers.Insert(info.Name())
+			}
 			return nil
 		}); err != nil {
-		return nil, fmt.Errorf("failed to find kubeconfig files in directory: %v", err)
+		return nil, nil, fmt.Errorf("failed to find kubeconfig files in directory: %v", err)
 	}
-	return shootIdentifiers, nil
+	return shootIdentifiers, seedIdentifiers, nil
 }
