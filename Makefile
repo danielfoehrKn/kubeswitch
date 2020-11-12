@@ -15,7 +15,7 @@ build-switcher:
 
 .PHONY: build-hooks
 build-hooks:
-	@go build -o hook-gardener-landscape-sync ./hooks/gardener-landscape-sync/main.go
+	@go build -o hook-gardener-landscape-sync ./hooks/gardener-landscape-sync/main.go ./hooks/gardener-landscape-sync/kubeconfig_store_file.go ./hooks/gardener-landscape-sync/kubeconfig_store_vault.go
 
 .PHONY: all
 all: format check build

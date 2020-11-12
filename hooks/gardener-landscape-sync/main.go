@@ -3,12 +3,13 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
@@ -20,24 +21,58 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 var (
 	logger = logrus.New()
 
-	gardenKubeconfigPath string
-	exportDirectory      string
-	landscapeName        string
-	cleanDirectory       bool
-	shootKubeconfigName  string
+	gardenKubeconfigPath        string
+	exportPath                  string
+	landscapeName               string
+	clean                       bool
+	shootKubeconfigName         string
+	kubeconfigStore             string
+	vaultAPIAddress             string
+	vaultSecretEnginePathPrefix string
 
 	rootCommand = &cobra.Command{
 		Use:   "sync",
 		Short: "Sync the kubeconfig of Shoot clusters to the local filesystem.",
 		Long:  `Hook for the \"switch\" tool for Gardener landscapes to sync the kubeconfigs of Shoot clusters to the local filesystem.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runHook()
+
+			var store KubeconfigStore
+			switch kubeconfigStore {
+			case KubeconfigStoreFilesystem:
+				store = &FileStore{}
+			case KubeconfigStoreVault:
+				vaultAddress := os.Getenv("VAULT_ADDR")
+				vaultToken := vaultAPIAddress
+				if len(vaultToken) == 0 {
+					vaultToken = os.Getenv("VAULT_TOKEN")
+				}
+				if len(vaultToken) == 0 {
+					return fmt.Errorf("for the vault kubeconfig store, the vault API address has to be provided wither by command line argument \"vaultAPI\" or via environment variable \"VAULT_ADDR\"")
+				}
+
+				config := &vaultapi.Config{
+					Address: vaultAddress,
+				}
+				client, err := vaultapi.NewClient(config)
+				if err != nil {
+					return err
+				}
+				client.SetToken(vaultToken)
+
+				store = &VaultStore{
+					client:                      client,
+					vaultSecretEnginePathPrefix: vaultSecretEnginePathPrefix,
+				}
+			default:
+				return fmt.Errorf("unknown store %q", kubeconfigStore)
+			}
+
+			return runHook(store)
 		},
 	}
 )
@@ -48,12 +83,12 @@ func init() {
 		&gardenKubeconfigPath,
 		"garden-kubeconfig-path",
 		"",
-		"path to the kubeconfig of the Garden cluster. The cluster has to contain the Shoot resources.")
+		"local directory path to the kubeconfig of the Garden cluster. The cluster has to contain the Shoot resources.")
 	rootCommand.Flags().StringVar(
-		&exportDirectory,
+		&exportPath,
 		"export-directory",
 		"",
-		"root of the directory where the Shoot kubeconfig files are exported to. The path for exported kubeconfigs is: export-directory/<landscape-name>/shoots/seed-<seed-name>/<landscape-name>-shoot-<project-name>-<shoot-name>.")
+		"root of the path where the Shoot kubeconfig files are exported to. The path for exported kubeconfigs is: export-directory/<landscape-name>/shoots/seed-<seed-name>/<landscape-name>-shoot-<project-name>-<shoot-name>.")
 	rootCommand.Flags().StringVar(
 		&landscapeName,
 		"landscape-name",
@@ -65,10 +100,41 @@ func init() {
 		"config",
 		"name for all the exported shoot cluster kubeconfig files.")
 	rootCommand.Flags().BoolVar(
-		&cleanDirectory,
+		&clean,
 		"clean-directory",
 		false,
-		"clean the export directory and all subdirectories before exporting the new kubeconfig files. Used to prevent holding on to kubeconfigs of already deleted clusters.")
+		"clean the export path and all sub paths before exporting the new kubeconfig files. Used to prevent holding on to kubeconfigs of already deleted clusters.")
+	rootCommand.Flags().StringVar(
+		&kubeconfigStore,
+		"store",
+		"filesystem",
+		"the storage for the kubeconfig files. Can be either \"filesystem\" or \"vault\"")
+	rootCommand.Flags().StringVar(
+		&vaultSecretEnginePathPrefix,
+		"vaultSecretEnginePathPrefix",
+		"",
+		"the prefix to use for the vault secret engine when exporting the Gardener kubeconfigs. Only used for store \"vault\".")
+
+}
+
+const (
+	KubeconfigStoreFilesystem = "filesystem"
+	KubeconfigStoreVault      = "vault"
+)
+
+type KubeconfigStore interface {
+	CreateLandscapeDirectory(dir string) error
+	GetPreviousIdentifiers(dir, landscape string) (sets.String, sets.String, error)
+	WriteKubeconfigFile(directory, kubeconfigName string, kubeconfigSecret corev1.Secret) error
+	CleanExistingKubeconfigs(dir string) error
+}
+
+type FileStore struct {
+}
+
+type VaultStore struct {
+	client                      *vaultapi.Client
+	vaultSecretEnginePathPrefix string
 }
 
 func main() {
@@ -78,18 +144,18 @@ func main() {
 	}
 }
 
-func runHook() error {
+func runHook(store KubeconfigStore) error {
 	if len(gardenKubeconfigPath) == 0 {
 		return fmt.Errorf("must set the path to the kubeconfig of the Garden cluster")
 	}
-	if len(exportDirectory) == 0 {
+	if len(exportPath) == 0 {
 		return fmt.Errorf("must set the export directory")
 	}
 	if len(landscapeName) == 0 {
 		return fmt.Errorf("must provide a landscape name")
 	}
 
-	landscapeDirectory := fmt.Sprintf("%s/%s", exportDirectory, landscapeName)
+	landscapeDirectory := fmt.Sprintf("%s/%s", exportPath, landscapeName)
 
 	scheme := runtime.NewScheme()
 	utilruntime.Must(corev1.AddToScheme(scheme))
@@ -173,21 +239,20 @@ func runHook() error {
 	seedNames := map[string]struct{}{}
 	shootedSeedNames := map[string]struct{}{}
 
-	oldShootIdentifiers, oldSeedIdentifiers, err := getPreviousIdentifiersFromFilesystem(exportDirectory, landscapeName)
+	oldShootIdentifiers, oldSeedIdentifiers, err := store.GetPreviousIdentifiers(exportPath, landscapeName)
 	if err != nil {
-		logger.Warnf("Failed to get existing kubeconfigs from the filesystem under path %q: %v", exportDirectory, err)
+		logger.Warnf("Failed to get existing kubeconfigs from the filesystem under path %q: %v", exportPath, err)
 	}
 
-	if cleanDirectory {
-		if err := cleanExistingKubeconfigs(landscapeDirectory); err != nil {
-			logger.Warnf("Failed to clean existing kubeconfigs from the filesystem under path %q: %v", exportDirectory, err)
+	if clean {
+		if err := store.CleanExistingKubeconfigs(landscapeDirectory); err != nil {
+			logger.Warnf("Failed to clean existing kubeconfigs from the filesystem under path %q: %v", exportPath, err)
 		}
 	}
 
 	// create root directory
-	err = os.Mkdir(landscapeDirectory, 0700)
-	if err != nil && !os.IsExist(err) {
-		return fmt.Errorf("failed to create directory for kubeconfigs %q: %v", exportDirectory, err)
+	if err := store.CreateLandscapeDirectory(landscapeDirectory); err != nil {
+		return fmt.Errorf("failed to create landscape directory %q: %v", landscapeDirectory, err)
 	}
 
 	for _, shoot := range shoots.Items {
@@ -202,20 +267,20 @@ func runHook() error {
 		}
 
 		var (
-			identifier string
+			identifier          string
 			kubeconfigDirectory string
 		)
 		// check for shooted seed
 		isShootedSeed := isShootedSeed(shoot)
 		if isShootedSeed {
 			identifier = getSeedIdentifier(landscapeName, shoot.Name)
-			kubeconfigDirectory = getSeedKubeconfigDirectory(exportDirectory, landscapeName, identifier)
+			kubeconfigDirectory = getSeedKubeconfigDirectory(exportPath, landscapeName, identifier)
 			if _, ok := shootedSeedNames[shoot.Name]; !ok {
 				shootedSeedNames[shoot.Name] = struct{}{}
 			}
 		} else {
 			identifier = getShootIdentifier(landscapeName, projectName, shoot.Name)
-			kubeconfigDirectory = getShootKubeconfigDirectory(exportDirectory, landscapeName, seedName, identifier)
+			kubeconfigDirectory = getShootKubeconfigDirectory(exportPath, landscapeName, seedName, identifier)
 		}
 
 		var (
@@ -234,7 +299,7 @@ func runHook() error {
 			}
 		}
 
-		if err := writeKubeconfigFile(kubeconfigDirectory, shootKubeconfigName, secret); err != nil {
+		if err := store.WriteKubeconfigFile(kubeconfigDirectory, shootKubeconfigName, secret); err != nil {
 			return fmt.Errorf("unable to write kubeconfig to path: %s: %v", kubeconfigDirectory, err)
 		}
 		if isShootedSeed {
@@ -243,7 +308,7 @@ func runHook() error {
 			shootIdentifiers.Insert(identifier)
 		}
 
-		if shootIdentifiers.Len() %30 == 0 {
+		if shootIdentifiers.Len()%30 == 0 {
 			logger.Infof("Wrote %d shoot kubeconfigs.", len(shootIdentifiers))
 		}
 	}
@@ -251,7 +316,7 @@ func runHook() error {
 	// check which shoots are deleted and which are added
 	addedShoots := shootIdentifiers.Difference(oldShootIdentifiers)
 	removedShoots := oldShootIdentifiers.Difference(shootIdentifiers)
-	fmt.Printf("\u001B[1;33m%s\u001B[0m: \n - Wrote kubeconfigs for \u001B[1;32m%d shoots\u001B[0m on \033[1;34m%d seeds\033[0m (%d shooted seeds) to directory %q.\n - \u001B[1;31mDeleted %d Shoots\u001B[0m. \n - \u001B[1;32mAdded %d Shoots\u001B[0m. \n", "Summary", shootIdentifiers.Len(), len(seedNames), len(shootedSeedNames), fmt.Sprintf("%s/%s", exportDirectory, landscapeName), len(removedShoots), len(addedShoots))
+	fmt.Printf("\u001B[1;33m%s\u001B[0m: \n - Wrote kubeconfigs for \u001B[1;32m%d shoots\u001B[0m on \033[1;34m%d seeds\033[0m (%d shooted seeds) to directory %q.\n - \u001B[1;31mDeleted %d Shoots\u001B[0m. \n - \u001B[1;32mAdded %d Shoots\u001B[0m. \n", "Summary", shootIdentifiers.Len(), len(seedNames), len(shootedSeedNames), fmt.Sprintf("%s/%s", exportPath, landscapeName), len(removedShoots), len(addedShoots))
 
 	// check which shooted seeds are deleted and which are added
 	addedShootedSeeds := shootedSeedIdentifiers.Difference(oldSeedIdentifiers)
@@ -267,14 +332,6 @@ func isShootedSeed(shoot gardencorev1beta1.Shoot) bool {
 		return ok
 	}
 	return false
-}
-
-func cleanExistingKubeconfigs(dir string) error {
-	err := os.RemoveAll(dir)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func getSecretIdentifier(namespace string, shootName string) string {
@@ -299,56 +356,4 @@ func getSeedIdentifier(landscape, shoot string) string {
 func getSeedKubeconfigDirectory(rootDirectory, landscape, identifier string) string {
 	// <landscape>/seeds/<landscape>-seed-<seed-name>
 	return fmt.Sprintf("%s/%s/shooted-seeds/%s", rootDirectory, landscape, identifier)
-}
-
-func writeKubeconfigFile(directory, kubeconfigName string, kubeconfigSecret corev1.Secret) error {
-	err := os.MkdirAll(directory, os.ModePerm)
-	if err != nil && !os.IsExist(err) {
-		return fmt.Errorf("failed to create directory %q: %v", directory, err)
-	}
-
-	filepath := fmt.Sprintf("%s/%s", directory, kubeconfigName)
-	file, err := os.Create(filepath)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	kubeconfig, _ := kubeconfigSecret.Data[secrets.DataKeyKubeconfig]
-	_, err = file.Write(kubeconfig)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func getPreviousIdentifiersFromFilesystem(dir, landscape string) (sets.String, sets.String, error) {
-	shootIdentifiers := sets.NewString()
-	seedIdentifiers := sets.NewString()
-	directory := fmt.Sprintf("%s/%s", dir, landscape)
-
-	if _, err := os.Stat(directory); err != nil {
-		if os.IsNotExist(err) {
-			return shootIdentifiers, seedIdentifiers, nil
-		}
-		return nil, nil, err
-	}
-
-	if err := filepath.Walk(directory,
-		func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			// parent directories of directories with the kubeconfig are created with a uniform prefix
-			if info.IsDir() && strings.Contains(info.Name(), fmt.Sprintf("%s-shoot-", landscape)) {
-				shootIdentifiers.Insert(info.Name())
-			}
-			if info.IsDir() && strings.Contains(path, "shooted-seeds") && strings.Contains(info.Name(), fmt.Sprintf("%s-seed-", landscape)) {
-				seedIdentifiers.Insert(info.Name())
-			}
-			return nil
-		}); err != nil {
-		return nil, nil, fmt.Errorf("failed to find kubeconfig files in directory: %v", err)
-	}
-	return shootIdentifiers, seedIdentifiers, nil
 }
