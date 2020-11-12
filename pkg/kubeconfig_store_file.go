@@ -1,81 +1,110 @@
-package main
+package pkg
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 
-	"github.com/gardener/gardener/pkg/utils/secrets"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
+	"github.com/karrick/godirwalk"
+	"gopkg.in/yaml.v2"
+
+	"github.com/danielfoehrkn/kubectlSwitch/types"
 )
 
-func (s *FileStore) CreateLandscapeDirectory(landscapeDirectory string) error {
-	// create root directory
-	err := os.Mkdir(landscapeDirectory, 0700)
-	if err != nil && !os.IsExist(err) {
-		return fmt.Errorf("failed to create filesystem directory for kubeconfigs %q: %v", exportPath, err)
-	}
-	return nil
+func (s *FileStore) getKind() types.StoreKind {
+	return types.StoreKindFilesystem
 }
 
-func (s *FileStore) GetPreviousIdentifiers(dir, landscape string) (sets.String, sets.String, error) {
-		shootIdentifiers := sets.NewString()
-		seedIdentifiers := sets.NewString()
-		directory := fmt.Sprintf("%s/%s", dir, landscape)
+func (s *FileStore) discoverPaths(searchPath string, kubeconfigName string, channel chan channelResult) {
+	var kubeconfigPaths []string
 
-		if _, err := os.Stat(directory); err != nil {
-			if os.IsNotExist(err) {
-				return shootIdentifiers, seedIdentifiers, nil
+	if err := godirwalk.Walk(searchPath, &godirwalk.Options{
+		Callback: func(osPathname string, _ *godirwalk.Dirent) error {
+			fileName := filepath.Base(osPathname)
+			matched, err := filepath.Match(kubeconfigName, fileName)
+			if err != nil {
+				return err
 			}
-			return nil, nil, err
+			if matched {
+				kubeconfigPaths = append(kubeconfigPaths, osPathname)
+				channel <- channelResult{
+					kubeconfigPath: osPathname,
+					error:          nil,
+				}
+			}
+			return nil
+		},
+		Unsorted: false, // (optional) set true for faster yet non-deterministic enumeration
+	}); err != nil {
+		channel <- channelResult{
+			kubeconfigPath: "",
+			error:          fmt.Errorf("failed to find kubeconfig files in directory: %v", err),
 		}
-
-		if err := filepath.Walk(directory,
-			func(path string, info os.FileInfo, err error) error {
-				if err != nil {
-					return err
-				}
-				// parent directories of directories with the kubeconfig are created with a uniform prefix
-				if info.IsDir() && strings.Contains(info.Name(), fmt.Sprintf("%s-shoot-", landscape)) {
-					shootIdentifiers.Insert(info.Name())
-				}
-				if info.IsDir() && strings.Contains(path, "shooted-seeds") && strings.Contains(info.Name(), fmt.Sprintf("%s-seed-", landscape)) {
-					seedIdentifiers.Insert(info.Name())
-				}
-				return nil
-			}); err != nil {
-			return nil, nil, fmt.Errorf("failed to find kubeconfig files in directory: %v", err)
-		}
-		return shootIdentifiers, seedIdentifiers, nil
+	}
 }
 
-func (s *FileStore) WriteKubeconfigFile(directory, kubeconfigName string, kubeconfigSecret corev1.Secret) error {
-	err := os.MkdirAll(directory, os.ModePerm)
-	if err != nil && !os.IsExist(err) {
-		return fmt.Errorf("failed to create directory %q: %v", directory, err)
+func (s *FileStore) getContextsForPath(path string) ([]string, error) {
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("could not read file with path '%s': %v", path, err)
 	}
 
-	filepath := fmt.Sprintf("%s/%s", directory, kubeconfigName)
-	file, err := os.Create(filepath)
+	// parse into struct that does not contain the credentials
+	config, err := parseKubeconfig(data)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("could not parse Kubeconfig with path '%s': %v", path, err)
 	}
-	defer file.Close()
 
-	kubeconfig, _ := kubeconfigSecret.Data[secrets.DataKeyKubeconfig]
-	_, err = file.Write(kubeconfig)
+	kubeconfigData, err := yaml.Marshal(config)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("could not marshal kubeconfig with path '%s': %v", path, err)
 	}
-	return nil
+
+	// save kubeconfig content to in-memory map to avoid duplicate read operation in getSanitizedKubeconfigForContext
+	writeToPathToKubeconfig(path, string(kubeconfigData))
+
+	return getContextsFromKubeconfig(path, config)
 }
 
-func (s *FileStore) CleanExistingKubeconfigs(dir string) error {
-	err := os.RemoveAll(dir)
+func (s *FileStore) getSanitizedKubeconfigForContext(contextName string) (string, error) {
+	path := readFromContextToPathMapping(contextName)
+
+	// during first run without index, the files are already read in the getContextsForPath and save in-memory
+	kubeconfig := readFromPathToKubeconfig(path)
+	if len(kubeconfig) > 0 {
+		return kubeconfig, nil
+	}
+
+	// kubeconfig not yet saved in in-memory map -> load from filesystem
+	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		return err
+		return "", fmt.Errorf("could not read file with path '%s': %v", path, err)
+	}
+
+	config, err := parseKubeconfig(data)
+	if err != nil {
+		return "", fmt.Errorf("could not parse Kubeconfig with path '%s': %v", path, err)
+	}
+
+	kubeconfigData, err := yaml.Marshal(config)
+	if err != nil {
+		return "", fmt.Errorf("could not marshal kubeconfig with path '%s': %v", path, err)
+	}
+
+	// save kubeconfig content to in-memory map to avoid duplicate read operation in getSanitizedKubeconfigForContext
+	writeToPathToKubeconfig(path, string(kubeconfigData))
+
+	return string(kubeconfigData), nil
+}
+
+func (s *FileStore) getKubeconfigForPath(path string) ([]byte, error) {
+	return ioutil.ReadFile(path)
+}
+
+func (s *FileStore) checkPath(kubeconfigDirectory string) error {
+	if _, err := os.Stat(kubeconfigDirectory); os.IsNotExist(err) {
+		return fmt.Errorf("the kubeconfig directory %q does not exist", kubeconfigDirectory)
 	}
 	return nil
 }

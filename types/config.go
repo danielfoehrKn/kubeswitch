@@ -10,8 +10,9 @@ const (
 )
 
 type Config struct {
-	Kind  string `yaml:"kind"`
-	Hooks []Hook `yaml:"hooks"`
+	Kind                          string         `yaml:"kind"`
+	KubeconfigRediscoveryInterval *time.Duration `yaml:"kubeconfigRediscoveryInterval"`
+	Hooks                         []Hook         `yaml:"hooks"`
 }
 
 type Hook struct {

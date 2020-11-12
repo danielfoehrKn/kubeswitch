@@ -24,7 +24,7 @@ var (
 		Short: "Launch the kubeconfig switcher",
 		Long:  `Simple tool for switching between kubeconfig files.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return pkg.Switcher(kubeconfigDir, kubeconfigName, showPreview)
+			return pkg.Switcher(configPath, kubeconfigDir, kubeconfigName, showPreview)
 		},
 	}
 )
@@ -96,4 +96,9 @@ func init() {
 		"show-preview",
 		true,
 		"show preview of the selected kubeconfig.")
+	rootCommand.Flags().StringVar(
+		&configPath,
+		"config-path",
+		os.ExpandEnv("$HOME/.kube/switch-config.yaml"),
+		"path to the configuration file.")
 }

@@ -3,14 +3,12 @@ package pkg
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"time"
 
 	"github.com/danielfoehrkn/kubectlSwitch/types"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -18,9 +16,15 @@ var (
 )
 
 func Hooks(configPath string, stateDirectory string, flagHookName string, runImmediately bool) error {
-	config, err := LoadConfigFromFile(configPath, runImmediately)
+	config, err := LoadConfigFromFile(configPath)
 	if err != nil {
 		return err
+	}
+
+	// only log if explicitly requested to run hooks
+	// otherwise silently fail (for normal execution with switcher)
+	if config == nil && runImmediately {
+		logger.Infof("Configuration file not found under path: %q", configPath)
 	}
 
 	if config == nil || len(config.Hooks) == 0 {
@@ -74,36 +78,6 @@ func getHookForName(c *types.Config, name string) *types.Hook {
 	return nil
 }
 
-// LoadConfigFromFile takes a filename and de-serializes the contents into a Configuration object.
-func LoadConfigFromFile(filename string, runImmediately bool) (*types.Config, error) {
-	// a config file is not required. Its ok if it does not exist.
-	if _, err := os.Stat(filename); err != nil {
-		if os.IsNotExist(err) {
-			if runImmediately {
-				logger.Infof("Configuration file not found under path: %q", filename)
-			}
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	bytes, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	config := &types.Config{}
-	if len(bytes) == 0 {
-		return config, nil
-	}
-
-	err = yaml.Unmarshal(bytes, &config)
-	if err != nil {
-		return nil, fmt.Errorf("could not unmarshal config with path '%s': %v", filename, err)
-	}
-	return config, nil
-}
-
 func getHooksToBeExecuted(hooks []types.Hook, stateDir string) []types.Hook {
 	var hooksToBeExecuted []types.Hook
 	for _, hook := range hooks {
@@ -136,60 +110,6 @@ func getHooksToBeExecuted(hooks []types.Hook, stateDir string) []types.Hook {
 		}
 	}
 	return hooksToBeExecuted
-}
-
-func getHookState(hookStateFilepath string) (*types.HookState, error) {
-	if _, err := os.Stat(hookStateFilepath); err != nil {
-		if os.IsNotExist(err) {
-			// occurs during first execution of the hook
-			logger.Infof("Configuration file not found under path: %q", hookStateFilepath)
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	bytes, err := ioutil.ReadFile(hookStateFilepath)
-	if err != nil {
-		return nil, err
-	}
-
-	state := &types.HookState{}
-	if len(bytes) == 0 {
-		return state, nil
-	}
-
-	err = yaml.Unmarshal(bytes, &state)
-	if err != nil {
-		return nil, fmt.Errorf("could not unmarshal hook state file with path '%s': %v", hookStateFilepath, err)
-	}
-
-	return state, nil
-}
-
-func updateHookState(hookName, stateFileName string) error {
-	// creates or truncate/clean the existing state file (only state is last execution anyways atm.)
-	file, err := os.Create(stateFileName)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	state := &types.HookState{
-		HookName:          hookName,
-		LastExecutionTime: time.Now().UTC(),
-	}
-
-	output, err := yaml.Marshal(state)
-	if err != nil {
-		return err
-	}
-
-	_, err = file.Write(output)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func getHookStateFileName(hookName string, stateDir string) string {
