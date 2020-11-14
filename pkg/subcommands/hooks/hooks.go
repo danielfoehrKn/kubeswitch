@@ -1,4 +1,4 @@
-package pkg
+package hooks
 
 import (
 	"bufio"
@@ -7,16 +7,16 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/danielfoehrkn/kubectlSwitch/types"
 	"github.com/sirupsen/logrus"
+
+	config2 "github.com/danielfoehrkn/kubectlSwitch/pkg/config"
+	"github.com/danielfoehrkn/kubectlSwitch/pkg/state"
+	"github.com/danielfoehrkn/kubectlSwitch/types"
 )
 
-var (
-	logger = logrus.New()
-)
 
-func Hooks(configPath string, stateDirectory string, flagHookName string, runImmediately bool) error {
-	config, err := LoadConfigFromFile(configPath)
+func Hooks(log *logrus.Entry, configPath string, stateDirectory string, flagHookName string, runImmediately bool) error {
+	config, err := config2.LoadConfigFromFile(configPath)
 	if err != nil {
 		return err
 	}
@@ -24,7 +24,7 @@ func Hooks(configPath string, stateDirectory string, flagHookName string, runImm
 	// only log if explicitly requested to run hooks
 	// otherwise silently fail (for normal execution with switcher)
 	if config == nil && runImmediately {
-		logger.Infof("Configuration file not found under path: %q", configPath)
+		log.Infof("Configuration file not found under path: %q", configPath)
 	}
 
 	if config == nil || len(config.Hooks) == 0 {
@@ -47,22 +47,22 @@ func Hooks(configPath string, stateDirectory string, flagHookName string, runImm
 	} else if runImmediately {
 		hooksToBeExecuted = config.Hooks
 	} else {
-		hooksToBeExecuted = getHooksToBeExecuted(config.Hooks, stateDirectory)
+		hooksToBeExecuted = getHooksToBeExecuted(log, config.Hooks, stateDirectory)
 	}
 
 	if len(hooksToBeExecuted) == 0 {
-		logger.Debug("No hooks need to be executed.")
+		log.Debug("No hooks need to be executed.")
 		return nil
 	}
 
 	for _, hook := range hooksToBeExecuted {
 		stateFileName := getHookStateFileName(hook.Name, stateDirectory)
-		if err := updateHookState(hook.Name, stateFileName); err != nil {
+		if err := state.UpdateHookState(hook.Name, stateFileName); err != nil {
 			return err
 		}
 
-		if err := executeHook(hook); err != nil {
-			logger.Error(err)
+		if err := executeHook(log, hook); err != nil {
+			log.Error(err)
 		}
 	}
 
@@ -78,7 +78,7 @@ func getHookForName(c *types.Config, name string) *types.Hook {
 	return nil
 }
 
-func getHooksToBeExecuted(hooks []types.Hook, stateDir string) []types.Hook {
+func getHooksToBeExecuted(log *logrus.Entry, hooks []types.Hook, stateDir string) []types.Hook {
 	var hooksToBeExecuted []types.Hook
 	for _, hook := range hooks {
 		if hook.Type != types.HookTypeExecutable && hook.Type != types.HookTypeInlineCommand {
@@ -92,9 +92,9 @@ func getHooksToBeExecuted(hooks []types.Hook, stateDir string) []types.Hook {
 
 		stateFileName := getHookStateFileName(hook.Name, stateDir)
 		// check by reading the hook state
-		hookState, err := getHookState(stateFileName)
+		hookState, err := state.GetHookState(log, stateFileName)
 		if err != nil {
-			logger.Warnf("failed to get hook state for %q", hook.Name)
+			log.Warnf("failed to get hook state for %q", hook.Name)
 			continue
 		}
 
@@ -105,7 +105,7 @@ func getHooksToBeExecuted(hooks []types.Hook, stateDir string) []types.Hook {
 		}
 
 		if time.Now().UTC().After(hookState.LastExecutionTime.UTC().Add(*hook.Execution.Interval)) {
-			logger.Infof("Hook %q has not been run in %s.", hook.Name, hook.Execution.Interval.String())
+			log.Infof("Hook has not been run in %s.", hook.Execution.Interval.String())
 			hooksToBeExecuted = append(hooksToBeExecuted, hook)
 		}
 	}
@@ -117,8 +117,8 @@ func getHookStateFileName(hookName string, stateDir string) string {
 	return stateFileName
 }
 
-func executeHook(hook types.Hook) error {
-	logger.Infof("Executing hook %q...", hook.Name)
+func executeHook(log *logrus.Entry, hook types.Hook) error {
+	log.Infof("Executing hook %q...", hook.Name)
 
 	var cmd *exec.Cmd
 	if hook.Type == types.HookTypeInlineCommand {
@@ -151,7 +151,7 @@ func executeHook(hook types.Hook) error {
 	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
 		m := scanner.Text()
-		logger.Info(m)
+		log.Info(m)
 	}
 	if err := cmd.Wait(); err != nil {
 		return fmt.Errorf("error waiting for hook %q: %+v", hook.Name, err)

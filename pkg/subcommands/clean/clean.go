@@ -1,13 +1,15 @@
-package pkg
+package clean
 
 import (
 	"fmt"
 	"io/ioutil"
 	"os"
+
+	"github.com/danielfoehrkn/kubectlSwitch/pkg"
 )
 
 func Clean() error {
-	tempDir := os.ExpandEnv(temporaryKubeconfigDir)
+	tempDir := os.ExpandEnv(pkg.TemporaryKubeconfigDir)
 	files, _ := ioutil.ReadDir(tempDir)
 	err := os.RemoveAll(tempDir)
 	if err != nil {
