@@ -19,7 +19,6 @@ type KubeconfigStore interface {
 	GetKubeconfigForPath(log *logrus.Entry, path string) ([]byte, error)
 }
 
-
 type FilesystemStore struct {
 	KubeconfigDirectory string
 	KubeconfigName      string
@@ -30,4 +29,3 @@ type VaultStore struct {
 	Client                      *vaultapi.Client
 	VaultSecretEnginePathPrefix string
 }
-

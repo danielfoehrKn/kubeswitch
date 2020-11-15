@@ -9,7 +9,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 
-	"github.com/danielfoehrkn/kubectlSwitch/pkg/store"
 	"github.com/danielfoehrkn/kubectlSwitch/types"
 )
 
@@ -30,25 +29,26 @@ type SearchIndex struct {
 	indexFilepath       string
 	indexStateFilepath  string
 	kubeconfigStoreKind types.StoreKind
-	content *types.Index
+	content             *types.Index
 }
 
 // New creates a new SearchIndex
-func New(log *logrus.Entry, kubeconfigStore store.KubeconfigStore, switchStateDirectory string) (*SearchIndex, error) {
-	indexStateFilepath := fmt.Sprintf("%s/switch.%s.%s", switchStateDirectory, kubeconfigStore.GetKind(), indexStateFileName)
-	indexFilepath := fmt.Sprintf("%s/switch.%s.%s", switchStateDirectory, kubeconfigStore.GetKind(), indexFileName)
+func New(log *logrus.Entry, storeKind types.StoreKind, switchStateDirectory string) (*SearchIndex, error) {
+	indexStateFilepath := fmt.Sprintf("%s/switch.%s.%s", switchStateDirectory, storeKind, indexStateFileName)
+	indexFilepath := fmt.Sprintf("%s/switch.%s.%s", switchStateDirectory, storeKind, indexFileName)
 
-	i:=  SearchIndex{
+	i := SearchIndex{
 		log:                 log,
 		indexFilepath:       indexFilepath,
 		indexStateFilepath:  indexStateFilepath,
-		kubeconfigStoreKind: kubeconfigStore.GetKind(),
+		kubeconfigStoreKind: storeKind,
 	}
 
 	indexFromFile, err := i.loadFromFile()
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
+
 	i.content = indexFromFile
 	return &i, nil
 }
@@ -61,8 +61,8 @@ func (i *SearchIndex) HasKind(kind types.StoreKind) bool {
 	return i.content != nil && i.content.Kind == kind
 }
 
-func (i *SearchIndex) GetContent() map[string]string{
-	if i.content ==  nil {
+func (i *SearchIndex) GetContent() map[string]string {
+	if i.content == nil {
 		return nil
 	}
 	return i.content.ContextToPathMapping
@@ -72,15 +72,12 @@ func (i *SearchIndex) GetContent() map[string]string{
 func (i *SearchIndex) loadFromFile() (*types.Index, error) {
 	// an index file is not required. Its ok if it does not exist.
 	if _, err := os.Stat(i.indexFilepath); err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
 		return nil, err
 	}
 
 	bytes, err := ioutil.ReadFile(i.indexFilepath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read index file from %q: %v", i.indexFilepath, err)
+		return nil, fmt.Errorf("failed to read index file from %q. File corrupt?: %v", i.indexFilepath, err)
 	}
 
 	index := &types.Index{}
@@ -153,6 +150,26 @@ func (i *SearchIndex) Write(toWrite types.Index) error {
 
 	_, err = file.Write(output)
 	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (i *SearchIndex) Delete() error {
+	if _, err := os.Stat(i.indexStateFilepath); err != nil {
+		if os.IsNotExist(err) {
+			// occurs during first execution of the hook
+			return nil
+		}
+		return err
+	}
+
+	if err := os.Remove(i.indexFilepath); err != nil {
+		return err
+	}
+
+	if err := os.Remove(i.indexStateFilepath); err != nil {
 		return err
 	}
 

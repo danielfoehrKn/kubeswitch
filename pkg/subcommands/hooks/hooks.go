@@ -7,13 +7,11 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	config2 "github.com/danielfoehrkn/kubectlSwitch/pkg/config"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/state"
 	"github.com/danielfoehrkn/kubectlSwitch/types"
+	"github.com/sirupsen/logrus"
 )
-
 
 func Hooks(log *logrus.Entry, configPath string, stateDirectory string, flagHookName string, runImmediately bool) error {
 	config, err := config2.LoadConfigFromFile(configPath)

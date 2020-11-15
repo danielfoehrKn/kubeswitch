@@ -66,4 +66,3 @@ func UpdateHookState(hookName, stateFileName string) error {
 
 	return nil
 }
-

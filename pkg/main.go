@@ -42,7 +42,7 @@ func Switcher(log *logrus.Entry, kubeconfigStore store.KubeconfigStore, configPa
 		return err
 	}
 
-	searchIndex, err := index.New(log, kubeconfigStore, stateDir)
+	searchIndex, err := index.New(log, kubeconfigStore.GetKind(), stateDir)
 	if err != nil {
 		return err
 	}

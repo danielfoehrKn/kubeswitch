@@ -36,7 +36,7 @@ hooks:
       - "sync"
       - "--garden-kubeconfig-path"
       - "/Users/<your-user>/.kube/switch/dev/dev-virtual-garden/config"
-      - "--export-directory"
+      - "--export-path"
       - "/Users/<your-user>/.kube/gardener-landscapes"
       - "--landscape-name"
       - "dev"

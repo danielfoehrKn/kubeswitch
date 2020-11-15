@@ -5,22 +5,17 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/danielfoehrkn/kubectlSwitch/pkg"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/store"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/subcommands/clean"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/subcommands/hooks"
-
+	"github.com/danielfoehrkn/kubectlSwitch/types"
 	vaultapi "github.com/hashicorp/vault/api"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
-const (
-	vaultTokenFileName        = ".vault-token"
-	kubeconfigStoreFilesystem = "filesystem"
-	kubeconfigStoreVault      = "vault"
-)
+const vaultTokenFileName = ".vault-token"
 
 var (
 	// root command
@@ -29,7 +24,7 @@ var (
 	showPreview    bool
 
 	// vault store
-	storageBackend             string
+	storageBackend              string
 	vaultAPIAddress             string
 	vaultSecretEnginePathPrefix string
 
@@ -47,19 +42,19 @@ var (
 
 			var (
 				kubeconfigStore store.KubeconfigStore
-				log *logrus.Entry
+				log             *logrus.Entry
 			)
 
 			switch storageBackend {
-			case kubeconfigStoreFilesystem:
-				log = logrus.New().WithField("store", kubeconfigStoreFilesystem)
+			case string(types.StoreKindFilesystem):
+				log = logrus.New().WithField("store", types.StoreKindFilesystem)
 
 				kubeconfigStore = &store.FilesystemStore{
 					KubeconfigDirectory: kubeconfigDir,
 					KubeconfigName:      kubeconfigName,
 				}
-			case kubeconfigStoreVault:
-				log = logrus.New().WithField("store", kubeconfigStoreVault)
+			case string(types.StoreKindVault):
+				log = logrus.New().WithField("store", types.StoreKindVault)
 
 				vaultAddress := os.Getenv("VAULT_ADDR")
 				if len(vaultAddress) > 0 {
@@ -207,5 +202,5 @@ func init() {
 		&vaultSecretEnginePathPrefix,
 		"vaultSecretEnginePathPrefix",
 		"",
-		"the prefix to use for the vault secret engine when exporting the Gardener kubeconfigs. Only used for store \"vault\".")
+		"the prefix to use for the vault secret engine when exporting the kubeconfigs. Only used for store \"vault\".")
 }
