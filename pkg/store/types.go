@@ -20,12 +20,12 @@ type KubeconfigStore interface {
 }
 
 type FilesystemStore struct {
-	KubeconfigDirectory string
-	KubeconfigName      string
+	KubeconfigPath string
+	KubeconfigName string
 }
 
 type VaultStore struct {
-	KubeconfigName              string
-	Client                      *vaultapi.Client
-	VaultSecretEnginePathPrefix string
+	KubeconfigName string
+	KubeconfigPath string
+	Client         *vaultapi.Client
 }

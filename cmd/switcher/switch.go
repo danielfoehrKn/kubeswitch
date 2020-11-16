@@ -19,25 +19,24 @@ const vaultTokenFileName = ".vault-token"
 
 var (
 	// root command
-	kubeconfigDir  string
+	kubeconfigPath string
 	kubeconfigName string
 	showPreview    bool
 
 	// vault store
 	storageBackend              string
 	vaultAPIAddress             string
-	vaultSecretEnginePathPrefix string
 
 	// hook command
-	configPath     string
-	stateDir       string
-	hookName       string
-	runImmediately bool
+	configDirectory string
+	stateDirectory  string
+	hookName        string
+	runImmediately  bool
 
 	rootCommand = &cobra.Command{
 		Use:   "switch",
 		Short: "Launch the kubeconfig switcher",
-		Long:  `Simple tool for switching between kubeconfig files.`,
+		Long:  `Simple tool for switching between kubeconfig contexts. The kubectx build for people with a lot of kubeconfigs.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			var (
@@ -50,8 +49,8 @@ var (
 				log = logrus.New().WithField("store", types.StoreKindFilesystem)
 
 				kubeconfigStore = &store.FilesystemStore{
-					KubeconfigDirectory: kubeconfigDir,
-					KubeconfigName:      kubeconfigName,
+					KubeconfigPath: kubeconfigPath,
+					KubeconfigName: kubeconfigName,
 				}
 			case string(types.StoreKindVault):
 				log = logrus.New().WithField("store", types.StoreKindVault)
@@ -97,15 +96,15 @@ var (
 				client.SetToken(vaultToken)
 
 				kubeconfigStore = &store.VaultStore{
-					KubeconfigName:              kubeconfigName,
-					Client:                      client,
-					VaultSecretEnginePathPrefix: vaultSecretEnginePathPrefix,
+					KubeconfigName: kubeconfigName,
+					KubeconfigPath: kubeconfigPath,
+					Client:         client,
 				}
 			default:
 				return fmt.Errorf("unknown store %q", kubeconfigStore)
 			}
 
-			return pkg.Switcher(log, kubeconfigStore, configPath, stateDir, showPreview)
+			return pkg.Switcher(log, kubeconfigStore, configDirectory, stateDirectory, showPreview)
 		},
 	}
 )
@@ -122,22 +121,21 @@ func init() {
 
 	hookCmd := &cobra.Command{
 		Use:   "hooks",
-		Short: "Runs configured hooks",
-		Long:  `Runs hooks configured in the configuration path`,
+		Short: "Run configured hooks",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log := logrus.New().WithField("hook", hookName)
-			return hooks.Hooks(log, configPath, stateDir, hookName, runImmediately)
+			return hooks.Hooks(log, configDirectory, stateDirectory, hookName, runImmediately)
 		},
 	}
 
 	hookCmd.Flags().StringVar(
-		&configPath,
-		"config-path",
+		&configDirectory,
+		"config-directory",
 		os.ExpandEnv("$HOME/.kube/switch-config.yaml"),
-		"path to the configuration file.")
+		"path to the switch configuration file containing configuration for Hooks.")
 
 	hookCmd.Flags().StringVar(
-		&stateDir,
+		&stateDirectory,
 		"state-directory",
 		os.ExpandEnv("$HOME/.kube/switch-state"),
 		"path to the state directory.")
@@ -164,15 +162,15 @@ func NewCommandStartSwitcher() *cobra.Command {
 
 func init() {
 	rootCommand.Flags().StringVar(
-		&kubeconfigDir,
-		"kubeconfig-directory",
+		&kubeconfigPath,
+		"kubeconfig-path",
 		os.ExpandEnv("$HOME/.kube"),
-		"directory on the local filesystem to be recursively searched for kubeconfig files. When using vault as store, the flag \"vaultSecretEnginePathPrefix\" instead defines the path where kubeconfig secrets are expected.")
+		"path to be recursively searched for kubeconfig files. Can be a directory on the local filesystem or a path in Vault.")
 	rootCommand.Flags().StringVar(
-		&stateDir,
-		"state-directory",
-		os.ExpandEnv("$HOME/.kube/switch-state"),
-		"path to the local directory used for storing internal state.")
+		&storageBackend,
+		"store",
+		"filesystem",
+		"the backing store to be searched for kubeconfig files. Can be either \"filesystem\" or \"vault\"")
 	rootCommand.Flags().StringVar(
 		&kubeconfigName,
 		"kubeconfig-name",
@@ -184,23 +182,18 @@ func init() {
 		true,
 		"show preview of the selected kubeconfig. Possibly makes sense to disable when using vault as the kubeconfig store to prevent excessive requests against the API.")
 	rootCommand.Flags().StringVar(
-		&configPath,
-		"config-path",
-		os.ExpandEnv("$HOME/.kube/switch-config.yaml"),
-		"path to the configuration file.")
-	rootCommand.Flags().StringVar(
 		&vaultAPIAddress,
 		"vault-api-address",
 		"",
 		"the API address of the Vault store.")
 	rootCommand.Flags().StringVar(
-		&storageBackend,
-		"store",
-		"filesystem",
-		"the storage for the kubeconfig files. Can be either \"filesystem\" or \"vault\"")
+		&stateDirectory,
+		"state-directory",
+		os.ExpandEnv("$HOME/.kube/switch-state"),
+		"path to the local directory used for storing internal state.")
 	rootCommand.Flags().StringVar(
-		&vaultSecretEnginePathPrefix,
-		"vaultSecretEnginePathPrefix",
-		"",
-		"the prefix to use for the vault secret engine when exporting the kubeconfigs. Only used for store \"vault\".")
+		&configDirectory,
+		"config-directory",
+		os.ExpandEnv("$HOME/.kube/switch-config.yaml"),
+		"path to the configuration file.")
 }

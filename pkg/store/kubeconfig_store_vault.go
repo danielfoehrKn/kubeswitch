@@ -51,10 +51,10 @@ func (s *VaultStore) recursivePathTraversal(log *logrus.Entry, wg *sync.WaitGrou
 }
 
 func (s *VaultStore) DiscoverPaths(log *logrus.Entry, channel chan PathDiscoveryResult) {
-	log.Infof("discovering secrets from vault under path %q", s.VaultSecretEnginePathPrefix)
+	log.Infof("discovering secrets from vault under path %q", s.KubeconfigPath)
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	go s.recursivePathTraversal(log, &wg, s.VaultSecretEnginePathPrefix, channel)
+	go s.recursivePathTraversal(log, &wg, s.KubeconfigPath, channel)
 	wg.Wait()
 	return
 }
@@ -110,7 +110,7 @@ func (s *VaultStore) GetKubeconfigForPath(log *logrus.Entry, path string) ([]byt
 }
 
 func (s *VaultStore) CheckRootPath() error {
-	_, err := s.Client.Logical().Read(s.VaultSecretEnginePathPrefix)
+	_, err := s.Client.Logical().Read(s.KubeconfigPath)
 	if err != nil {
 		return err
 	}

@@ -2,6 +2,7 @@ package sync
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	vaultapi "github.com/hashicorp/vault/api"
@@ -11,6 +12,9 @@ import (
 	"github.com/danielfoehrkn/kubectlSwitch/hooks/gardener-landscape-sync/pkg"
 	"github.com/danielfoehrkn/kubectlSwitch/hooks/gardener-landscape-sync/pkg/hookstore"
 )
+
+const vaultTokenFileName = ".vault-token"
+
 
 var (
 	logger = logrus.New()
@@ -27,8 +31,8 @@ var (
 
 	rootCommand = &cobra.Command{
 		Use:   "sync",
-		Short: "Sync the kubeconfig of Shoot clusters to the local filesystem.",
-		Long:  `Hook for the \"switch\" tool for Gardener landscapes to sync the kubeconfigs of Shoot clusters to the local filesystem.`,
+		Short: "Sync the kubeconfig of Shoot clusters to vault or the local filesystem.",
+		Long:  `Hook for the \"switch\" tool for Gardener landscapes to sync the kubeconfigs of Shoot clusters.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			var store hookstore.KubeconfigStore
@@ -37,16 +41,38 @@ var (
 				store = &hookstore.FileStore{}
 			case hookstore.KubeconfigStoreVault:
 				vaultAddress := os.Getenv("VAULT_ADDR")
-				vaultToken := vaultAPIAddress
-				if len(vaultToken) == 0 {
-					vaultToken = os.Getenv("VAULT_TOKEN")
+				if len(vaultAddress) > 0 {
+					vaultAPIAddress = vaultAddress
 				}
+
+				if len(vaultAPIAddress) == 0 {
+					return fmt.Errorf("when using the vault kubeconfig store, the API address of the vault has to be provided either by command line argument \"vaultAPI\" or via environment variable \"VAULT_ADDR\"")
+				}
+
+				home, err := os.UserHomeDir()
+				if err != nil {
+					return err
+				}
+
+				var vaultToken string
+
+				// https://www.vaultproject.io/docs/commands/token-helper
+				tokenBytes, _ := ioutil.ReadFile(fmt.Sprintf("%s/%s", home, vaultTokenFileName))
+				if tokenBytes != nil {
+					vaultToken = string(tokenBytes)
+				}
+
+				vaultTokenEnv := os.Getenv("VAULT_TOKEN")
+				if len(vaultTokenEnv) > 0 {
+					vaultToken = vaultTokenEnv
+				}
+
 				if len(vaultToken) == 0 {
-					return fmt.Errorf("for the vault kubeconfig store, the vault API address has to be provided wither by command line argument \"vaultAPI\" or via environment variable \"VAULT_ADDR\"")
+					return fmt.Errorf("when using the vault kubeconfig store, a vault API token must be provided.  Per default, the token file in  \"~.vault-token\" is used. The default oken can be overriden via the  environment variable \"VAULT_ADDR\"")
 				}
 
 				config := &vaultapi.Config{
-					Address: vaultAddress,
+					Address: vaultAPIAddress,
 				}
 				client, err := vaultapi.NewClient(config)
 				if err != nil {
@@ -107,5 +133,10 @@ func init() {
 		"state-directory",
 		os.ExpandEnv("$HOME/.kube/switch-state"),
 		"path to the switchers state directory used to read the Search Index.")
+	rootCommand.Flags().StringVar(
+		&vaultAPIAddress,
+		"vault-api-address",
+		"",
+		"the API address of the Vault store.")
 
 }
