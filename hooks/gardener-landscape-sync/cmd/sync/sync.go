@@ -15,7 +15,6 @@ import (
 
 const vaultTokenFileName = ".vault-token"
 
-
 var (
 	logger = logrus.New()
 	log    = logger.WithField("hook", "gardener-landscape-sync")

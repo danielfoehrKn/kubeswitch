@@ -200,8 +200,8 @@ func showFuzzySearch(log *logrus.Entry, kubeconfigStore store.KubeconfigStore, s
 	return kubeconfigPath, selectedContext, nil
 }
 
-func getContextsForKubeconfigPath(log *logrus.Entry, kubeconfigStore store.KubeconfigStore, path string) ([]string, error) {
-	bytes, err := kubeconfigStore.GetKubeconfigForPath(log, path)
+func getContextsForKubeconfigPath(log *logrus.Entry, kubeconfigStore store.KubeconfigStore, kubeconfigPath string) ([]string, error) {
+	bytes, err := kubeconfigStore.GetKubeconfigForPath(log, kubeconfigPath)
 	if err != nil {
 		return nil, err
 	}
@@ -209,17 +209,17 @@ func getContextsForKubeconfigPath(log *logrus.Entry, kubeconfigStore store.Kubec
 	// parse into struct that does not contain the credentials
 	config, err := parseSanitizedKubeconfig(bytes)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse Kubeconfig with path '%s': %v", path, err)
+		return nil, fmt.Errorf("could not parse Kubeconfig with path '%s': %v", kubeconfigPath, err)
 	}
 
 	kubeconfigData, err := yaml.Marshal(config)
 	if err != nil {
-		return nil, fmt.Errorf("could not marshal kubeconfig with path '%s': %v", path, err)
+		return nil, fmt.Errorf("could not marshal kubeconfig with path '%s': %v", kubeconfigPath, err)
 	}
 
 	// save kubeconfig content to in-memory map to avoid duplicate read operation in getSanitizedKubeconfigForContext
-	writeToPathToKubeconfig(path, string(kubeconfigData))
-	return getContextsFromKubeconfig(path, config)
+	writeToPathToKubeconfig(kubeconfigPath, string(kubeconfigData))
+	return getContextsFromKubeconfig(kubeconfigStore.GetKind(), kubeconfigPath, config)
 }
 
 func getSanitizedKubeconfigForContext(log *logrus.Entry, kubeconfigStore store.KubeconfigStore, contextName string) (string, error) {
@@ -252,9 +252,12 @@ func getSanitizedKubeconfigForContext(log *logrus.Entry, kubeconfigStore store.K
 	return string(kubeconfigData), nil
 }
 
-func getContextsFromKubeconfig(path string, kubeconfig *types.KubeConfig) ([]string, error) {
-	// get parent folder name
+func getContextsFromKubeconfig(kind types.StoreKind, path string, kubeconfig *types.KubeConfig) ([]string, error) {
 	parentFoldername := filepath.Base(filepath.Dir(path))
+	if kind == types.StoreKindVault {
+		// for vault, the secret name itself contains the semantic information (not the key of the kv-pair of the vault secret)
+		parentFoldername = filepath.Base(path)
+	}
 	return getContextNames(kubeconfig, parentFoldername), nil
 }
 

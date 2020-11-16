@@ -24,8 +24,8 @@ var (
 	showPreview    bool
 
 	// vault store
-	storageBackend              string
-	vaultAPIAddress             string
+	storageBackend  string
+	vaultAPIAddress string
 
 	// hook command
 	configDirectory string
