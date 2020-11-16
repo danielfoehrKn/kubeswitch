@@ -5,8 +5,8 @@ By providing a configuration file, the `switch` tool can call arbitrary hooks (a
 ```
 switch hooks help
 Usage:
-  --hook-config-path path to the hook configuration file. (default "~/.kube/switch-config.yaml")
-  --hook-state-directory path to the state directory. (default "~/.kube/switch-state")
+  --config-path path to the configuration file. (default "~/.kube/switch-config.yaml")
+  --state-directory path to the state directory. (default "~/.kube/switch-state")
   --hook-name the name of the hook that should be run.
   --run-hooks-immediately run hooks right away. Do not respect the hooks execution configuration. (default "true").
 ```
@@ -64,5 +64,5 @@ hooks:
 ### Hook State
 
 To remember the last execution time for hooks, a file is written into the state directory.
-The default location for the hook state files are at `~/.kube/switch-state` or can be set with `--hook-state-directory`.
+The default location for the hook state files are at `~/.kube/switch-state` or can be set with `--state-directory`.
  

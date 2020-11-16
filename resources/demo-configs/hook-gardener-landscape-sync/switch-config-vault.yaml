@@ -1,0 +1,20 @@
+kind: SwitchConfig
+hooks:
+  - name: sync-dev-landscape
+    type: Executable
+    path: /Users/<your-user>/go/src/github.com/danielfoehrkn/kubeconfig-switch/hack/hooks/hook-gardener-landscape-sync
+    arguments:
+      - "sync"
+      - "--garden-kubeconfig-path"
+      - "/<path in vault>"
+      - "--export-path"
+      - "/Users/<your-user>/.kube/gardener-landscapes"
+      - "--landscape-name"
+      - "dev"
+      - "--clean-directory=true"
+      - "--store"
+      - "vault"
+      - "--vault-api-address"
+      - "http:/...."
+    execution:
+      interval: 6h
