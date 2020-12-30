@@ -11,11 +11,13 @@ build: build-switcher build-hooks
 
 .PHONY: build-switcher
 build-switcher:
-	@go build -o switcher ./cmd/main.go
+	@go build -o hack/switch/switcher ./cmd/main.go
+	@env GOOS=linux GOARCH=amd64 go build -o hack/switch/switcher_linux_amd64 ./cmd/main.go
 
 .PHONY: build-hooks
 build-hooks:
-	@go build -o hook-gardener-landscape-sync hooks/gardener-landscape-sync/cmd/main.go
+	@go build -o hack/hooks/hook_gardener_landscape_sync hooks/gardener-landscape-sync/cmd/main.go
+	@env GOOS=linux GOARCH=amd64 go build -o hack/hooks/hook_gardener_landscape_sync_linux_amd64 hooks/gardener-landscape-sync/cmd/main.go
 
 .PHONY: all
 all: format check build
