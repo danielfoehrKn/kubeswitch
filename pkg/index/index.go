@@ -106,12 +106,11 @@ func (i *SearchIndex) ShouldBeUsed(switchConfig *types.Config) (bool, error) {
 	}
 
 	// the switch config has no KubeconfigRediscoveryInterval set - take default rediscovery interval
-	kubeconfigRediscoveryInterval := switchConfig.KubeconfigRediscoveryInterval
-	if switchConfig == nil || kubeconfigRediscoveryInterval == nil {
+	if switchConfig == nil || switchConfig.KubeconfigRediscoveryInterval == nil {
 		return time.Now().UTC().Before(indexState.LastUpdateTime.UTC().Add(DefaultKubeconfigRediscoveryInterval)), nil
 	}
 
-	return time.Now().UTC().Before(indexState.LastUpdateTime.UTC().Add(*kubeconfigRediscoveryInterval)), nil
+	return time.Now().UTC().Before(indexState.LastUpdateTime.UTC().Add(*switchConfig.KubeconfigRediscoveryInterval)), nil
 }
 
 func (i *SearchIndex) WriteState(toWrite types.IndexState) error {
