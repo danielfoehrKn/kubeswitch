@@ -17,7 +17,7 @@ build-switcher:
 .PHONY: build-hooks
 build-hooks:
 	@env GOOS=linux GOARCH=amd64 go build -o hack/hooks/hook_gardener_landscape_sync_linux_amd64 hooks/gardener-landscape-sync/cmd/main.go
-	@env GOOS=darwin GOARCH=amd64 go build -o hack/hooks/hook_gardener_landscape_sync hooks/gardener-landscape-sync/cmd/main.go
+	@env GOOS=darwin GOARCH=amd64 go build -o hack/hooks/hook_gardener_landscape_sync_darwin_amd64 hooks/gardener-landscape-sync/cmd/main.go
 
 .PHONY: all
 all: format check build
