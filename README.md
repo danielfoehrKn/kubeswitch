@@ -39,24 +39,25 @@ If you are running Linux, you can download the `switcher` binary from the [relea
 
 #### Option 1 - Manual Installation
 
+Download the switch script and the switcher binary for your OS/architecture (darwin / linux).
 ```
-# grab pre-compiled switcher binary from the github releases (for os/architecture)
-$ get https://github.com/danielfoehrKn/kubeswitch/releases/download/0.0.4/switcher_linux_amd64.tar.gz
-$ tar -zxvf switcher_linux_amd64.tar.gz
-$ cp switcher_linux_amd64 /usr/local/bin/switcher 
-$ rm switcher_linux_amd64.tar.gz
+# grab pre-compiled switcher binary for your OS/architecture
+OS=linux #darwin
+wget https://github.com/danielfoehrKn/kubeswitch/releases/download/0.1.0/switcher_${OS}_amd64.tar.gz
+tar -zxvf switcher_${OS}_amd64.tar.gz
+cp switcher_${OS}_amd64 /usr/local/bin/switcher
+rm switcher_${OS}_amd64.tar.gz
+
+# grab switch script
+wget https://github.com/danielfoehrKn/kubeswitch/releases/download/0.1.0/switch.tar.gz
+tar -zxvf switch.tar.gz
+cp switch.sh /usr/local/bin/switch.sh
+rm switch.tar.gz
 ```
 
-Download the switch script and source it.
+Source `switch.sh` e.g. in the `.bashrc`/`.zsh`) via:
 ```
-$ wget https://github.com/danielfoehrKn/kubeswitch/releases/download/0.0.4/switch.tar.gz
-$ tar -zxvf switch.tar.gz
-$ rm switch.tar.gz
-```
-
-Copy `switch.sh` to directory of choice and source it (e.g. in the `.bashrc` / `.zsh`) via:
-```
-$ source ~/<my-directory>/switch.sh
+$ source /usr/local/bin/switch.sh
 ```
 
 #### Option 2 - Homebrew
@@ -68,10 +69,10 @@ $ brew install danielfoehrkn/switch/switch
 
 Source the `switch` script from the `homebrew` installation path.
 ```
-$ source /usr/local/Cellar/switch/v0.0.4/switch.sh
+$ source /usr/local/Cellar/switch/v0.1.0/switch.sh
 ```
 
-Updating the version of the `switch` utility via `brew` (e.g changing from version 0.0.2 to 0.0.3) requires to change the sourced path.
+Updating the version of the `switch` utility via `brew` (e.g changing from version 0.1.0 to 0.1.1) requires to change the sourced path.
 
 ## Usage 
 
