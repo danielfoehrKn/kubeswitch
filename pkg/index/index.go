@@ -13,9 +13,6 @@ import (
 )
 
 const (
-	// DefaultKubeconfigRediscoveryInterval is the interval after which the index file is refreshed
-	// rediscovering the kubeconfig paths and context names from the Store may lead to delays/ more API requests during execution
-	DefaultKubeconfigRediscoveryInterval = 20 * time.Minute
 	// indexStateFileName is the filename of the index state file containing the last time a Store index has been updated
 	// located at the root of the given kubeconfigDirectory
 	indexStateFileName = "index.state"
@@ -105,9 +102,8 @@ func (i *SearchIndex) ShouldBeUsed(switchConfig *types.Config) (bool, error) {
 		return false, nil
 	}
 
-	// the switch config has no KubeconfigRediscoveryInterval set - take default rediscovery interval
 	if switchConfig == nil || switchConfig.KubeconfigRediscoveryInterval == nil {
-		return time.Now().UTC().Before(indexState.LastUpdateTime.UTC().Add(DefaultKubeconfigRediscoveryInterval)), nil
+		return false, nil
 	}
 
 	return time.Now().UTC().Before(indexState.LastUpdateTime.UTC().Add(*switchConfig.KubeconfigRediscoveryInterval)), nil

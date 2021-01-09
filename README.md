@@ -32,44 +32,46 @@ Kubeswitch (short: `switch`) is a tiny standalone tool, designed to conveniently
 
 ## Installation
 
-Mac users can just use `homebrew` for installation.
+Mac users can use `homebrew` for installation.
 
-If you are running Linux, you would need to first compile the `switcher` binary for Linux yourself, put it in your path, and then source the `switch` script from [here](https://github.com/danielfoehrKn/kubeconfig-switch/blob/master/hack/switch/switch.sh).
+If you are running Linux, you can download the `switcher` binary from the [releases](https://github.com/danielfoehrKn/kubeswitch/releases)
+, put it in your path, and then source the `switch` script from [here](https://github.com/danielfoehrKn/kubeswitch/blob/master/hack/switch/switch.sh).
 
-#### Option 1 - Homebrew
+#### Option 1 - Manual Installation
+
+```
+# grab pre-compiled switcher binary from the github releases (for os/architecture)
+$ get https://github.com/danielfoehrKn/kubeswitch/releases/download/0.0.4/switcher_linux_amd64.tar.gz
+$ tar -zxvf switcher_linux_amd64.tar.gz
+$ cp switcher_linux_amd64 /usr/local/bin/switcher 
+$ rm switcher_linux_amd64.tar.gz
+```
+
+Download the switch script and source it.
+```
+$ wget https://github.com/danielfoehrKn/kubeswitch/releases/download/0.0.4/switch.tar.gz
+$ tar -zxvf switch.tar.gz
+$ rm switch.tar.gz
+```
+
+Copy `switch.sh` to directory of choice and source it (e.g. in the `.bashrc` / `.zsh`) via:
+```
+$ source ~/<my-directory>/switch.sh
+```
+
+#### Option 2 - Homebrew
 
 Install both the `switcher` tool and the `switch` script with `homebrew`. 
 ```
- $ brew install danielfoehrkn/switch/switch
+$ brew install danielfoehrkn/switch/switch
 ```
 
 Source the `switch` script from the `homebrew` installation path.
-
 ```
-$ source /usr/local/Cellar/switch/v0.0.3/switch.sh
-```
-
-Updating the version of the `switch` utility via `brew` (e.g changing from version 0.0.2 to 0.0.3) requires you to change the sourced path. 
-
-#### Option 2 - Manual Installation
-
-```
- $ go get github.com/danielfoehrKn/kubeswitch
- $ cd github.com/danielfoehrKn/kubeswitch # cd into directory
- $ cp ./hack/switch/switcher /usr/local/bin/switcher # grab pre-compiled binary (for OS X)
+$ source /usr/local/Cellar/switch/v0.0.4/switch.sh
 ```
 
-Add to .bashrc or similar
-
-```
-source ~/go/src/github.com/danielfoehrkn/kubeconfig-switch/hack/switch/switch.sh
-```
-
-Optionally: define alias 
-
-```
-alias switch='switch --kubeconfig-path ~/.kube/my-kubeconfig-files'
-```
+Updating the version of the `switch` utility via `brew` (e.g changing from version 0.0.2 to 0.0.3) requires to change the sourced path.
 
 ## Usage 
 
@@ -99,11 +101,15 @@ Flags:
 
 Use "switch [command] --help" for more information about a command.
 ```
-Just type `switch` to search for kubeconfig files with name `config` in the `~/.kube` directory. 
-As shown above, there are multiple flags available to adjust this behaviour. 
+Just type `switch` to search for kubeconfig files with name `config` in the local `~/.kube` directory. 
+As shown above, there are multiple flags available to adjust this behaviour.
 
-To speed up the fuzzy search, I would recommend putting all the kubeconfig files into a single directory containing only kubeconfig files.
-The default `~/.kube` directory contains a bunch of other files that have to be filtered out.
+## Configuration
+
+I recommend setting up an alias for your `switch` commands.
+
+For instance, to always using the directory `~/.kube/switch` to search for kubeconfig files,
+use the following alias:
 
 ```
 alias switch='switch --kubeconfig-directory ~/.kube/switch'
@@ -112,27 +118,40 @@ alias switch='switch --kubeconfig-directory ~/.kube/switch'
 ### Kubeconfig stores
 
 There are two Kubeconfig stores support: `filesystem` and `vault`.
+
 The local filesystem is the default store and does not require any additional settings.
+However, to speed up the fuzzy search on the local filesystem, 
+I would recommend putting all the kubeconfig files into a single directory containing only kubeconfig files.
+Then create a `switch` alias via `--kubeconfig-directory` pointing to this directory.
+This is because the default `~/.kube` directory contains a bunch of other files 
+that have to be filtered out and thus slowing down the search.
 
-To use of `vault` requires the following
-- set either the environment variable `VAULT_ADDR` or the switch command line flag `--vault-api-address` to the API endpoint of your vault instance.
-- make sure that the file `~/.vault-token` is set (automatically created via the `vault` CLI) and contains the token for your vault server. Alternatively set the environment variable `VAULT_TOKEN`.
-- set the switch command line flag `--kubeconfig-path` to the root directory of the vault secrets engine. E.g if the kubeconfigs are stored in vault under `landscapes/dev/cluster-1` and `landscapes/canary/cluster-1` then set the flag value to `landscapes` 
-- set the switch command line flag `--store vault`
+To use vault as the kubeconfig store, [please see here](docs/use_vault_store.md).
 
-`
-switch --kubeconfig-path landscapes --store vault  --vault-api-address http://127.0.0.1:8200
-`
+### Search Index
 
-The `vault` looks like this:
+Use a search index to speed up searches.
+Per default, the search index is **not** used.
+
+Using the search index is especially useful when 
+ - dealing with large amounts of kubeconfigs and querying the kubeconfig store is slow (e.g. searching a large directory)
+ - when using vault as the kubeconfig store to save requests against the Vault API 
+
+Enable the search index in the `SwitchConfig` file (per default located in `~/.kube/switch-config.yaml` or configured via flag `--config-directory`).
+The field `kubeconfigRediscoveryInterval` determines the time after which the tool should 
+refresh its index against the configured kubeconfig store.
+The index is stored in a file in the state directory (default: `~/.kube/switch-state/switch.<store>.index`)
 
 ```
-vault kv list /landscapes
-Keys
-----
-canary/
-dev/
+$ cat ~/.kube/switch-config.yaml
+
+kind: SwitchConfig
+kubeconfigRediscoveryInterval: 1h
 ```
+
+Compared to the example in the [hot reload feature](#hot-reload), see that all the kubeconfig contexts are available almost instantly.
+
+![demo GIF](resources/index-demo.gif)
 
 ## Directory setup 
 
@@ -169,28 +188,6 @@ For large directories with many kubeconfig files, the kubeconfigs are added to t
 For smaller directory sizes, the search feels instantaneous.
 
  ![demo GIF](resources/hot-reload.gif)
- 
-### Search Index
-
-The tool automatically creates a search index to speed up future searches.
-Only for the initial search, the actual storage is searched (filesystem/ vault).
-Subsequent searches are only against the index.
-
-Per default, every 20 minutes the index is updated.
-This is configurable in the Switch config.
-
-```
-$ cat ~/.kube/switch-config.yaml
-
-kind: SwitchConfig
-kubeconfigRediscoveryInterval: 1h
-```
-
-Compared to the example in the hot reload feature, see that all the kubeconfig contexts are available almost instantly.
-
- ![demo GIF](resources/index-demo.gif)
- 
-The index is stored in a file in the state directory (default: `~/.kube/switch-state/switch.<store>.index`)
 
 ### Extensibilty 
 
