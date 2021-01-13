@@ -1,7 +1,9 @@
 # Kubeswitch
 
-The `kubectx` build for many kubeconfigs.
-Kubeswitch (short: `switch`) is a tiny standalone tool, designed to conveniently switch between the context of thousands of `kubeconfig` files.
+The `kubectx` for operators.
+
+Kubeswitch (short: `switch`) is a tiny standalone tool, 
+designed to conveniently switch between the context of thousands of `kubeconfig` files.
 
 ## Highlights
 
