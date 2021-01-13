@@ -32,12 +32,23 @@ Kubeswitch (short: `switch`) is a tiny standalone tool, designed to conveniently
 
 ## Installation
 
-Mac users can use `homebrew` for installation.
+### Option 1 - Homebrew
 
-If you are running Linux, you can download the `switcher` binary from the [releases](https://github.com/danielfoehrKn/kubeswitch/releases)
-, put it in your path, and then source the `switch` script from [here](https://github.com/danielfoehrKn/kubeswitch/blob/master/hack/switch/switch.sh).
+Mac and Linux users can install both the `switcher` tool and the `switch` script with `homebrew`. 
+```
+$ brew install danielfoehrkn/switch/switch
+```
 
-#### Option 1 - Manual Installation
+Source the `switch` script from the `homebrew` installation path.
+```
+$ source $HOMEBREW_CELLAR/switch/v0.1.0/switch.sh
+```
+
+Updating the version of the `switch` utility via `brew` (e.g changing from version 0.1.0 to 0.1.1) requires to change the sourced path.
+
+### Option 2 - Manual Installation
+
+#### Mac
 
 Download the switch script and the switcher binary for your OS/architecture (darwin / linux).
 ```
@@ -59,20 +70,10 @@ Source `switch.sh` e.g. in the `.bashrc`/`.zsh`) via:
 ```
 $ source /usr/local/bin/switch.sh
 ```
+#### Linux
 
-#### Option 2 - Homebrew
-
-Install both the `switcher` tool and the `switch` script with `homebrew`. 
-```
-$ brew install danielfoehrkn/switch/switch
-```
-
-Source the `switch` script from the `homebrew` installation path.
-```
-$ source /usr/local/Cellar/switch/v0.1.0/switch.sh
-```
-
-Updating the version of the `switch` utility via `brew` (e.g changing from version 0.1.0 to 0.1.1) requires to change the sourced path.
+If you are running Linux, you can download the `switcher` binary from the [releases](https://github.com/danielfoehrKn/kubeswitch/releases)
+, put it in your path, and then source the `switch` script from [here](https://github.com/danielfoehrKn/kubeswitch/blob/master/hack/switch/switch.sh).
 
 ## Usage 
 
