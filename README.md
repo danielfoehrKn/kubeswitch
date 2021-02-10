@@ -94,7 +94,7 @@ Available Commands:
   hooks       Runs configured hooks
 
 Flags:
-      --config-directory string    path to the configuration file. (default "~/.kube/switch-config.yaml")
+      --config-path string    path to the configuration file. (default "~/.kube/switch-config.yaml")
   -h, --help                       help for switch
       --kubeconfig-name string     only shows kubeconfig files with this name. Accepts wilcard arguments "*" and "?". Defaults to "config". (default "config")
       --kubeconfig-path string     path to be recursively searched for kubeconfig files. Can be a directory on the local filesystem or a path in Vault. (default "~/.kube")
@@ -141,7 +141,7 @@ Using the search index is especially useful when
  - dealing with large amounts of kubeconfigs and querying the kubeconfig store is slow (e.g. searching a large directory)
  - when using vault as the kubeconfig store to save requests against the Vault API 
 
-Enable the search index in the `SwitchConfig` file (per default located in `~/.kube/switch-config.yaml` or configured via flag `--config-directory`. The flag has to point to the file, not the directory).
+Enable the search index in the `SwitchConfig` file (per default located in `~/.kube/switch-config.yaml` or configured via flag `--config-path`. The flag has to point to the file, not the directory).
 The field `kubeconfigRediscoveryInterval` determines the time after which the tool should 
 refresh its index against the configured kubeconfig store.
 The index is stored in a file in the state directory (default: `~/.kube/switch-state/switch.<store>.index`)

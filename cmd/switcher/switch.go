@@ -28,15 +28,15 @@ var (
 	vaultAPIAddress string
 
 	// hook command
-	configDirectory string
-	stateDirectory  string
-	hookName        string
-	runImmediately  bool
+	configPath     string
+	stateDirectory string
+	hookName       string
+	runImmediately bool
 
 	rootCommand = &cobra.Command{
 		Use:   "switch",
 		Short: "Launch the kubeconfig switcher",
-		Long:  `Simple tool for switching between kubeconfig contexts. The kubectx build for people with a lot of kubeconfigs.`,
+		Long:  `The kubectx for operators.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			var (
@@ -104,7 +104,7 @@ var (
 				return fmt.Errorf("unknown store %q", kubeconfigStore)
 			}
 
-			return pkg.Switcher(log, kubeconfigStore, configDirectory, stateDirectory, showPreview)
+			return pkg.Switcher(log, kubeconfigStore, configPath, stateDirectory, showPreview)
 		},
 	}
 )
@@ -124,15 +124,15 @@ func init() {
 		Short: "Run configured hooks",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log := logrus.New().WithField("hook", hookName)
-			return hooks.Hooks(log, configDirectory, stateDirectory, hookName, runImmediately)
+			return hooks.Hooks(log, configPath, stateDirectory, hookName, runImmediately)
 		},
 	}
 
 	hookCmd.Flags().StringVar(
-		&configDirectory,
-		"config-directory",
+		&configPath,
+		"config-path",
 		os.ExpandEnv("$HOME/.kube/switch-config.yaml"),
-		"path to the switch configuration file containing configuration for Hooks.")
+		"path on the local filesystem to the configuration file.")
 
 	hookCmd.Flags().StringVar(
 		&stateDirectory,
@@ -142,7 +142,7 @@ func init() {
 
 	hookCmd.Flags().StringVar(
 		&hookName,
-		"name",
+		"hook-name",
 		"",
 		"the name of the hook that should be run.")
 
@@ -192,8 +192,8 @@ func init() {
 		os.ExpandEnv("$HOME/.kube/switch-state"),
 		"path to the local directory used for storing internal state.")
 	rootCommand.Flags().StringVar(
-		&configDirectory,
-		"config-directory",
+		&configPath,
+		"config-path",
 		os.ExpandEnv("$HOME/.kube/switch-config.yaml"),
-		"path to the configuration file.")
+		"path on the local filesystem to the configuration file.")
 }

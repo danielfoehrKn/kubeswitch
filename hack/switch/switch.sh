@@ -8,7 +8,7 @@ Usage:
   switch hooks [flags]
 
 Flags:
-      --config-directory string   path to the switch configuration file containing configuration for Hooks. (default "~/.kube/switch-config.yaml")
+      --config-path string        path on the local filesystem to the configuration file. (default "~/.kube/switch-config.yaml")
   -h, --help                      help for hooks
       --hook-name string          the name of the hook that should be run.
       --run-immediately           run hooks right away. Do not respect the hooks execution configuration. (default true)
@@ -18,7 +18,7 @@ Flags:
 
 switchUsage() {
 echo '
-Simple tool for switching between kubeconfig contexts. The kubectx build for people with a lot of kubeconfigs.
+The kubectx for operators.
 
 Usage:
   switch [flags]
@@ -30,7 +30,7 @@ Available Commands:
   hooks       Runs configured hooks
 
 Flags:
-      --config-directory string    path to the configuration file. (default "~/.kube/switch-config.yaml")
+      --config-path string         path on the local filesystem to the configuration file. (default "~/.kube/switch-config.yaml")
   -h, --help                       help for switch
       --kubeconfig-name string     only shows kubeconfig files with this name. Accepts wilcard arguments "*" and "?". Defaults to "config". (default "config")
       --kubeconfig-path string     path to be recursively searched for kubeconfig files. Can be a directory on the local filesystem or a path in Vault. (default "~/.kube")
@@ -65,7 +65,7 @@ function switch(){
   STORE=''
   KUBECONFIG_NAME=''
   SHOW_PREVIEW=''
-  CONFIG_DIRECTORY=''
+  CONFIG_PATH=''
   VAULT_API_ADDRESS=''
   EXECUTABLE_PATH=''
   CLEAN=''
@@ -73,7 +73,7 @@ function switch(){
   # Hooks
   HOOKS=''
   STATE_DIRECTORY=''
-  NAME=''
+  HOOK_NAME=''
   RUN_IMMEDIATELY=''
 
   while test $# -gt 0; do
@@ -121,15 +121,14 @@ function switch(){
                       STATE_DIRECTORY=$1
                       shift
                       ;;
-                  --config-directory)
+                  --config-path)
                       shift
-                      CONFIG_DIRECTORY=$1
+                      CONFIG_PATH=$1
                       shift
                       ;;
                   --hook-name)
                       shift
-                      # hook name
-                      NAME=$1
+                      HOOK_NAME=$1
                       shift
                       ;;
                   --run-hooks-immediately)
@@ -206,22 +205,22 @@ function switch(){
      STATE_DIRECTORY_FLAG=--state-directory
   fi
 
-  CONFIG_DIRECTORY_FLAG=''
-  if [ -n "$CONFIG_DIRECTORY" ]
+  CONFIG_PATH_FLAG=''
+  if [ -n "$CONFIG_PATH" ]
   then
-     CONFIG_DIRECTORY="$CONFIG_DIRECTORY"
-     CONFIG_DIRECTORY_FLAG=--config-path
+     CONFIG_PATH="$CONFIG_PATH"
+     CONFIG_PATH_FLAG=--config-path
   fi
 
   if [ -n "$HOOKS" ]
   then
      echo "Running hooks."
 
-     NAME_FLAG=''
-     if [ -n "$NAME" ]
+     HOOK_NAME_FLAG=''
+     if [ -n "$HOOK_NAME" ]
      then
-        NAME="$NAME"
-        NAME_FLAG=--name
+        HOOK_NAME="$HOOK_NAME"
+        HOOK_NAME_FLAG=--hook-name
      fi
 
      RUN_IMMEDIATELY_FLAG=--run-immediately
@@ -234,9 +233,9 @@ function switch(){
 
      RESPONSE=$($EXECUTABLE_PATH hooks \
      $RUN_IMMEDIATELY_FLAG=${RUN_IMMEDIATELY} \
-     $CONFIG_DIRECTORY_FLAG ${CONFIG_DIRECTORY} \
+     $CONFIG_PATH_FLAG ${CONFIG_PATH} \
      $STATE_DIRECTORY_FLAG ${STATE_DIRECTORY} \
-     $NAME_FLAG ${NAME})
+     $HOOK_NAME_FLAG ${HOOK_NAME})
 
       if [ -n "$RESPONSE" ]
       then
@@ -248,7 +247,7 @@ function switch(){
   # always run hooks command with --run-immediately=false
   $EXECUTABLE_PATH hooks \
      --run-immediately=false \
-     $CONFIG_DIRECTORY_FLAG ${CONFIG_DIRECTORY} \
+     $CONFIG_PATH_FLAG ${CONFIG_PATH} \
      $STATE_DIRECTORY_FLAG ${STATE_DIRECTORY}
 
   # execute golang binary handing over all the flags
@@ -259,7 +258,7 @@ function switch(){
   $SHOW_PREVIEW_FLAG=${SHOW_PREVIEW} \
   $VAULT_API_ADDRESS_FLAG ${VAULT_API_ADDRESS} \
   $STATE_DIRECTORY_FLAG ${STATE_DIRECTORY} \
-  $CONFIG_DIRECTORY_FLAG ${CONFIG_DIRECTORY})
+  $CONFIG_PATH_FLAG ${CONFIG_PATH})
 
   if [[ "$?" = "0" ]]; then
       export KUBECONFIG=${NEW_KUBECONFIG}
