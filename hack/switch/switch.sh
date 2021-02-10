@@ -10,7 +10,7 @@ Usage:
 Flags:
       --config-directory string   path to the switch configuration file containing configuration for Hooks. (default "~/.kube/switch-config.yaml")
   -h, --help                      help for hooks
-      --name string               the name of the hook that should be run.
+      --hook-name string          the name of the hook that should be run.
       --run-immediately           run hooks right away. Do not respect the hooks execution configuration. (default true)
       --state-directory string    path to the state directory. (default "~/.kube/switch-state")
 '
@@ -32,7 +32,7 @@ Available Commands:
 Flags:
       --config-directory string    path to the configuration file. (default "~/.kube/switch-config.yaml")
   -h, --help                       help for switch
-      --kubeconfig-name string     only shows kubeconfig files with this name. Accepts wilcard arguments "*" and "?". Defaults to "config". \(default "config")
+      --kubeconfig-name string     only shows kubeconfig files with this name. Accepts wilcard arguments "*" and "?". Defaults to "config". (default "config")
       --kubeconfig-path string     path to be recursively searched for kubeconfig files. Can be a directory on the local filesystem or a path in Vault. (default "~/.kube")
       --show-preview               show preview of the selected kubeconfig. Possibly makes sense to disable when using vault as the kubeconfig store to prevent excessive requests against the API. (default true)
       --state-directory string     path to the local directory used for storing internal state. (default "~/.kube/switch-state")

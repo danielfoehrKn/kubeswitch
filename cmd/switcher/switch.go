@@ -83,7 +83,7 @@ var (
 				}
 
 				if len(vaultToken) == 0 {
-					return fmt.Errorf("when using the vault kubeconfig store, a vault API token must be provided.  Per default, the token file in  \"~.vault-token\" is used. The default oken can be overriden via the  environment variable \"VAULT_ADDR\"")
+					return fmt.Errorf("when using the vault kubeconfig store, a vault API token must be provided.  Per default, the token file in  \"~.vault-token\" is used. The default token can be overriden via the  environment variable \"VAULT_TOKEN\"")
 				}
 
 				config := &vaultapi.Config{
