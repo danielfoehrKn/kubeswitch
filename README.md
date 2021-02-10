@@ -82,7 +82,7 @@ If you are running Linux, you can download the `switcher` binary from the [relea
 ```
 $ switch -h
 
-Simple tool for switching between kubeconfig contexts. The kubectx build for people with a lot of kubeconfigs.
+The kubectx for operators.
 
 Usage:
   switch [flags]
@@ -94,7 +94,7 @@ Available Commands:
   hooks       Runs configured hooks
 
 Flags:
-      --config-path string    path to the configuration file. (default "~/.kube/switch-config.yaml")
+      --config-path string         path on the local filesystem to the configuration file. (default "~/.kube/switch-config.yaml")
   -h, --help                       help for switch
       --kubeconfig-name string     only shows kubeconfig files with this name. Accepts wilcard arguments "*" and "?". Defaults to "config". (default "config")
       --kubeconfig-path string     path to be recursively searched for kubeconfig files. Can be a directory on the local filesystem or a path in Vault. (default "~/.kube")
