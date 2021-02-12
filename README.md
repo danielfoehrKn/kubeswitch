@@ -45,10 +45,10 @@ $ brew install danielfoehrkn/switch/switch
 
 Source the `switch` script from the `homebrew` installation path.
 ```
-$ source $HOMEBREW_CELLAR/switch/v0.1.0/switch.sh
+$ source $HOMEBREW_CELLAR/switch/v0.2.0/switch.sh
 ```
 
-Updating the version of the `switch` utility via `brew` (e.g changing from version 0.1.0 to 0.1.1) requires to change the sourced path.
+Updating the version of the `switch` utility via `brew` (e.g changing from version 0.1.0 to 0.2.0) requires to change the sourced path.
 
 ### Option 2 - Manual Installation
 
@@ -58,13 +58,13 @@ Download the switch script and the switcher binary for your OS/architecture (dar
 ```
 # grab pre-compiled switcher binary for your OS/architecture
 OS=linux #darwin
-wget https://github.com/danielfoehrKn/kubeswitch/releases/download/0.1.0/switcher_${OS}_amd64.tar.gz
+wget https://github.com/danielfoehrKn/kubeswitch/releases/download/0.2.0/switcher_${OS}_amd64.tar.gz
 tar -zxvf switcher_${OS}_amd64.tar.gz
 cp switcher_${OS}_amd64 /usr/local/bin/switcher
 rm switcher_${OS}_amd64.tar.gz
 
 # grab switch script
-wget https://github.com/danielfoehrKn/kubeswitch/releases/download/0.1.0/switch.tar.gz
+wget https://github.com/danielfoehrKn/kubeswitch/releases/download/0.2.0/switch.tar.gz
 tar -zxvf switch.tar.gz
 cp switch.sh /usr/local/bin/switch.sh
 rm switch.tar.gz
