@@ -14,7 +14,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 
-	"github.com/danielfoehrkn/kubectlSwitch/pkg/config"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/index"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/store"
 	"github.com/danielfoehrkn/kubectlSwitch/types"
@@ -28,58 +27,120 @@ const (
 )
 
 var (
-	allKubeconfigContextNames []string
+	// need mutex for all maps because multiple stores with multiple go routines write to the map simultaneously
+	// in addition the fuzzy search reads from the maps during hot reload
+	allKubeconfigContextNamesLock = sync.RWMutex{}
+	allKubeconfigContextNames     []string
 
 	contextToPathMapping     = make(map[string]string)
 	contextToPathMappingLock = sync.RWMutex{}
 
 	pathToKubeconfig     = make(map[string]string)
 	pathToKubeconfigLock = sync.RWMutex{}
+
+	pathToStore     = make(map[string]types.StoreKind)
+	pathToStoreLock = sync.RWMutex{}
 )
 
-func Switcher(log *logrus.Entry, kubeconfigStore store.KubeconfigStore, configPath string, stateDir string, showPreview bool) error {
-	if err := kubeconfigStore.CheckRootPath(); err != nil {
-		return err
-	}
+func Switcher(stores []store.KubeconfigStore, switchConfig *types.Config, configPath string, stateDir string, showPreview bool) error {
+	for _, kubeconfigStore := range stores {
+		logger := kubeconfigStore.GetLogger()
 
-	searchIndex, err := index.New(log, kubeconfigStore.GetKind(), stateDir)
-	if err != nil {
-		return err
-	}
-
-	shouldReadFromIndex := false
-	if searchIndex.HasContent() && searchIndex.HasKind(kubeconfigStore.GetKind()) {
-		switchConfig, err := config.LoadConfigFromFile(configPath)
-		if err != nil {
-			return fmt.Errorf("failed to check if should read from index file: %v", err)
+		if err := kubeconfigStore.VeryKubeconfigPaths(); err != nil {
+			return err
 		}
 
-		// found an index for the correct Store kind
-		// check if should use existing index or not
-		shouldReadFromIndex, err = searchIndex.ShouldBeUsed(switchConfig)
+		searchIndex, err := index.New(logger, kubeconfigStore.GetKind(), stateDir)
 		if err != nil {
 			return err
 		}
+
+		shouldReadFromIndex, err := shouldReadFromIndex(searchIndex, kubeconfigStore, switchConfig)
+		if err != nil {
+			return err
+		}
+
+		if shouldReadFromIndex {
+			go func(store store.KubeconfigStore, index index.SearchIndex) {
+				// directly set from pre-computed index
+				content := index.GetContent()
+				for contextName, path := range content {
+					// add to allKubeconfigContextNames for fuzzy search
+					appendToAllKubeconfigContextNames(contextName)
+					writeToPathToStoreKind(path, store.GetKind())
+					writeToContextToPathMapping(contextName, path)
+				}
+			}(kubeconfigStore, *searchIndex)
+
+			continue
+		}
+
+		// otherwise, we need to query the backing store for the kubeconfig files
+		c := make(chan store.SearchResult)
+		go func(store store.KubeconfigStore, channel chan store.SearchResult) {
+			// only close when directory search is over, otherwise send on closed channel
+			defer close(channel)
+			store.GetLogger().Debugf("Starting search for store: %s", store.GetKind())
+			store.StartSearch(channel)
+		}(kubeconfigStore, c)
+
+		go func(store store.KubeconfigStore, channel chan store.SearchResult, index index.SearchIndex) error {
+			// remember the context to kubeconfig path mapping for this this store
+			// to write it to the index. Do not use the global "ContextToPathMapping"
+			// as this contains contexts names from all stores combined
+			localContextToPathMapping := make(map[string]string)
+			for channelResult := range channel {
+				if channelResult.Error != nil {
+					logger.Warnf("error returned from search: %v", channelResult.Error)
+					continue
+				}
+
+				// get the context names from the parsed kubeconfig
+				contexts, err := getContextsForKubeconfigPath(store, channelResult.KubeconfigPath)
+				if err != nil {
+					// do not throw Error, try to parse the other files
+					// this will happen a lot when using vault as storage because the secrets key value needs to match the desired kubeconfig name
+					// this however cannot be checked without retrieving the actual secret (path discovery is only list operation)
+					continue
+				}
+
+				writeToPathToStoreKind(channelResult.KubeconfigPath, store.GetKind())
+
+				// write to global map that is concurrently read by the fuzzy search
+				appendToAllKubeconfigContextNames(contexts...)
+
+				for _, context := range contexts {
+					// add to global contextToPath map
+					writeToContextToPathMapping(context, channelResult.KubeconfigPath)
+					// add to local contextToPath map to write the index for this store only
+					localContextToPathMapping[context] = channelResult.KubeconfigPath
+				}
+			}
+
+			// write index file as soon as the path discovery is complete
+			writeIndex(store, &index, localContextToPathMapping)
+			return nil
+		}(kubeconfigStore, c, *searchIndex)
 	}
 
-	var kubeconfigPath, selectedContext string
-	if shouldReadFromIndex {
-		kubeconfigPath, selectedContext, err = fuzzySearchFromIndex(log, kubeconfigStore, *searchIndex, showPreview)
-		if err != nil {
-			return err
-		}
-	} else {
-		kubeconfigPath, selectedContext, err = fuzzySearch(log, kubeconfigStore, *searchIndex, showPreview)
-		if err != nil {
-			return err
-		}
+	var kindToStore = map[types.StoreKind]store.KubeconfigStore{}
+	for _, s := range stores {
+		kindToStore[s.GetKind()] = s
+	}
+
+	kubeconfigPath, selectedContext, err := showFuzzySearch(kindToStore, showPreview)
+
+	if len(kubeconfigPath) == 0 {
+		return nil
 	}
 
 	// remove the folder name from the context name
 	split := strings.Split(selectedContext, "/")
 	selectedContext = split[len(split)-1]
 
-	kubeconfigData, err := kubeconfigStore.GetKubeconfigForPath(log, kubeconfigPath)
+	storeKind := readFromPathToStoreKind(kubeconfigPath)
+	store := kindToStore[storeKind]
+	kubeconfigData, err := store.GetKubeconfigForPath(kubeconfigPath)
 	if err != nil {
 		return err
 	}
@@ -89,89 +150,55 @@ func Switcher(log *logrus.Entry, kubeconfigStore store.KubeconfigStore, configPa
 		return fmt.Errorf("failed to write current context to temporary kubeconfig: %v", err)
 	}
 
-	// print kubeconfig path to std.out -> captured by calling bash script to set KUBECONFIG ENV Variable
+	// print kubeconfig path to std.out -> captured by calling bash script to set KUBECONFIG environment Variable
 	fmt.Print(tempKubeconfigPath)
 
 	return nil
 }
 
-func fuzzySearchFromIndex(log *logrus.Entry, store store.KubeconfigStore, searchIndex index.SearchIndex, showPreview bool) (string, string, error) {
-	contextToPathMapping = searchIndex.GetContent()
-
-	// build all KubeconfigContextNames from pre-computed index
-	allKubeconfigContextNames = make([]string, len(contextToPathMapping))
-	i := 0
-	for k := range contextToPathMapping {
-		allKubeconfigContextNames[i] = k
-		i++
+// writeIndex tries to write the Index file for the kubeconfig store
+// if it fails to do so, it logs a warning, but does not panic
+func writeIndex(store store.KubeconfigStore, searchIndex *index.SearchIndex, ctxToPathMapping map[string]string) {
+	index := types.Index{
+		Kind:                 store.GetKind(),
+		ContextToPathMapping: ctxToPathMapping,
 	}
 
-	return showFuzzySearch(log, store, showPreview)
+	if err := searchIndex.Write(index); err != nil {
+		store.GetLogger().Warnf("failed to write index file to speed up future fuzzy searches: %v", err)
+		return
+	}
+
+	indexStateToWrite := types.IndexState{
+		Kind:           store.GetKind(),
+		LastUpdateTime: time.Now().UTC(),
+	}
+
+	if err := searchIndex.WriteState(indexStateToWrite); err != nil {
+		store.GetLogger().Warnf("failed to write index state file: %v", err)
+	}
 }
 
-func fuzzySearch(log *logrus.Entry, kubeconfigStore store.KubeconfigStore, searchIndex index.SearchIndex, showPreview bool) (string, string, error) {
-	var channel = make(chan store.PathDiscoveryResult)
-
-	go func() {
-		// only close when directory search is over, otherwise send on closed channel
-		defer close(channel)
-		kubeconfigStore.DiscoverPaths(log, channel)
-	}()
-
-	go func() error {
-		for channelResult := range channel {
-			if channelResult.Error != nil {
-				log.Warnf("error returned from path discovery: %v", channelResult.Error)
-				continue
-			}
-
-			// get the context names from the parsed kubeconfig
-			contexts, err := getContextsForKubeconfigPath(log, kubeconfigStore, channelResult.KubeconfigPath)
-			if err != nil {
-				// do not throw Error, try to parse the other files
-				// this will happen a lot when using vault as storage because the secrets key value needs to matche the desired kubeconfig name
-				// this however cannot be checked without retrieving the actual secret (path discovery is only list operation)
-				continue
-			}
-
-			allKubeconfigContextNames = append(allKubeconfigContextNames, contexts...)
-			for _, context := range contexts {
-				writeToContextToPathMapping(context, channelResult.KubeconfigPath)
-			}
+func shouldReadFromIndex(searchIndex *index.SearchIndex, kubeconfigStore store.KubeconfigStore, switchConfig *types.Config) (bool, error) {
+	if searchIndex.HasContent() && searchIndex.HasKind(kubeconfigStore.GetKind()) {
+		// found an index for the correct Store kind
+		// check if should use existing index or not
+		shouldReadFromIndex, err := searchIndex.ShouldBeUsed(switchConfig)
+		if err != nil {
+			return false, err
 		}
-
-		// write index file as soon as the path discovery is complete
-		index := types.Index{
-			Kind:                 kubeconfigStore.GetKind(),
-			ContextToPathMapping: contextToPathMapping,
-		}
-
-		if err := searchIndex.Write(index); err != nil {
-			log.Warnf("failed to write index file to speed up future fuzzy searches: %v", err)
-			return nil
-		}
-
-		indexStateToWrite := types.IndexState{
-			Kind:           kubeconfigStore.GetKind(),
-			LastUpdateTime: time.Now().UTC(),
-		}
-
-		if err := searchIndex.WriteState(indexStateToWrite); err != nil {
-			log.Warnf("failed to write index state file: %v", err)
-		}
-
-		return nil
-	}()
-
-	return showFuzzySearch(log, kubeconfigStore, showPreview)
+		return shouldReadFromIndex, nil
+	}
+	return false, nil
 }
 
-func showFuzzySearch(log *logrus.Entry, kubeconfigStore store.KubeconfigStore, showPreview bool) (string, string, error) {
+func showFuzzySearch(kindToStore map[types.StoreKind]store.KubeconfigStore, showPreview bool) (string, string, error) {
+	log := logrus.New()
 	// display selection dialog for all the kubeconfig context names
 	idx, err := fuzzyfinder.Find(
 		&allKubeconfigContextNames,
 		func(i int) string {
-			return allKubeconfigContextNames[i]
+			return readFromAllKubeconfigContextNames(i)
 		},
 		fuzzyfinder.WithHotReload(),
 		fuzzyfinder.WithPreviewWindow(func(i, w, h int) string {
@@ -180,8 +207,11 @@ func showFuzzySearch(log *logrus.Entry, kubeconfigStore store.KubeconfigStore, s
 			}
 
 			// read the content of the kubeconfig here and display
-			currentContextName := allKubeconfigContextNames[i]
-			kubeconfig, err := getSanitizedKubeconfigForContext(log, kubeconfigStore, currentContextName)
+			currentContextName := readFromAllKubeconfigContextNames(i)
+			path := readFromContextToPathMapping(currentContextName)
+			storeType := readFromPathToStoreKind(path)
+			store := kindToStore[storeType]
+			kubeconfig, err := getSanitizedKubeconfigForKubeconfigPath(store, path)
 			if err != nil {
 				log.Warnf("failed to show preview: %v", err)
 				return ""
@@ -194,14 +224,14 @@ func showFuzzySearch(log *logrus.Entry, kubeconfigStore store.KubeconfigStore, s
 	}
 
 	// map selection back to kubeconfig
-	selectedContext := allKubeconfigContextNames[idx]
+	selectedContext := readFromAllKubeconfigContextNames(idx)
 	kubeconfigPath := readFromContextToPathMapping(selectedContext)
 
 	return kubeconfigPath, selectedContext, nil
 }
 
-func getContextsForKubeconfigPath(log *logrus.Entry, kubeconfigStore store.KubeconfigStore, kubeconfigPath string) ([]string, error) {
-	bytes, err := kubeconfigStore.GetKubeconfigForPath(log, kubeconfigPath)
+func getContextsForKubeconfigPath(kubeconfigStore store.KubeconfigStore, kubeconfigPath string) ([]string, error) {
+	bytes, err := kubeconfigStore.GetKubeconfigForPath(kubeconfigPath)
 	if err != nil {
 		return nil, err
 	}
@@ -217,21 +247,19 @@ func getContextsForKubeconfigPath(log *logrus.Entry, kubeconfigStore store.Kubec
 		return nil, fmt.Errorf("could not marshal kubeconfig with path '%s': %v", kubeconfigPath, err)
 	}
 
-	// save kubeconfig content to in-memory map to avoid duplicate read operation in getSanitizedKubeconfigForContext
+	// save kubeconfig content to in-memory map to avoid duplicate read operation in getSanitizedKubeconfigForKubeconfigPath
 	writeToPathToKubeconfig(kubeconfigPath, string(kubeconfigData))
 	return getContextsFromKubeconfig(kubeconfigStore.GetKind(), kubeconfigPath, config)
 }
 
-func getSanitizedKubeconfigForContext(log *logrus.Entry, kubeconfigStore store.KubeconfigStore, contextName string) (string, error) {
-	path := readFromContextToPathMapping(contextName)
-
-	// during first run without index, the files are already read in the getContextsForKubeconfigPath and save in-memory
+func getSanitizedKubeconfigForKubeconfigPath(kubeconfigStore store.KubeconfigStore, path string) (string, error) {
+	// during first run without index, the files are already read in the getContextsForKubeconfigPath and saved in-memory
 	kubeconfig := readFromPathToKubeconfig(path)
 	if len(kubeconfig) > 0 {
 		return kubeconfig, nil
 	}
 
-	data, err := kubeconfigStore.GetKubeconfigForPath(log, path)
+	data, err := kubeconfigStore.GetKubeconfigForPath(path)
 	if err != nil {
 		return "", fmt.Errorf("could not read file with path '%s': %v", path, err)
 	}
@@ -246,7 +274,7 @@ func getSanitizedKubeconfigForContext(log *logrus.Entry, kubeconfigStore store.K
 		return "", fmt.Errorf("could not marshal kubeconfig with path '%s': %v", path, err)
 	}
 
-	// save kubeconfig content to in-memory map to avoid duplicate read operation in getSanitizedKubeconfigForContext
+	// save kubeconfig content to in-memory map to avoid duplicate read operation in getSanitizedKubeconfigForKubeconfigPath
 	writeToPathToKubeconfig(path, string(kubeconfigData))
 
 	return string(kubeconfigData), nil
@@ -339,6 +367,18 @@ func appendCurrentContextToTemporaryKubeconfigFile(kubeconfigPath, currentContex
 	return nil
 }
 
+func readFromAllKubeconfigContextNames(index int) string {
+	allKubeconfigContextNamesLock.RLock()
+	defer allKubeconfigContextNamesLock.RUnlock()
+	return allKubeconfigContextNames[index]
+}
+
+func appendToAllKubeconfigContextNames(values ...string) {
+	allKubeconfigContextNamesLock.Lock()
+	defer allKubeconfigContextNamesLock.Unlock()
+	allKubeconfigContextNames = append(allKubeconfigContextNames, values...)
+}
+
 func readFromContextToPathMapping(key string) string {
 	contextToPathMappingLock.RLock()
 	defer contextToPathMappingLock.RUnlock()
@@ -349,6 +389,18 @@ func writeToContextToPathMapping(key, value string) {
 	contextToPathMappingLock.Lock()
 	defer contextToPathMappingLock.Unlock()
 	contextToPathMapping[key] = value
+}
+
+func readFromPathToStoreKind(key string) types.StoreKind {
+	pathToStoreLock.RLock()
+	defer pathToStoreLock.RUnlock()
+	return pathToStore[key]
+}
+
+func writeToPathToStoreKind(key string, value types.StoreKind) {
+	pathToStoreLock.Lock()
+	defer pathToStoreLock.Unlock()
+	pathToStore[key] = value
 }
 
 func readFromPathToKubeconfig(key string) string {

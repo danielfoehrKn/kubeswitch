@@ -7,3 +7,11 @@
 .idea
 .DS_Store
 *~
+
+/hack/switch/switch.tar.gz
+
+/hack/switch/switcher_darwin_amd64
+/hack/switch/switcher_darwin_amd64.tar.gz
+
+/hack/switch/switcher_linux_amd64
+/hack/switch/switcher_linux_amd64.tar.gz

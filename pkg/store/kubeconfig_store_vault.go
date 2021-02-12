@@ -16,12 +16,16 @@ func (s *VaultStore) GetKind() types.StoreKind {
 	return types.StoreKindVault
 }
 
-func (s *VaultStore) recursivePathTraversal(log *logrus.Entry, wg *sync.WaitGroup, searchPath string, channel chan PathDiscoveryResult) {
+func (s *VaultStore) GetLogger() *logrus.Entry {
+	return s.Logger
+}
+
+func (s *VaultStore) recursivePathTraversal(wg *sync.WaitGroup, searchPath string, channel chan SearchResult) {
 	defer wg.Done()
 
 	secret, err := s.Client.Logical().List(searchPath)
 	if err != nil {
-		channel <- PathDiscoveryResult{
+		channel <- SearchResult{
 			KubeconfigPath: "",
 			Error:          err,
 		}
@@ -29,7 +33,7 @@ func (s *VaultStore) recursivePathTraversal(log *logrus.Entry, wg *sync.WaitGrou
 	}
 
 	if secret == nil {
-		log.Infof("No secrets found for path %s", searchPath)
+		s.Logger.Infof("No secrets found for path %s", searchPath)
 		return
 	}
 
@@ -39,10 +43,10 @@ func (s *VaultStore) recursivePathTraversal(log *logrus.Entry, wg *sync.WaitGrou
 		if strings.HasSuffix(item.(string), "/") {
 			// this is another folder
 			wg.Add(1)
-			go s.recursivePathTraversal(log, wg, itemPath, channel)
+			go s.recursivePathTraversal(wg, itemPath, channel)
 		} else if item != "" {
 			// found an actual secret
-			channel <- PathDiscoveryResult{
+			channel <- SearchResult{
 				KubeconfigPath: itemPath,
 				Error:          err,
 			}
@@ -50,13 +54,16 @@ func (s *VaultStore) recursivePathTraversal(log *logrus.Entry, wg *sync.WaitGrou
 	}
 }
 
-func (s *VaultStore) DiscoverPaths(log *logrus.Entry, channel chan PathDiscoveryResult) {
-	log.Infof("discovering secrets from vault under path %q", s.KubeconfigPath)
+func (s *VaultStore) StartSearch(channel chan SearchResult) {
 	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go s.recursivePathTraversal(log, &wg, s.KubeconfigPath, channel)
+	// start multiple recursive searches from different root paths
+	for _, path := range s.vaultPaths {
+		s.Logger.Debugf("discovering secrets from vault under path %q", path)
+
+		wg.Add(1)
+		go s.recursivePathTraversal(&wg, path, channel)
+	}
 	wg.Wait()
-	return
 }
 
 func getBytesFromSecretValue(v interface{}) ([]byte, error) {
@@ -75,8 +82,8 @@ func getBytesFromSecretValue(v interface{}) ([]byte, error) {
 	return bytes, nil
 }
 
-func (s *VaultStore) GetKubeconfigForPath(log *logrus.Entry, path string) ([]byte, error) {
-	log.Debugf("vault: getting secret for path %q", path)
+func (s *VaultStore) GetKubeconfigForPath(path string) ([]byte, error) {
+	s.Logger.Debugf("vault: getting secret for path %q", path)
 
 	secret, err := s.Client.Logical().Read(path)
 	if err != nil {
@@ -109,10 +116,26 @@ func (s *VaultStore) GetKubeconfigForPath(log *logrus.Entry, path string) ([]byt
 	return nil, fmt.Errorf("should not happen")
 }
 
-func (s *VaultStore) CheckRootPath() error {
-	_, err := s.Client.Logical().Read(s.KubeconfigPath)
-	if err != nil {
-		return err
+func (s *VaultStore) VeryKubeconfigPaths() error {
+	var duplicatePath = make(map[string]*struct{})
+
+	for _, path := range s.KubeconfigPaths {
+		if path.Store != types.StoreKindVault {
+			continue
+		}
+
+		// do not add duplicate paths
+		if duplicatePath[path.Path] != nil {
+			continue
+		}
+		duplicatePath[path.Path] = &struct{}{}
+
+		_, err := s.Client.Logical().Read(path.Path)
+		if err != nil {
+			return err
+		}
+
+		s.vaultPaths = append(s.vaultPaths, path.Path)
 	}
 	return nil
 }

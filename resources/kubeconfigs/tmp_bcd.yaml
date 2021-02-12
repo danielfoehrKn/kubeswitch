@@ -4,19 +4,19 @@ current-context: bcd
 contexts:
 - name: bcd
   context:
-    cluster: shoot--d060239--dev-seed-gcp
-    user: shoot--d060239--dev-seed-gcp
+    cluster: shoot----dev-seed-gcp
+    user: shoot----dev-seed-gcp
 clusters:
-- name: shoot--d060239--dev-seed-gcp
+- name: shoot----dev-seed-gcp
   cluster:
     certificate-authority-data: ZHVtbXk=
-    server: https://api.dev-seed-gcp.d060239.shoot.dev.dummy.com
+    server: https://api.dev-seed-gcp..shoot.dev.dummy.com
 users:
-- name: shoot--d060239--dev-seed-gcp
+- name: shoot----dev-seed-gcp
   user:
     client-certificate-data: ZHVtbXk=
     client-key-data: ZHVtbXky
-- name: shoot--d060239--dev-seed-gcp-basic-auth
+- name: shoot----dev-seed-gcp-basic-auth
   user:
     username: admin
     password: cGFzc3dvcmQ=

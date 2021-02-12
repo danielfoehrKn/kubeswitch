@@ -7,25 +7,31 @@ import (
 	"github.com/danielfoehrkn/kubectlSwitch/types"
 )
 
-type PathDiscoveryResult struct {
+type SearchResult struct {
 	KubeconfigPath string
 	Error          error
 }
 
 type KubeconfigStore interface {
+	GetLogger() *logrus.Entry
 	GetKind() types.StoreKind
-	CheckRootPath() error
-	DiscoverPaths(log *logrus.Entry, channel chan PathDiscoveryResult)
-	GetKubeconfigForPath(log *logrus.Entry, path string) ([]byte, error)
+	VeryKubeconfigPaths() error
+	StartSearch(channel chan SearchResult)
+	GetKubeconfigForPath(path string) ([]byte, error)
 }
 
 type FilesystemStore struct {
-	KubeconfigPath string
-	KubeconfigName string
+	Logger                *logrus.Entry
+	KubeconfigPaths       []types.KubeconfigPath
+	KubeconfigName        string
+	kubeconfigDirectories []string
+	kubeconfigFilepaths   []string
 }
 
 type VaultStore struct {
-	KubeconfigName string
-	KubeconfigPath string
-	Client         *vaultapi.Client
+	Logger          *logrus.Entry
+	Client          *vaultapi.Client
+	KubeconfigName  string
+	KubeconfigPaths []types.KubeconfigPath
+	vaultPaths      []string
 }

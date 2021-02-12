@@ -10,9 +10,16 @@ const (
 )
 
 type Config struct {
-	Kind                          string         `yaml:"kind"`
-	KubeconfigRediscoveryInterval *time.Duration `yaml:"kubeconfigRediscoveryInterval"`
-	Hooks                         []Hook         `yaml:"hooks"`
+	Kind                          string           `yaml:"kind"`
+	KubeconfigRediscoveryInterval *time.Duration   `yaml:"kubeconfigRediscoveryInterval"`
+	VaultAPIAddress               string           `yaml:"vaultAPIAddress"`
+	Hooks                         []Hook           `yaml:"hooks"`
+	KubeconfigPaths               []KubeconfigPath `yaml:"kubeconfigPaths"`
+}
+
+type KubeconfigPath struct {
+	Path  string    `yaml:"path"`
+	Store StoreKind `yaml:"store"`
 }
 
 type Hook struct {

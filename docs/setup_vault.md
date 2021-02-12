@@ -1,13 +1,12 @@
-# Use the Vault kubeconfig store
+# Setup Vault for `switch`
 
 Vault can be used as the kubeconfig store for `switch`.
 Currently, the [key-value secrets engine](https://www.vaultproject.io/docs/secrets/kv) is supported.
+In addition, only one Vault instance can be configured. However, you can configure 
+multiple search paths within this one Vault instance.
 
-## Setup vault
-
-The `vault` should store all base64 encoded kubeconfigs under one root path.
-This path will be recursively searched for secrets.
-
+The `vault` should store kubeconfigs base64 encoded under one or multiple root paths.
+These paths will be recursively searched for secrets.
 
 First, enable this path e.g. `landscapes` with the [key-value secrets engine](https://www.vaultproject.io/docs/secrets/kv).
 
@@ -35,26 +34,15 @@ config    <base64 kubeconfig>
 
 If you deal with large numbers of changing kubeconfigs, 
 it is recommended to setup an automation to sync the kubeconfigs to the vault instance.
+You can use [Hooks](../hooks/README.md) to achieve that.
 
-## Configure `switch` to use the `vault`
+## Configure `switch` to use Vault as Kubeconfig store
 
-Using `vault` requires the following
-- set either the environment variable `VAULT_ADDR` or the switch command line flag `--vault-api-address` to the API endpoint of your vault instance.
-- make sure the file `~/.vault-token` is set (automatically created via the `vault` CLI) and contains the token for your vault server. Alternatively set the environment variable `VAULT_TOKEN`.
-- set the switch command line flag `--kubeconfig-path` to the root path of the vault secrets engine. E.g if the kubeconfigs are stored in vault under `landscapes/dev/cluster-1` and `landscapes/canary/cluster-1` then set the flag value to `landscapes`
-- set the switch command line flag `--store vault`
-
-Example usage:
-
-`
-switch --kubeconfig-path landscapes --store vault  --vault-api-address http://127.0.0.1:8200
-`
-
-I recommend creating an alias for this command.
+Please [see here](kubeconfig_stores.md) on how to configure `switch` either via CLI flags or a `SwitchConfig` file.
 
 ## Additional Considerations
 
-One of the reason I build this vault integration was that I
+One of the reason this vault integration was built originally is because I
 used to synchronize a huge number of kubeconfig files to my local filesystem.
 However, for security reasons they should instead be stored in a Vault.
 

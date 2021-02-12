@@ -2,11 +2,11 @@ apiVersion: v1
 clusters:
   - cluster:
       certificate-authority-data: CASA=
-      server: https://api.alicloud.seed.dev.k8s.ondemand.com
+      server: https://api.alicloud.seed.dev.dummy.com
     name: dev-alicloud
   - cluster:
       certificate-authority-data: DAASD=
-      server: https://api.aws.seed.dev.k8s.ondemand.com
+      server: https://api.aws.seed.dev.dummy.com
     name: dev-aws
 contexts:
   - context:
