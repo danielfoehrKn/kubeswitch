@@ -43,6 +43,11 @@ Use "switch [command] --help" for more information about a command.
 '
 }
 
+unknownCommand() {
+  echo "error: unknown command \"$1\" for "switch"
+Run 'switch --help' for usage."
+}
+
 usage()
 {
    # usage for `switch hooks`
@@ -145,7 +150,7 @@ function switch(){
                      return
                      ;;
                   *)
-                     usage $HOOKS
+                     unknownCommand $1
                      return
                      ;;
             esac
