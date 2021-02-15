@@ -25,9 +25,10 @@ Usage:
   switch [command]
 
 Available Commands:
-  clean       Cleans all temporary kubeconfig files
-  help        Help about any command
-  hooks       Runs configured hooks
+  <context-name>  Switch to context name provided as first argument
+  clean           Cleans all temporary kubeconfig files
+  help            Help about any command
+  hooks           Runs configured hooks
 
 Flags:
       --config-path string         path on the local filesystem to the configuration file. (default "~/.kube/switch-config.yaml")
@@ -74,6 +75,7 @@ function switch(){
   VAULT_API_ADDRESS=''
   EXECUTABLE_PATH=''
   CLEAN=''
+  SET_CONTEXT=''
 
   # Hooks
   HOOKS=''
@@ -150,8 +152,8 @@ function switch(){
                      return
                      ;;
                   *)
-                     unknownCommand $1
-                     return
+                     SET_CONTEXT=$1
+                     shift
                      ;;
             esac
     done
@@ -217,6 +219,11 @@ function switch(){
      CONFIG_PATH_FLAG=--config-path
   fi
 
+  if [ -n "$SET_CONTEXT" ]
+  then
+     SET_CONTEXT="$SET_CONTEXT"
+  fi
+
   if [ -n "$HOOKS" ]
   then
      echo "Running hooks."
@@ -257,6 +264,7 @@ function switch(){
 
   # execute golang binary handing over all the flags
   NEW_KUBECONFIG=$($EXECUTABLE_PATH \
+  $SET_CONTEXT \
   $KUBECONFIG_PATH_FLAG ${KUBECONFIG_PATH} \
   $STORE_FLAG ${STORE} \
   $KUBECONFIG_NAME_FLAG ${KUBECONFIG_NAME} \

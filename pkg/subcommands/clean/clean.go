@@ -5,11 +5,11 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/danielfoehrkn/kubectlSwitch/pkg"
+	"github.com/danielfoehrkn/kubectlSwitch/pkg/util"
 )
 
 func Clean() error {
-	tempDir := os.ExpandEnv(pkg.TemporaryKubeconfigDir)
+	tempDir := os.ExpandEnv(util.TemporaryKubeconfigDir)
 	files, _ := ioutil.ReadDir(tempDir)
 	err := os.RemoveAll(tempDir)
 	if err != nil {

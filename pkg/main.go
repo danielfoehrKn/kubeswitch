@@ -2,9 +2,6 @@ package pkg
 
 import (
 	"fmt"
-	"io/ioutil"
-	"log"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -16,14 +13,8 @@ import (
 
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/index"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/store"
+	"github.com/danielfoehrkn/kubectlSwitch/pkg/util"
 	"github.com/danielfoehrkn/kubectlSwitch/types"
-)
-
-const (
-	// kubeconfigCurrentContext is a constant for the current context in a kubeconfig file
-	kubeconfigCurrentContext = "current-context:"
-	// TemporaryKubeconfigDir is a constant for the directory where the switcher stores the temporary kubeconfig files
-	TemporaryKubeconfigDir = "$HOME/.kube/.switch_tmp"
 )
 
 var (
@@ -40,89 +31,46 @@ var (
 
 	pathToStore     = make(map[string]types.StoreKind)
 	pathToStoreLock = sync.RWMutex{}
+
+	logger = logrus.New()
 )
 
-func Switcher(stores []store.KubeconfigStore, switchConfig *types.Config, configPath string, stateDir string, showPreview bool) error {
-	for _, kubeconfigStore := range stores {
-		logger := kubeconfigStore.GetLogger()
-
-		if err := kubeconfigStore.VeryKubeconfigPaths(); err != nil {
-			return err
-		}
-
-		searchIndex, err := index.New(logger, kubeconfigStore.GetKind(), stateDir)
-		if err != nil {
-			return err
-		}
-
-		shouldReadFromIndex, err := shouldReadFromIndex(searchIndex, kubeconfigStore, switchConfig)
-		if err != nil {
-			return err
-		}
-
-		if shouldReadFromIndex {
-			go func(store store.KubeconfigStore, index index.SearchIndex) {
-				// directly set from pre-computed index
-				content := index.GetContent()
-				for contextName, path := range content {
-					// add to allKubeconfigContextNames for fuzzy search
-					appendToAllKubeconfigContextNames(contextName)
-					writeToPathToStoreKind(path, store.GetKind())
-					writeToContextToPathMapping(contextName, path)
-				}
-			}(kubeconfigStore, *searchIndex)
-
-			continue
-		}
-
-		// otherwise, we need to query the backing store for the kubeconfig files
-		c := make(chan store.SearchResult)
-		go func(store store.KubeconfigStore, channel chan store.SearchResult) {
-			// only close when directory search is over, otherwise send on closed channel
-			defer close(channel)
-			store.GetLogger().Debugf("Starting search for store: %s", store.GetKind())
-			store.StartSearch(channel)
-		}(kubeconfigStore, c)
-
-		go func(store store.KubeconfigStore, channel chan store.SearchResult, index index.SearchIndex) error {
-			// remember the context to kubeconfig path mapping for this this store
-			// to write it to the index. Do not use the global "ContextToPathMapping"
-			// as this contains contexts names from all stores combined
-			localContextToPathMapping := make(map[string]string)
-			for channelResult := range channel {
-				if channelResult.Error != nil {
-					logger.Warnf("error returned from search: %v", channelResult.Error)
-					continue
-				}
-
-				// get the context names from the parsed kubeconfig
-				contexts, err := getContextsForKubeconfigPath(store, channelResult.KubeconfigPath)
-				if err != nil {
-					// do not throw Error, try to parse the other files
-					// this will happen a lot when using vault as storage because the secrets key value needs to match the desired kubeconfig name
-					// this however cannot be checked without retrieving the actual secret (path discovery is only list operation)
-					continue
-				}
-
-				writeToPathToStoreKind(channelResult.KubeconfigPath, store.GetKind())
-
-				// write to global map that is concurrently read by the fuzzy search
-				appendToAllKubeconfigContextNames(contexts...)
-
-				for _, context := range contexts {
-					// add to global contextToPath map
-					writeToContextToPathMapping(context, channelResult.KubeconfigPath)
-					// add to local contextToPath map to write the index for this store only
-					localContextToPathMapping[context] = channelResult.KubeconfigPath
-				}
-			}
-
-			// write index file as soon as the path discovery is complete
-			writeIndex(store, &index, localContextToPathMapping)
-			return nil
-		}(kubeconfigStore, c, *searchIndex)
+func Switcher(stores []store.KubeconfigStore, switchConfig *types.Config, stateDir string, showPreview bool) error {
+	c, err := DoSearch(stores, switchConfig, stateDir)
+	if err != nil {
+		return err
 	}
 
+	go func(channel chan DiscoveredKubeconfig) {
+		for discoveredKubeconfig := range channel {
+			if discoveredKubeconfig.Error != nil {
+				logger.Warnf("error returned from search: %v", discoveredKubeconfig.Error)
+				continue
+			}
+
+			if discoveredKubeconfig.Store == nil {
+				// this should not happen
+				logger.Debugf("store returned from search is nil. This should not happen")
+				continue
+			}
+			kubeconfigStore := *discoveredKubeconfig.Store
+
+			// write to global map that is polled by the fuzzy search
+			appendToAllKubeconfigContextNames(discoveredKubeconfig.ContextNames...)
+			// associate (path -> store)
+			// required to map back from selected context -> path -> store -> store.getKubeconfig(path)
+			writeToPathToStoreKind(discoveredKubeconfig.Path, kubeconfigStore.GetKind())
+
+			for _, context := range discoveredKubeconfig.ContextNames {
+				// add to global contextToPath map
+				// required to map back from selected context -> path
+				writeToContextToPathMapping(context, discoveredKubeconfig.Path)
+			}
+		}
+	}(*c)
+
+
+	// remember the store for later kubeconfig retrieval
 	var kindToStore = map[types.StoreKind]store.KubeconfigStore{}
 	for _, s := range stores {
 		kindToStore[s.GetKind()] = s
@@ -134,10 +82,6 @@ func Switcher(stores []store.KubeconfigStore, switchConfig *types.Config, config
 		return nil
 	}
 
-	// remove the folder name from the context name
-	split := strings.Split(selectedContext, "/")
-	selectedContext = split[len(split)-1]
-
 	storeKind := readFromPathToStoreKind(kubeconfigPath)
 	store := kindToStore[storeKind]
 	kubeconfigData, err := store.GetKubeconfigForPath(kubeconfigPath)
@@ -145,7 +89,8 @@ func Switcher(stores []store.KubeconfigStore, switchConfig *types.Config, config
 		return err
 	}
 
-	tempKubeconfigPath, err := setCurrentContextOnTemporaryKubeconfigFile(kubeconfigData, selectedContext)
+	selectedContext = util.GetContextWithoutFolderPrefix(selectedContext)
+	tempKubeconfigPath, err := util.SetCurrentContextOnTemporaryKubeconfigFile(kubeconfigData, selectedContext)
 	if err != nil {
 		return fmt.Errorf("failed to write current context to temporary kubeconfig: %v", err)
 	}
@@ -177,19 +122,6 @@ func writeIndex(store store.KubeconfigStore, searchIndex *index.SearchIndex, ctx
 	if err := searchIndex.WriteState(indexStateToWrite); err != nil {
 		store.GetLogger().Warnf("failed to write index state file: %v", err)
 	}
-}
-
-func shouldReadFromIndex(searchIndex *index.SearchIndex, kubeconfigStore store.KubeconfigStore, switchConfig *types.Config) (bool, error) {
-	if searchIndex.HasContent() && searchIndex.HasKind(kubeconfigStore.GetKind()) {
-		// found an index for the correct Store kind
-		// check if should use existing index or not
-		shouldReadFromIndex, err := searchIndex.ShouldBeUsed(switchConfig)
-		if err != nil {
-			return false, err
-		}
-		return shouldReadFromIndex, nil
-	}
-	return false, nil
 }
 
 func showFuzzySearch(kindToStore map[types.StoreKind]store.KubeconfigStore, showPreview bool) (string, string, error) {
@@ -313,58 +245,6 @@ func getContextNames(config *types.KubeConfig, parentFoldername string) []string
 		}
 	}
 	return contextNames
-}
-
-func setCurrentContextOnTemporaryKubeconfigFile(kubeconfigData []byte, ctxnName string) (string, error) {
-	currentContext := fmt.Sprintf("%s %s", kubeconfigCurrentContext, ctxnName)
-
-	lines := strings.Split(string(kubeconfigData), "\n")
-
-	foundCurrentContext := false
-	for i, line := range lines {
-		if !strings.HasPrefix(line, "#") && strings.Contains(line, kubeconfigCurrentContext) {
-			foundCurrentContext = true
-			lines[i] = currentContext
-		}
-	}
-
-	output := strings.Join(lines, "\n")
-	tempDir := os.ExpandEnv(TemporaryKubeconfigDir)
-	err := os.Mkdir(tempDir, 0700)
-	if err != nil && !os.IsExist(err) {
-		log.Fatalln(err)
-	}
-
-	// write temporary kubeconfig file
-	file, err := ioutil.TempFile(tempDir, "config.*.tmp")
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	_, err = file.Write([]byte(output))
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	// if written file does not have the current context set,
-	// add the context at the last line of the file
-	if !foundCurrentContext {
-		return file.Name(), appendCurrentContextToTemporaryKubeconfigFile(file.Name(), currentContext)
-	}
-
-	return file.Name(), nil
-}
-
-func appendCurrentContextToTemporaryKubeconfigFile(kubeconfigPath, currentContext string) error {
-	file, err := os.OpenFile(kubeconfigPath, os.O_APPEND|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	if _, err := file.WriteString(currentContext); err != nil {
-		return err
-	}
-	return nil
 }
 
 func readFromAllKubeconfigContextNames(index int) string {

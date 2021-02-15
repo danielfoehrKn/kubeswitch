@@ -4,6 +4,7 @@ go 1.12
 
 require (
 	github.com/gardener/gardener v1.11.3
+	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/karrick/godirwalk v1.16.1
 	github.com/ktr0731/go-fuzzyfinder v0.2.0

@@ -8,9 +8,18 @@ import (
 )
 
 func main() {
-	command := switcher.NewCommandStartSwitcher()
-	if err := command.Execute(); err != nil {
-		fmt.Print(err)
-		os.Exit(1)
+	rootCommand := switcher.NewCommandStartSwitcher()
+
+	// if first argument is not found, assume it is a context name
+	// hence call default subcommand
+	cmd, _, err := rootCommand.Find(os.Args[1:])
+	if err != nil || cmd == nil {
+		args := append([]string{"set-context"}, os.Args[1:]...)
+		rootCommand.SetArgs(args)
+	}
+
+	if err := rootCommand.Execute(); err != nil {
+	fmt.Print(err)
+	os.Exit(1)
 	}
 }
