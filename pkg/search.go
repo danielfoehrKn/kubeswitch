@@ -72,7 +72,7 @@ func DoSearch(stores []store.KubeconfigStore, switchConfig *types.Config, stateD
 			store.StartSearch(channel)
 		}(kubeconfigStore, c)
 
-		go func(store store.KubeconfigStore, storeSearchChannel chan store.SearchResult, index index.SearchIndex) error {
+		go func(store store.KubeconfigStore, storeSearchChannel chan store.SearchResult, index index.SearchIndex) {
 			// remember the context to kubeconfig path mapping for this this store
 			// to write it to the index. Do not use the global "ContextToPathMapping"
 			// as this contains contexts names from all stores combined
@@ -113,7 +113,6 @@ func DoSearch(stores []store.KubeconfigStore, switchConfig *types.Config, stateD
 
 			// write store index file now that the path discovery is complete
 			writeIndex(store, &index, localContextToPathMapping)
-			return nil
 		}(kubeconfigStore, c, *searchIndex)
 	}
 

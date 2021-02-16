@@ -75,6 +75,9 @@ func Switcher(stores []store.KubeconfigStore, switchConfig *types.Config, stateD
 	}
 
 	kubeconfigPath, selectedContext, err := showFuzzySearch(kindToStore, showPreview)
+	if err != nil {
+		return err
+	}
 
 	if len(kubeconfigPath) == 0 {
 		return nil

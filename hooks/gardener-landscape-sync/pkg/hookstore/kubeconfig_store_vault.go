@@ -22,7 +22,7 @@ func (s *VaultStore) CreateLandscapeDirectory(landscapeDirectory string) error {
 }
 
 func (s *VaultStore) WriteKubeconfigFile(vaultPath, kubeconfigName string, kubeconfigSecret corev1.Secret) error {
-	kubeconfigData, _ := kubeconfigSecret.Data[secrets.DataKeyKubeconfig]
+	kubeconfigData := kubeconfigSecret.Data[secrets.DataKeyKubeconfig]
 
 	_, err := s.Client.Logical().Write(vaultPath, map[string]interface{}{
 		kubeconfigName: kubeconfigData,

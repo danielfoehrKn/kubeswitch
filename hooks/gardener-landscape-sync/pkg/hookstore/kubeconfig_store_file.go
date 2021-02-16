@@ -37,7 +37,7 @@ func (s *FileStore) WriteKubeconfigFile(directory, kubeconfigName string, kubeco
 	}
 	defer file.Close()
 
-	kubeconfig, _ := kubeconfigSecret.Data[secrets.DataKeyKubeconfig]
+	kubeconfig := kubeconfigSecret.Data[secrets.DataKeyKubeconfig]
 	_, err = file.Write(kubeconfig)
 	if err != nil {
 		return err
