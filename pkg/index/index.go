@@ -6,10 +6,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/danielfoehrkn/kubectlSwitch/types"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
-
-	"github.com/danielfoehrkn/kubectlSwitch/types"
 )
 
 const (

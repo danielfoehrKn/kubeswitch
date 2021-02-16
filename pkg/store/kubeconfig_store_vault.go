@@ -7,9 +7,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/danielfoehrkn/kubectlSwitch/types"
+	"github.com/sirupsen/logrus"
 )
 
 func (s *VaultStore) GetKind() types.StoreKind {

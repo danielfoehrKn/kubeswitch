@@ -27,7 +27,7 @@ Usage:
 Available Commands:
   <context-name>  Switch to context name provided as first argument
   help            Help about any command
-  history         Lists the context history
+  history         Switch to a previous context from the history
   clean           Cleans all temporary kubeconfig files
   hooks           Runs configured hooks
 
@@ -177,7 +177,8 @@ function switch(){
 
   if [ -n "$HISTORY" ]
   then
-     $EXECUTABLE_PATH history
+     NEW_KUBECONFIG=$($EXECUTABLE_PATH history)
+     setKubeconfigEnvironmentVariable $NEW_KUBECONFIG
      return
   fi
 
@@ -285,9 +286,13 @@ function switch(){
   $STATE_DIRECTORY_FLAG ${STATE_DIRECTORY} \
   $CONFIG_PATH_FLAG ${CONFIG_PATH})
 
+  setKubeconfigEnvironmentVariable $NEW_KUBECONFIG
+}
+
+function setKubeconfigEnvironmentVariable() {
   if [[ "$?" = "0" ]]; then
-      export KUBECONFIG=${NEW_KUBECONFIG}
-      currentContext=$(kubectl config current-context)
+    export KUBECONFIG=${NEW_KUBECONFIG}
+    currentContext=$(kubectl config current-context)
     echo "switched to context $currentContext"
   fi
 }

@@ -5,9 +5,8 @@ import (
 	"io/ioutil"
 	"os"
 
-	"gopkg.in/yaml.v2"
-
 	"github.com/danielfoehrkn/kubectlSwitch/types"
+	"gopkg.in/yaml.v2"
 )
 
 // LoadConfigFromFile takes a filename and de-serializes the contents into a Configuration object.

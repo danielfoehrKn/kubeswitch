@@ -3,13 +3,12 @@ package setcontext
 import (
 	"fmt"
 
-	"github.com/hashicorp/go-multierror"
-	"github.com/sirupsen/logrus"
-
 	"github.com/danielfoehrkn/kubectlSwitch/pkg"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/store"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/util"
 	"github.com/danielfoehrkn/kubectlSwitch/types"
+	"github.com/hashicorp/go-multierror"
+	"github.com/sirupsen/logrus"
 )
 
 var logger = logrus.New()
@@ -56,7 +55,7 @@ func SetContext(desiredContext string, stores []store.KubeconfigStore, switchCon
 
 	}
 
-	if mError != nil{
+	if mError != nil {
 		return fmt.Errorf("context with name %q not found. Possibly due to errors: %v", desiredContext, mError.Error())
 	}
 

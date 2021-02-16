@@ -1,10 +1,9 @@
 package store
 
 import (
+	"github.com/danielfoehrkn/kubectlSwitch/types"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
-
-	"github.com/danielfoehrkn/kubectlSwitch/types"
 )
 
 type SearchResult struct {

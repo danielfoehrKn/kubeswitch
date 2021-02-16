@@ -12,7 +12,7 @@ type DiscoveredKubeconfig struct {
 	// Path is the kubeconfig path in the backing store (filesystem / Vault)
 	Path string
 	// ContextNames are the context names in the kubeconfig
-	ContextNames  []string
+	ContextNames []string
 	// Store is a reference to the backing store that contains the kubeconfig
 	Store *store.KubeconfigStore
 	// Error is an error that occured during the search
@@ -80,7 +80,7 @@ func DoSearch(stores []store.KubeconfigStore, switchConfig *types.Config, stateD
 			for channelResult := range storeSearchChannel {
 				if channelResult.Error != nil {
 					resultChannel <- DiscoveredKubeconfig{
-						Error:        channelResult.Error,
+						Error: channelResult.Error,
 					}
 					continue
 				}
@@ -93,7 +93,6 @@ func DoSearch(stores []store.KubeconfigStore, switchConfig *types.Config, stateD
 					// this however cannot be checked without retrieving the actual secret (path discovery is only list operation)
 					continue
 				}
-
 
 				// write to result channel
 				resultChannel <- DiscoveredKubeconfig{
@@ -138,4 +137,3 @@ func shouldReadFromIndex(searchIndex *index.SearchIndex, kubeconfigStore store.K
 	}
 	return false, nil
 }
-

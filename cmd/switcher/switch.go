@@ -54,10 +54,15 @@ var (
 func init() {
 	historyCmd := &cobra.Command{
 		Use:   "history",
-		Short: "Lists the context history",
-		Long:  `Lists all the context names from the context history.`,
+		Short: "Switch to a previous context from the history",
+		Long:  `Lists the context history with the ability to switch to a previous context.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return history.ListHistory()
+			stores, config, err := initialize()
+			if err != nil {
+				return err
+			}
+
+			return history.ListHistory(stores, config, stateDirectory)
 		},
 	}
 
@@ -268,7 +273,7 @@ func getVaultStore(vaultAPIAddressFromSwitchConfig string, paths []types.Kubecon
 	}
 
 	if len(vaultToken) == 0 {
-		return nil, fmt.Errorf("when using the vault kubeconfig store, a vault API token must be provided.  Per default, the token file in  \"~.vault-token\" is used. The default token can be overriden via the  environment variable \"VAULT_TOKEN\"")
+		return nil, fmt.Errorf("when using the vault kubeconfig store, a vault API token must be provided. Per default, the token file in \"~.vault-token\" is used. The default token can be overriden via the environment variable \"VAULT_TOKEN\"")
 	}
 
 	config := &vaultapi.Config{

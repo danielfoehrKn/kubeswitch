@@ -19,7 +19,7 @@ func main() {
 	}
 
 	if err := rootCommand.Execute(); err != nil {
-	fmt.Print(err)
-	os.Exit(1)
+		fmt.Print(err)
+		os.Exit(1)
 	}
 }

@@ -7,14 +7,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ktr0731/go-fuzzyfinder"
-	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
-
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/index"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/store"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/util"
 	"github.com/danielfoehrkn/kubectlSwitch/types"
+	"github.com/ktr0731/go-fuzzyfinder"
+	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -68,7 +67,6 @@ func Switcher(stores []store.KubeconfigStore, switchConfig *types.Config, stateD
 			}
 		}
 	}(*c)
-
 
 	// remember the store for later kubeconfig retrieval
 	var kindToStore = map[types.StoreKind]store.KubeconfigStore{}

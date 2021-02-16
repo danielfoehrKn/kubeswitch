@@ -9,10 +9,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/danielfoehrkn/kubectlSwitch/types"
 	"github.com/karrick/godirwalk"
 	"github.com/sirupsen/logrus"
-
-	"github.com/danielfoehrkn/kubectlSwitch/types"
 )
 
 func (s *FilesystemStore) GetKind() types.StoreKind {
