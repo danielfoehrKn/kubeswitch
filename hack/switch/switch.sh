@@ -27,7 +27,7 @@ Usage:
 Available Commands:
   <context-name>  Switch to context name provided as first argument
   help            Help about any command
-  history         Switch to a previous context from the history
+  history         Switch to a previous context from the history (short: h)
   clean           Cleans all temporary kubeconfig files
   hooks           Runs configured hooks
 
@@ -119,6 +119,10 @@ function switch(){
                       ;;
                   clean)
                       CLEAN=$1
+                      shift
+                      ;;
+                  h)
+                      HISTORY=$1
                       shift
                       ;;
                   history)

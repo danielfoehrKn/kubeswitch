@@ -53,9 +53,10 @@ var (
 
 func init() {
 	historyCmd := &cobra.Command{
-		Use:   "history",
-		Short: "Switch to a previous context from the history",
-		Long:  `Lists the context history with the ability to switch to a previous context.`,
+		Use:     "history",
+		Aliases: []string{"h"},
+		Short:   "Switch to a previous context from the history",
+		Long:    `Lists the context history with the ability to switch to a previous context.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			stores, config, err := initialize()
 			if err != nil {
