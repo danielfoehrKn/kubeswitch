@@ -26,8 +26,9 @@ Usage:
 
 Available Commands:
   <context-name>  Switch to context name provided as first argument
-  clean           Cleans all temporary kubeconfig files
   help            Help about any command
+  history         Lists the context history
+  clean           Cleans all temporary kubeconfig files
   hooks           Runs configured hooks
 
 Flags:
@@ -76,6 +77,7 @@ function switch(){
   EXECUTABLE_PATH=''
   CLEAN=''
   SET_CONTEXT=''
+  HISTORY=''
 
   # Hooks
   HOOKS=''
@@ -117,6 +119,10 @@ function switch(){
                       ;;
                   clean)
                       CLEAN=$1
+                      shift
+                      ;;
+                  history)
+                      HISTORY=$1
                       shift
                       ;;
                   hooks)
@@ -166,6 +172,12 @@ function switch(){
   if [ -n "$CLEAN" ]
   then
      $EXECUTABLE_PATH clean
+     return
+  fi
+
+  if [ -n "$HISTORY" ]
+  then
+     $EXECUTABLE_PATH history
      return
   fi
 

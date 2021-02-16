@@ -9,6 +9,7 @@ import (
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/config"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/store"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/subcommands/clean"
+	"github.com/danielfoehrkn/kubectlSwitch/pkg/subcommands/history"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/subcommands/hooks"
 	setcontext "github.com/danielfoehrkn/kubectlSwitch/pkg/subcommands/set-context"
 	"github.com/danielfoehrkn/kubectlSwitch/types"
@@ -51,10 +52,19 @@ var (
 )
 
 func init() {
+	historyCmd := &cobra.Command{
+		Use:   "history",
+		Short: "Lists the context history",
+		Long:  `Lists all the context names from the context history.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return history.ListHistory()
+		},
+	}
+
 	setContextCmd := &cobra.Command{
 		Use:   "set-context",
-		Short: "Sets the provided context without fuzzy search",
-		Long:  `Sets the provided context without fuzzy search. Context name has to exist in any of the found Kubeconfig files.`,
+		Short: "Switch to context name provided as first argument",
+		Long:  `Switch to context name provided as first argument. Context name has to exist in any of the found Kubeconfig files.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			stores, config, err := initialize()
 			if err != nil {
@@ -64,7 +74,6 @@ func init() {
 			return setcontext.SetContext(args[0], stores, config, stateDirectory)
 		},
 	}
-	setCommonFlags(setContextCmd)
 
 	deleteCmd := &cobra.Command{
 		Use:   "clean",
@@ -111,8 +120,12 @@ func init() {
 	rootCommand.AddCommand(setContextCmd)
 	rootCommand.AddCommand(deleteCmd)
 	rootCommand.AddCommand(hookCmd)
+	rootCommand.AddCommand(historyCmd)
 
 	setContextCmd.SilenceUsage = true
+
+	setCommonFlags(setContextCmd)
+	setCommonFlags(historyCmd)
 }
 
 func NewCommandStartSwitcher() *cobra.Command {

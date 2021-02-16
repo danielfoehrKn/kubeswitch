@@ -35,8 +35,6 @@ func SetContext(desiredContext string, stores []store.KubeconfigStore, switchCon
 		}
 		kubeconfigStore := *discoveredKubeconfig.Store
 
-
-		// TODO if none is found, take the one with most matching prefix characters!
 		for _, name := range discoveredKubeconfig.ContextNames {
 			contextWithoutFolderPrefix := util.GetContextWithoutFolderPrefix(name)
 			if desiredContext == name || desiredContext == contextWithoutFolderPrefix {
