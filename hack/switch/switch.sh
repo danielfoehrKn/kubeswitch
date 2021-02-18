@@ -27,7 +27,8 @@ Usage:
 Available Commands:
   <context-name>  Switch to context name provided as first argument
   help            Help about any command
-  history         Switch to a previous context from the history (short: h)
+  history         Switch to any previous context from the history (short: h)
+  -               Switch to the previous context from the history
   clean           Cleans all temporary kubeconfig files
   hooks           Runs configured hooks
   list-contexts   List all available contexts without fuzzy search
@@ -79,6 +80,7 @@ function switch(){
   CLEAN=''
   SET_CONTEXT=''
   HISTORY=''
+  PREV_HISTORY=''
   LIST_CONTEXTS=''
 
   # Hooks
@@ -129,6 +131,10 @@ function switch(){
                       ;;
                   history)
                       HISTORY=$1
+                      shift
+                      ;;
+                  -)
+                      PREV_HISTORY=$1
                       shift
                       ;;
                   list-contexts)
@@ -188,6 +194,13 @@ function switch(){
   if [ -n "$HISTORY" ]
   then
      NEW_KUBECONFIG=$($EXECUTABLE_PATH history)
+     setKubeconfigEnvironmentVariable $NEW_KUBECONFIG
+     return
+  fi
+
+  if [ -n "$PREV_HISTORY" ]
+  then
+     NEW_KUBECONFIG=$($EXECUTABLE_PATH -)
      setKubeconfigEnvironmentVariable $NEW_KUBECONFIG
      return
   fi

@@ -18,6 +18,12 @@ func main() {
 		rootCommand.SetArgs(args)
 	}
 
+	// cobra somehow does  not recognize - as a valid command
+	if os.Args[1] == "-" {
+		args := append([]string{"set-previous-context"}, os.Args[1:]...)
+		rootCommand.SetArgs(args)
+	}
+
 	if err := rootCommand.Execute(); err != nil {
 		fmt.Print(err)
 		os.Exit(1)

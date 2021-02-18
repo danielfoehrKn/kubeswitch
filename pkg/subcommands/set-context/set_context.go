@@ -47,6 +47,10 @@ func SetContext(desiredContext string, stores []store.KubeconfigStore, switchCon
 					return fmt.Errorf("failed to write current context to temporary kubeconfig: %v", err)
 				}
 
+				if err := util.AppendContextToHistory(desiredContext); err != nil {
+					logger.Warnf("failed to append context to history file: %v", err)
+				}
+
 				// print kubeconfig path to std.out -> captured by calling bash script to set KUBECONFIG environment Variable
 				fmt.Print(tempKubeconfigPath)
 				return nil

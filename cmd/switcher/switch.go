@@ -54,10 +54,23 @@ var (
 )
 
 func init() {
+	previousContextCmd := &cobra.Command{
+		Use:   "set-previous-context",
+		Short: "Switch to the previous context from the history",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			stores, config, err := initialize()
+			if err != nil {
+				return err
+			}
+
+			return history.SetPreviousContext(stores, config, stateDirectory)
+		},
+	}
+
 	historyCmd := &cobra.Command{
 		Use:     "history",
 		Aliases: []string{"h"},
-		Short:   "Switch to a previous context from the history",
+		Short:   "Switch to any previous context from the history",
 		Long:    `Lists the context history with the ability to switch to a previous context.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			stores, config, err := initialize()
@@ -145,12 +158,14 @@ func init() {
 	rootCommand.AddCommand(deleteCmd)
 	rootCommand.AddCommand(hookCmd)
 	rootCommand.AddCommand(historyCmd)
+	rootCommand.AddCommand(previousContextCmd)
 
 	setContextCmd.SilenceUsage = true
 
 	setCommonFlags(setContextCmd)
 	setCommonFlags(listContextsCmd)
 	setCommonFlags(historyCmd)
+	setCommonFlags(previousContextCmd)
 }
 
 func NewCommandStartSwitcher() *cobra.Command {

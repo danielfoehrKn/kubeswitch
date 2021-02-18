@@ -28,3 +28,23 @@ func ListHistory(stores []store.KubeconfigStore, switchConfig *types.Config, sta
 
 	return setcontext.SetContext(history[idx], stores, switchConfig, stateDir)
 }
+
+func SetPreviousContext(stores []store.KubeconfigStore, switchConfig *types.Config, stateDir string) error {
+	history, err := util.ReadHistory()
+	if err != nil {
+		return err
+	}
+
+	if len(history) == 0 {
+		return nil
+	}
+
+	var position int
+	if len(history) == 1 {
+		position = 0
+	} else {
+		position = 1
+	}
+
+	return setcontext.SetContext(history[position], stores, switchConfig, stateDir)
+}
