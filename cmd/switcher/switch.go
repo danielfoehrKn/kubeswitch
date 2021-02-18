@@ -11,6 +11,7 @@ import (
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/subcommands/clean"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/subcommands/history"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/subcommands/hooks"
+	list_contexts "github.com/danielfoehrkn/kubectlSwitch/pkg/subcommands/list-contexts"
 	setcontext "github.com/danielfoehrkn/kubectlSwitch/pkg/subcommands/set-context"
 	"github.com/danielfoehrkn/kubectlSwitch/types"
 	vaultapi "github.com/hashicorp/vault/api"
@@ -81,6 +82,21 @@ func init() {
 		},
 	}
 
+	listContextsCmd := &cobra.Command{
+		Use:   "list-contexts",
+		Short: "List all available contexts without fuzzy search",
+		Aliases: []string{"ls"},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			stores, config, err := initialize()
+			if err != nil {
+				return err
+			}
+
+			list_contexts.ListContexts(stores, config, stateDirectory)
+			return nil
+		},
+	}
+
 	deleteCmd := &cobra.Command{
 		Use:   "clean",
 		Short: "Cleans all temporary kubeconfig files",
@@ -124,6 +140,7 @@ func init() {
 		"run hooks right away. Do not respect the hooks execution configuration.")
 
 	rootCommand.AddCommand(setContextCmd)
+	rootCommand.AddCommand(listContextsCmd)
 	rootCommand.AddCommand(deleteCmd)
 	rootCommand.AddCommand(hookCmd)
 	rootCommand.AddCommand(historyCmd)
@@ -131,6 +148,7 @@ func init() {
 	setContextCmd.SilenceUsage = true
 
 	setCommonFlags(setContextCmd)
+	setCommonFlags(listContextsCmd)
 	setCommonFlags(historyCmd)
 }
 

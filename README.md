@@ -52,9 +52,20 @@ Updating the version of the `switch` utility via `brew` (e.g changing from versi
 
 ### Option 2 - Manual Installation
 
-#### Mac
+#### From Source
 
-Download the switch script and the switcher binary for your OS/architecture (darwin / linux).
+```
+$ go get github.com/danielfoehrKn/kubeswitch
+```
+
+From the repository root run `make build-switcher`.
+This builds the binaries to `/hack/switch/`.
+Copy the build binary for your OS / Architecture to e.g. `/usr/local/bin`
+and source the switch script from `/hack/switch/switch.sh`.
+
+#### Github Releases
+
+Download the switch script and the switcher binary for your OS / Architecture (darwin / linux).
 ```
 # grab pre-compiled switcher binary for your OS/architecture
 OS=linux #darwin
@@ -74,10 +85,9 @@ Source `switch.sh` e.g. in the `.bashrc`/`.zsh`) via:
 ```
 $ source /usr/local/bin/switch.sh
 ```
-#### Linux
+### Command completion
 
-If you are running Linux, you can download the `switcher` binary from the [releases](https://github.com/danielfoehrKn/kubeswitch/releases)
-, put it in your path, and then source the `switch` script from [here](https://github.com/danielfoehrKn/kubeswitch/blob/master/hack/switch/switch.sh).
+Please [see here](docs/command_completion.md) how to install command completion for bash and zsh shells.
 
 ## Usage 
 

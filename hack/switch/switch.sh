@@ -30,6 +30,7 @@ Available Commands:
   history         Switch to a previous context from the history (short: h)
   clean           Cleans all temporary kubeconfig files
   hooks           Runs configured hooks
+  list-contexts   List all available contexts without fuzzy search
 
 Flags:
       --config-path string         path on the local filesystem to the configuration file. (default "~/.kube/switch-config.yaml")
@@ -78,6 +79,7 @@ function switch(){
   CLEAN=''
   SET_CONTEXT=''
   HISTORY=''
+  LIST_CONTEXTS=''
 
   # Hooks
   HOOKS=''
@@ -127,6 +129,10 @@ function switch(){
                       ;;
                   history)
                       HISTORY=$1
+                      shift
+                      ;;
+                  list-contexts)
+                      LIST_CONTEXTS=$1
                       shift
                       ;;
                   hooks)
@@ -183,6 +189,12 @@ function switch(){
   then
      NEW_KUBECONFIG=$($EXECUTABLE_PATH history)
      setKubeconfigEnvironmentVariable $NEW_KUBECONFIG
+     return
+  fi
+
+  if [ -n "$LIST_CONTEXTS" ]
+  then
+     $EXECUTABLE_PATH list-contexts
      return
   fi
 
@@ -297,6 +309,6 @@ function setKubeconfigEnvironmentVariable() {
   if [[ "$?" = "0" ]]; then
     export KUBECONFIG=${NEW_KUBECONFIG}
     currentContext=$(kubectl config current-context)
-    echo "switched to context $currentContext"
+    echo "switched to context \"$currentContext\"."
   fi
 }
