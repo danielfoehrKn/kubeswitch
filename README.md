@@ -81,7 +81,7 @@ cp switch.sh /usr/local/bin/switch.sh
 rm switch.tar.gz
 ```
 
-Source `switch.sh` e.g. in the `.bashrc`/`.zsh`) via:
+Source `switch.sh` in `.bashrc`/`.zsh` via:
 ```
 $ source /usr/local/bin/switch.sh
 ```

@@ -31,7 +31,7 @@ type SearchIndex struct {
 // New creates a new SearchIndex
 func New(log *logrus.Entry, storeKind types.StoreKind, switchStateDirectory string) (*SearchIndex, error) {
 	if _, err := os.Stat(switchStateDirectory); os.IsNotExist(err) {
-		if err :=os.Mkdir(switchStateDirectory, 0755); err != nil {
+		if err := os.Mkdir(switchStateDirectory, 0755); err != nil {
 			return nil, err
 		}
 	}

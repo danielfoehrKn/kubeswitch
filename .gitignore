@@ -6,6 +6,7 @@
 .vscode
 .idea
 .DS_Store
+.cache_ggshield
 *~
 
 /hack/switch/switch.tar.gz

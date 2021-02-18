@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/danielfoehrkn/kubectlSwitch/pkg"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/config"
@@ -83,8 +84,8 @@ func init() {
 	}
 
 	listContextsCmd := &cobra.Command{
-		Use:   "list-contexts",
-		Short: "List all available contexts without fuzzy search",
+		Use:     "list-contexts",
+		Short:   "List all available contexts without fuzzy search",
 		Aliases: []string{"ls"},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			stores, config, err := initialize()
@@ -218,6 +219,14 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 		})
 	}
 
+	kubeconfigEnv := os.Getenv("KUBECONFIG")
+	if len(kubeconfigEnv) > 0 && !isDuplicatePath(switchConfig.KubeconfigPaths, kubeconfigEnv) && !strings.HasSuffix(kubeconfigEnv, ".tmp") {
+		switchConfig.KubeconfigPaths = append(switchConfig.KubeconfigPaths, types.KubeconfigPath{
+			Path:  kubeconfigEnv,
+			Store: types.StoreKind(storageBackend),
+		})
+	}
+
 	var (
 		useVaultStore      = false
 		useFilesystemStore = false
@@ -255,6 +264,15 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 		stores = append(stores, s)
 	}
 	return stores, switchConfig, nil
+}
+
+func isDuplicatePath(paths []types.KubeconfigPath, newPath string) bool {
+	for _, p := range paths {
+		if p.Path == newPath {
+			return true
+		}
+	}
+	return false
 }
 
 func getVaultStore(vaultAPIAddressFromSwitchConfig string, paths []types.KubeconfigPath) (*store.VaultStore, error) {
