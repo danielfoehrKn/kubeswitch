@@ -58,7 +58,7 @@ Available Commands:
   history         Switch to any previous context from the history (short: h)
   clean           Cleans all temporary kubeconfig files
   hooks           Runs configured hooks
-  alias           Create an alias for a context. Use ALIAS>=<CONTEXT_NAME. To list all use "alias ls" and to remove an alias use "alias rm <name>"
+  alias           Create an alias for a context. Use <ALIAS>=<CONTEXT_NAME> (<ALIAS>=. to rename current-context to <ALIAS>). To list all use "alias ls" and to remove an alias use "alias rm <name>"
   list-contexts   List all available contexts without fuzzy search
   -               Switch to the previous context from the history
   -d <NAME>       Delete context <NAME> ('.' for current-context). Only works on the current kubeconfig file - only implemented for compatibility with kubectx.
