@@ -293,6 +293,15 @@ function switch(){
         return
      fi
 
+     # compatibility with kubectx <NEW_NAME>=. rename current-context to <NEW_NAME>
+     if [[ "$ALIAS_ARGUMENTS" == *=. ]]; then
+        lastCharRemoved=${ALIAS_ARGUMENTS: : -1}
+        currentContextAlias=$lastCharRemoved$(kubectl config current-context)
+        echo "c: $currentContextAlias"
+        $EXECUTABLE_PATH alias "$currentContextAlias"
+        return
+     fi
+
      $EXECUTABLE_PATH alias "$ALIAS_ARGUMENTS"
      return
   fi
