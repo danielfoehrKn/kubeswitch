@@ -56,12 +56,13 @@ Available Commands:
   <context-name>  Switch to context name provided as first argument
   help            Help about any command
   history         Switch to any previous context from the history (short: h)
-  -               Switch to the previous context from the history
-  -c, --current   Show the current context name
   clean           Cleans all temporary kubeconfig files
   hooks           Runs configured hooks
   alias           Create an alias for a context. Use ALIAS>=<CONTEXT_NAME. To list all use "alias ls" and to remove an alias use "alias rm <name>"
   list-contexts   List all available contexts without fuzzy search
+  -               Switch to the previous context from the history
+  -c, --current   Show the current context name
+  -u, --unset     Unset the current context
 
 Flags:
       --config-path string         path on the local filesystem to the configuration file. (default "~/.kube/switch-config.yaml")
@@ -123,6 +124,7 @@ function switch(){
   ALIAS=''
   ALIAS_ARGUMENTS=''
   ALIAS_ARGUMENTS_ALIAS=''
+  UNSET_CURRENT_CONTEXT=''
 
   # Hooks
   HOOKS=''
@@ -187,6 +189,14 @@ function switch(){
                       PREV_HISTORY=$1
                       shift
                       ;;
+                  -u)
+                      UNSET_CURRENT_CONTEXT=$1
+                      shift
+                      ;;
+                  --unset)
+                      UNSET_CURRENT_CONTEXT=$1
+                      shift
+                      ;;
                   list-contexts)
                       LIST_CONTEXTS=$1
                       shift
@@ -236,6 +246,13 @@ function switch(){
                      ;;
             esac
     done
+
+
+  if [ -n "$UNSET_CURRENT_CONTEXT" ]
+  then
+     kubectl config unset current-context
+     return
+  fi
 
   if [ -n "$CURRENT_CONTEXT" ]
   then
