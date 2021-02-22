@@ -61,6 +61,7 @@ Available Commands:
   alias           Create an alias for a context. Use ALIAS>=<CONTEXT_NAME. To list all use "alias ls" and to remove an alias use "alias rm <name>"
   list-contexts   List all available contexts without fuzzy search
   -               Switch to the previous context from the history
+  -d <NAME>       Delete context <NAME> ('.' for current-context). Only works on the current kubeconfig file - only implemented for compatibility with kubectx.
   -c, --current   Show the current context name
   -u, --unset     Unset the current context
 
@@ -125,6 +126,7 @@ function switch(){
   ALIAS_ARGUMENTS=''
   ALIAS_ARGUMENTS_ALIAS=''
   UNSET_CURRENT_CONTEXT=''
+  DELETE_CONTEXT=''
 
   # Hooks
   HOOKS=''
@@ -197,6 +199,11 @@ function switch(){
                       UNSET_CURRENT_CONTEXT=$1
                       shift
                       ;;
+                  -d)
+                      shift
+                      DELETE_CONTEXT=$1
+                      shift
+                      ;;
                   list-contexts)
                       LIST_CONTEXTS=$1
                       shift
@@ -252,6 +259,19 @@ function switch(){
   then
      kubectl config unset current-context
      return
+  fi
+
+  if [ -n "$DELETE_CONTEXT" ]
+  then
+     case $DELETE_CONTEXT in
+       .)
+         kubectl config delete-context $(kubectl config current-context)
+         ;;
+       *)
+         kubectl config delete-context $DELETE_CONTEXT
+         ;;
+       esac
+       return
   fi
 
   if [ -n "$CURRENT_CONTEXT" ]
