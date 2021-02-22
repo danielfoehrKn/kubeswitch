@@ -10,8 +10,56 @@ import (
 	config2 "github.com/danielfoehrkn/kubectlSwitch/pkg/config"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/state"
 	"github.com/danielfoehrkn/kubectlSwitch/types"
+	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/sirupsen/logrus"
 )
+
+func ListHooks(log *logrus.Entry, configPath, stateDir string) error {
+	config, err := config2.LoadConfigFromFile(configPath)
+	if err != nil {
+		return err
+	}
+
+	if config == nil {
+		fmt.Print("No hooks configured.")
+		return nil
+	}
+
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(table.Row{"Name", "Type", "Interval", "Next Execution"})
+
+	for _, hook := range config.Hooks {
+		execution := "OnDemand"
+		nextExecution := "OnDemand"
+		if hook.Execution != nil {
+			execution = hook.Execution.Interval.String()
+
+			stateFileName := getHookStateFileName(hook.Name, stateDir)
+			// check by reading the hook state
+			hookState, err := state.GetHookState(log, stateFileName)
+			if err != nil {
+				nextExecution = "?"
+				continue
+			} else if hookState != nil {
+				if time.Now().UTC().After(hookState.LastExecutionTime.UTC().Add(*hook.Execution.Interval)) {
+					nextExecution = "Now"
+				} else {
+					nextExecution = hookState.LastExecutionTime.UTC().Add(*hook.Execution.Interval).Sub(time.Now().UTC()).Round(time.Minute).String()
+				}
+			}
+		}
+
+		t.AppendRows([]table.Row{
+			{hook.Name, hook.Type, execution, nextExecution},
+		})
+	}
+	t.AppendSeparator()
+	t.AppendFooter(table.Row{"Total", len(config.Hooks)})
+	t.Render()
+
+	return nil
+}
 
 func Hooks(log *logrus.Entry, configPath string, stateDirectory string, flagHookName string, runImmediately bool) error {
 	config, err := config2.LoadConfigFromFile(configPath)
@@ -84,7 +132,7 @@ func getHooksToBeExecuted(log *logrus.Entry, hooks []types.Hook, stateDir string
 		}
 
 		if hook.Execution == nil || hook.Execution.Interval == nil {
-			hooksToBeExecuted = append(hooksToBeExecuted, hook)
+			// hooks without an interval are executed on demand
 			continue
 		}
 

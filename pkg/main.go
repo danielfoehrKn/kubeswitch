@@ -9,7 +9,9 @@ import (
 
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/index"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/store"
-	"github.com/danielfoehrkn/kubectlSwitch/pkg/util"
+	aliasutil "github.com/danielfoehrkn/kubectlSwitch/pkg/subcommands/alias/util"
+	"github.com/danielfoehrkn/kubectlSwitch/pkg/subcommands/history/util"
+	kubeconfigutil "github.com/danielfoehrkn/kubectlSwitch/pkg/util/kubectx_copied"
 	"github.com/danielfoehrkn/kubectlSwitch/types"
 	"github.com/ktr0731/go-fuzzyfinder"
 	"github.com/sirupsen/logrus"
@@ -31,6 +33,9 @@ var (
 	pathToStore     = make(map[string]types.StoreKind)
 	pathToStoreLock = sync.RWMutex{}
 
+	aliasToContext     = make(map[string]string)
+	aliasToContextLock = sync.RWMutex{}
+
 	logger = logrus.New()
 )
 
@@ -40,31 +45,34 @@ func Switcher(stores []store.KubeconfigStore, switchConfig *types.Config, stateD
 		return err
 	}
 
-	go func(channel chan DiscoveredKubeconfig) {
-		for discoveredKubeconfig := range channel {
-			if discoveredKubeconfig.Error != nil {
-				logger.Warnf("error returned from search: %v", discoveredKubeconfig.Error)
+	go func(channel chan DiscoveredContext) {
+		for discoveredContext := range channel {
+			if discoveredContext.Error != nil {
+				logger.Warnf("error returned from search: %v", discoveredContext.Error)
 				continue
 			}
 
-			if discoveredKubeconfig.Store == nil {
+			if discoveredContext.Store == nil {
 				// this should not happen
 				logger.Debugf("store returned from search is nil. This should not happen")
 				continue
 			}
-			kubeconfigStore := *discoveredKubeconfig.Store
+			kubeconfigStore := *discoveredContext.Store
+
+			contextName := discoveredContext.Name
+			if len(discoveredContext.Alias) > 0 {
+				contextName = discoveredContext.Alias
+				writeToAliasToContext(discoveredContext.Alias, discoveredContext.Name)
+			}
 
 			// write to global map that is polled by the fuzzy search
-			appendToAllKubeconfigContextNames(discoveredKubeconfig.ContextNames...)
+			appendToAllKubeconfigContextNames(contextName)
+			// add to global contextToPath map
+			// required to map back from selected context -> path
+			writeToContextToPathMapping(contextName, discoveredContext.Path)
 			// associate (path -> store)
 			// required to map back from selected context -> path -> store -> store.getKubeconfig(path)
-			writeToPathToStoreKind(discoveredKubeconfig.Path, kubeconfigStore.GetKind())
-
-			for _, context := range discoveredKubeconfig.ContextNames {
-				// add to global contextToPath map
-				// required to map back from selected context -> path
-				writeToContextToPathMapping(context, discoveredKubeconfig.Path)
-			}
+			writeToPathToStoreKind(discoveredContext.Path, kubeconfigStore.GetKind())
 		}
 	}(*c)
 
@@ -90,17 +98,26 @@ func Switcher(stores []store.KubeconfigStore, switchConfig *types.Config, stateD
 		return err
 	}
 
-	selectedContext = util.GetContextWithoutFolderPrefix(selectedContext)
+	kubeconfig, err := kubeconfigutil.ParseTemporaryKubeconfig(kubeconfigData)
+	if err != nil {
+		return fmt.Errorf("failed to parse selected kubeconfig. Please check if this file is a valid kubeconfig: %v", err)
+	}
+
+	if err := kubeconfig.SetContext(selectedContext, aliasutil.GetContextForAlias(selectedContext, aliasToContext)); err != nil {
+		return err
+	}
+
+	tempKubeconfigPath, err := kubeconfig.WriteTemporaryKubeconfigFile()
+	if err != nil {
+		return fmt.Errorf("failed to write temporary kubeconfig file: %v", err)
+	}
+
 	if err := util.AppendContextToHistory(selectedContext); err != nil {
 		logger.Warnf("failed to append context to history file: %v", err)
 	}
 
-	tempKubeconfigPath, err := util.SetCurrentContextOnTemporaryKubeconfigFile(kubeconfigData, selectedContext)
-	if err != nil {
-		return fmt.Errorf("failed to write current context to temporary kubeconfig: %v", err)
-	}
-
-	// print kubeconfig path to std.out -> captured by calling bash script to set KUBECONFIG environment Variable
+	// print kubeconfig path to std.out
+	// captured by calling bash script to set KUBECONFIG environment variable
 	fmt.Print(tempKubeconfigPath)
 
 	return nil
@@ -298,4 +315,10 @@ func writeToPathToKubeconfig(key, value string) {
 	pathToKubeconfigLock.Lock()
 	defer pathToKubeconfigLock.Unlock()
 	pathToKubeconfig[key] = value
+}
+
+func writeToAliasToContext(key, value string) {
+	aliasToContextLock.Lock()
+	defer aliasToContextLock.Unlock()
+	aliasToContext[key] = value
 }

@@ -19,12 +19,13 @@ You can find several demo configuration files [here](https://github.com/danielfo
 
 ### Hook calling an executable
 
-Hooks can call an arbitrary executables and pass arguments.
+Hooks can call an arbitrary executable and pass arguments.
 
 Below is the configuration to use with [Gardener](https://github.com/gardener/gardener) installations.
 The Hook [`gardener-landscape-sync`](https://github.com/danielfoehrKn/kubeconfig-switch/tree/master/hooks/gardener-landscape-sync) downloads the 
 kubeconfig files for all available Kubernetes clusters to the local filesystem.
-The hook is executed every 6 hours. 
+The hook is executed every 6 hours.
+Not specifying an execution interval means that the hook shall only be run on demand via `switch hooks --hook-name <name>`.
 
 ```
 kind: SwitchConfig

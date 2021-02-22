@@ -5,11 +5,11 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/danielfoehrkn/kubectlSwitch/pkg/util"
+	kubeconfigutil "github.com/danielfoehrkn/kubectlSwitch/pkg/util/kubectx_copied"
 )
 
 func Clean() error {
-	tempDir := os.ExpandEnv(util.TemporaryKubeconfigDir)
+	tempDir := os.ExpandEnv(kubeconfigutil.TemporaryKubeconfigDir)
 	files, _ := ioutil.ReadDir(tempDir)
 	err := os.RemoveAll(tempDir)
 	if err != nil {

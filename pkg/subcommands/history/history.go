@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/store"
+	"github.com/danielfoehrkn/kubectlSwitch/pkg/subcommands/history/util"
 	setcontext "github.com/danielfoehrkn/kubectlSwitch/pkg/subcommands/set-context"
-	"github.com/danielfoehrkn/kubectlSwitch/pkg/util"
 	"github.com/danielfoehrkn/kubectlSwitch/types"
 	"github.com/ktr0731/go-fuzzyfinder"
 )

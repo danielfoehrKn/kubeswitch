@@ -11,6 +11,8 @@ const (
 	historyFileName = "$HOME/.kube/.switch_history"
 )
 
+// AppendContextToHistory appends the given context (should include the parent folder name for uniqueness)
+// to the history state file
 func AppendContextToHistory(context string) error {
 	fileName := os.ExpandEnv(historyFileName)
 	f, err := os.OpenFile(fileName,
@@ -26,6 +28,7 @@ func AppendContextToHistory(context string) error {
 	return nil
 }
 
+// ReadHistory reads the context history from the state file
 func ReadHistory() ([]string, error) {
 	fileName := os.ExpandEnv(historyFileName)
 	file, err := os.Open(fileName)

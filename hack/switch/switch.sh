@@ -6,6 +6,10 @@ Run configured hooks
 
 Usage:
   switch hooks [flags]
+  switch hooks [command]
+
+Available Commands:
+  ls          List configured hooks
 
 Flags:
       --config-path string        path on the local filesystem to the configuration file. (default "~/.kube/switch-config.yaml")
@@ -13,6 +17,30 @@ Flags:
       --hook-name string          the name of the hook that should be run.
       --run-immediately           run hooks right away. Do not respect the hooks execution configuration. (default true)
       --state-directory string    path to the state directory. (default "~/.kube/switch-state")
+'
+}
+
+aliasUsage() {
+echo '
+Create an alias for a context.
+
+Usage:
+  switch alias ALIAS=CONTEXT_NAME
+  switch alias [flags]
+  switch alias [command]
+
+Available Commands:
+  ls          List all existing aliases
+  rm          Remove an existing alias
+
+Flags:
+      --config-path string         path on the local filesystem to the configuration file. (default "~/.kube/switch-config.yaml")
+  -h, --help                       help for alias
+      --kubeconfig-name string     only shows kubeconfig files with this name. Accepts wilcard arguments "*" and "?". Defaults to "config". (default "config")
+      --kubeconfig-path string     path to be recursively searched for kubeconfig files.  Can be a file or a directory on the local filesystem or a path in Vault. (default "~/.kube/config")
+      --state-directory string     path to the local directory used for storing internal state. (default "~/.kube/switch-state")
+      --store string               the backing store to be searched for kubeconfig files. Can be either "filesystem" or "vault" (default "filesystem")
+      --vault-api-address string   the API address of the Vault store. Overrides the default "vaultAPIAddress" field in the SwitchConfig. This flag is overridden by the environment variable "VAULT_ADDR".
 '
 }
 
@@ -29,8 +57,10 @@ Available Commands:
   help            Help about any command
   history         Switch to any previous context from the history (short: h)
   -               Switch to the previous context from the history
+  -c, --current   Show the current context name
   clean           Cleans all temporary kubeconfig files
   hooks           Runs configured hooks
+  alias           Create an alias for a context. Use ALIAS>=<CONTEXT_NAME. To list all use "alias ls" and to remove an alias use "alias rm <name>"
   list-contexts   List all available contexts without fuzzy search
 
 Flags:
@@ -54,14 +84,21 @@ Run 'switch --help' for usage."
 
 usage()
 {
-   # usage for `switch hooks`
-   if [ -n "$1" ]
-  then
-    hooksUsage
-    return
-  fi
+  case "$1" in
+   alias)
+      aliasUsage
+      return
+    ;;
+  hooks)
+      hooksUsage
+      return
+    ;;
+   *)
+      switchUsage
+      return
+    ;;
+  esac
 
-  switchUsage
 }
 
 
@@ -82,9 +119,14 @@ function switch(){
   HISTORY=''
   PREV_HISTORY=''
   LIST_CONTEXTS=''
+  CURRENT_CONTEXT=''
+  ALIAS=''
+  ALIAS_ARGUMENTS=''
+  ALIAS_ARGUMENTS_ALIAS=''
 
   # Hooks
   HOOKS=''
+  HOOKS_ARGUMENTS=''
   STATE_DIRECTORY=''
   HOOK_NAME=''
   RUN_IMMEDIATELY=''
@@ -121,6 +163,14 @@ function switch(){
                       EXECUTABLE_PATH=$1
                       shift
                       ;;
+                  -c)
+                      CURRENT_CONTEXT=$1
+                      shift
+                      ;;
+                  --current)
+                      CURRENT_CONTEXT=$1
+                      shift
+                      ;;
                   clean)
                       CLEAN=$1
                       shift
@@ -143,6 +193,13 @@ function switch(){
                       ;;
                   hooks)
                       HOOKS=$1
+                      HOOKS_ARGUMENTS=$2
+                      shift
+                      ;;
+                  alias)
+                      ALIAS=$1
+                      ALIAS_ARGUMENTS=$2
+                      ALIAS_ARGUMENTS_ALIAS=$3
                       shift
                       ;;
                   --state-directory)
@@ -166,11 +223,11 @@ function switch(){
                       shift
                       ;;
                   --help)
-                     usage $HOOKS
+                     usage $HOOKS $ALIAS
                      return
                      ;;
                   -h)
-                     usage $HOOKS
+                     usage $HOOKS $ALIAS
                      return
                      ;;
                   *)
@@ -180,10 +237,29 @@ function switch(){
             esac
     done
 
+  if [ -n "$CURRENT_CONTEXT" ]
+  then
+     kubectl config current-context
+     return
+  fi
+
   if [ -z "$EXECUTABLE_PATH" ]
   then
      EXECUTABLE_PATH=$DEFAULT_EXECUTABLE_PATH
   fi
+
+    if [ -n "$ALIAS" ]
+  then
+     # for switch alias rm <name>
+     if [ -n "$ALIAS_ARGUMENTS_ALIAS" ]; then
+        $EXECUTABLE_PATH alias "$ALIAS_ARGUMENTS" "$ALIAS_ARGUMENTS_ALIAS"
+        return
+     fi
+
+     $EXECUTABLE_PATH alias "$ALIAS_ARGUMENTS"
+     return
+  fi
+
 
   if [ -n "$CLEAN" ]
   then
@@ -277,15 +353,22 @@ function switch(){
         HOOK_NAME_FLAG=--hook-name
      fi
 
-     RUN_IMMEDIATELY_FLAG=--run-immediately
-     if [ -n "$RUN_IMMEDIATELY" ]
-     then
-        RUN_IMMEDIATELY="$RUN_IMMEDIATELY"
-     else
-        RUN_IMMEDIATELY="true"
+     RUN_IMMEDIATELY_FLAG=''
+
+     # do not set flag --run-immediately for hooks ls command
+     if [ "$HOOKS_ARGUMENTS" != ls ]; then
+       if [ -n "$RUN_IMMEDIATELY" ]
+       then
+          RUN_IMMEDIATELY_FLAG=--run-immediately
+          RUN_IMMEDIATELY="$RUN_IMMEDIATELY"
+       else
+          RUN_IMMEDIATELY_FLAG=--run-immediately
+          RUN_IMMEDIATELY="true"
+       fi
      fi
 
      RESPONSE=$($EXECUTABLE_PATH hooks \
+     "$HOOKS_ARGUMENTS" \
      $RUN_IMMEDIATELY_FLAG=${RUN_IMMEDIATELY} \
      $CONFIG_PATH_FLAG ${CONFIG_PATH} \
      $STATE_DIRECTORY_FLAG ${STATE_DIRECTORY} \
@@ -320,7 +403,7 @@ function switch(){
 
 function setKubeconfigEnvironmentVariable() {
   if [[ "$?" = "0" ]]; then
-    export KUBECONFIG=${NEW_KUBECONFIG}
+    export KUBECONFIG=$1
     currentContext=$(kubectl config current-context)
     echo "switched to context \"$currentContext\"."
   fi

@@ -5,14 +5,18 @@ import (
 
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/index"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/store"
+	aliasstate "github.com/danielfoehrkn/kubectlSwitch/pkg/subcommands/alias/state"
+	aliasutil "github.com/danielfoehrkn/kubectlSwitch/pkg/subcommands/alias/util"
 	"github.com/danielfoehrkn/kubectlSwitch/types"
 )
 
-type DiscoveredKubeconfig struct {
+type DiscoveredContext struct {
 	// Path is the kubeconfig path in the backing store (filesystem / Vault)
 	Path string
-	// ContextNames are the context names in the kubeconfig
-	ContextNames []string
+	// Name ist the context name in the kubeconfig
+	Name string
+	// Alias is a custom alias defined for this context name
+	Alias string
 	// Store is a reference to the backing store that contains the kubeconfig
 	Store *store.KubeconfigStore
 	// Error is an error that occured during the search
@@ -21,8 +25,20 @@ type DiscoveredKubeconfig struct {
 
 // DoSearch executes a concurrent search over the given kubeconfig stores
 // returns results from all stores on the return channel
-func DoSearch(stores []store.KubeconfigStore, switchConfig *types.Config, stateDir string) (*chan DiscoveredKubeconfig, error) {
-	resultChannel := make(chan DiscoveredKubeconfig)
+func DoSearch(stores []store.KubeconfigStore, switchConfig *types.Config, stateDir string) (*chan DiscoveredContext, error) {
+	// first get defined alias in order to check if found kubecontext names should be display and returned
+	// with a different name
+	alias, err := aliasstate.GetDefaultAlias(stateDir)
+	if err != nil {
+		return nil, err
+	}
+
+	contextToAliasMapping := make(map[string]string)
+	if alias != nil && alias.Content.ContextToAliasMapping != nil {
+		contextToAliasMapping = alias.Content.ContextToAliasMapping
+	}
+
+	resultChannel := make(chan DiscoveredContext)
 	wgResultChannel := sync.WaitGroup{}
 	wgResultChannel.Add(len(stores))
 
@@ -51,11 +67,12 @@ func DoSearch(stores []store.KubeconfigStore, switchConfig *types.Config, stateD
 				// directly set from pre-computed index
 				content := index.GetContent()
 				for contextName, path := range content {
-					resultChannel <- DiscoveredKubeconfig{
-						Path:         path,
-						ContextNames: []string{contextName},
-						Store:        &store,
-						Error:        nil,
+					resultChannel <- DiscoveredContext{
+						Path:  path,
+						Name:  contextName,
+						Alias: aliasutil.GetContextForAlias(contextName, contextToAliasMapping),
+						Store: &store,
+						Error: nil,
 					}
 				}
 			}(kubeconfigStore, *searchIndex)
@@ -79,7 +96,7 @@ func DoSearch(stores []store.KubeconfigStore, switchConfig *types.Config, stateD
 			localContextToPathMapping := make(map[string]string)
 			for channelResult := range storeSearchChannel {
 				if channelResult.Error != nil {
-					resultChannel <- DiscoveredKubeconfig{
+					resultChannel <- DiscoveredContext{
 						Error: channelResult.Error,
 					}
 					continue
@@ -94,17 +111,17 @@ func DoSearch(stores []store.KubeconfigStore, switchConfig *types.Config, stateD
 					continue
 				}
 
-				// write to result channel
-				resultChannel <- DiscoveredKubeconfig{
-					Path:         channelResult.KubeconfigPath,
-					ContextNames: contexts,
-					Store:        &store,
-					Error:        nil,
-				}
-
-				for _, context := range contexts {
+				for _, contextName := range contexts {
+					// write to result channel
+					resultChannel <- DiscoveredContext{
+						Path:  channelResult.KubeconfigPath,
+						Name:  contextName,
+						Alias: aliasutil.GetContextForAlias(contextName, contextToAliasMapping),
+						Store: &store,
+						Error: nil,
+					}
 					// add to local contextToPath map to write the index for this store only
-					localContextToPathMapping[context] = channelResult.KubeconfigPath
+					localContextToPathMapping[contextName] = channelResult.KubeconfigPath
 				}
 			}
 

@@ -16,7 +16,7 @@ func GetHookState(log *logrus.Entry, hookStateFilepath string) (*types.HookState
 	if _, err := os.Stat(hookStateFilepath); err != nil {
 		if os.IsNotExist(err) {
 			// occurs during first execution of the hook
-			log.Infof("Configuration file not found under path: %q", hookStateFilepath)
+			log.Debugf("State file not found under path: %q", hookStateFilepath)
 			return nil, nil
 		}
 		return nil, err

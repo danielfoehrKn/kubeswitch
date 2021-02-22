@@ -11,10 +11,10 @@ import (
 
 var logger = logrus.New()
 
-func ListContexts(stores []store.KubeconfigStore, switchConfig *types.Config, stateDir string) {
+func ListContexts(stores []store.KubeconfigStore, switchConfig *types.Config, stateDir string) error {
 	c, err := pkg.DoSearch(stores, switchConfig, stateDir)
 	if err != nil {
-		logger.Warnf("cannot list contexts: %v", err)
+		return fmt.Errorf("cannot list contexts: %v", err)
 	}
 
 	for discoveredKubeconfig := range *c {
@@ -23,9 +23,14 @@ func ListContexts(stores []store.KubeconfigStore, switchConfig *types.Config, st
 			continue
 		}
 
-		// write to STDIO
-		for _, name := range discoveredKubeconfig.ContextNames {
-			fmt.Println(name)
+		name := discoveredKubeconfig.Name
+		if len(discoveredKubeconfig.Alias) > 0 {
+			name = discoveredKubeconfig.Alias
 		}
+
+		// write to STDIO
+		fmt.Println(name)
 	}
+
+	return nil
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/danielfoehrkn/kubectlSwitch/pkg"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/config"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/store"
+	"github.com/danielfoehrkn/kubectlSwitch/pkg/subcommands/alias"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/subcommands/clean"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/subcommands/history"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/subcommands/hooks"
@@ -54,6 +55,53 @@ var (
 )
 
 func init() {
+	aliasContextCmd := &cobra.Command{
+		Use:   "alias",
+		Short: "Create an alias for a context. Use ALIAS=CONTEXT_NAME",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 1 || !strings.Contains(args[0], "=") || len(strings.Split(args[0], "=")) != 2 {
+				return fmt.Errorf("please provide the alias in the form ALIAS=CONTEXT_NAME")
+			}
+			arguments := strings.Split(args[0], "=")
+
+			stores, config, err := initialize()
+			if err != nil {
+				return err
+			}
+
+			return alias.Alias(arguments[0], arguments[1], stores, config, stateDirectory)
+		},
+	}
+
+	aliasLsCmd := &cobra.Command{
+		Use:   "ls",
+		Short: "List all existing aliases",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return alias.ListAliases(stateDirectory)
+		},
+	}
+
+	aliasRmCmd := &cobra.Command{
+		Use:   "rm",
+		Short: "Remove an existing alias",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) != 1 || len(args[0]) == 0 {
+				return fmt.Errorf("please provide the alias to remove as the first argument")
+			}
+
+			return alias.RemoveAlias(args[0], stateDirectory)
+		},
+	}
+
+	aliasRmCmd.Flags().StringVar(
+		&stateDirectory,
+		"state-directory",
+		os.ExpandEnv("$HOME/.kube/switch-state"),
+		"path to the state directory.")
+
+	aliasContextCmd.AddCommand(aliasLsCmd)
+	aliasContextCmd.AddCommand(aliasRmCmd)
+
 	previousContextCmd := &cobra.Command{
 		Use:   "set-previous-context",
 		Short: "Switch to the previous context from the history",
@@ -129,6 +177,28 @@ func init() {
 		},
 	}
 
+	hookLsCmd := &cobra.Command{
+		Use:   "ls",
+		Short: "List configured hooks",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			log := logrus.New().WithField("hook-ls", hookName)
+			return hooks.ListHooks(log, configPath, stateDirectory)
+		},
+	}
+	hookLsCmd.Flags().StringVar(
+		&configPath,
+		"config-path",
+		os.ExpandEnv("$HOME/.kube/switch-config.yaml"),
+		"path on the local filesystem to the configuration file.")
+
+	hookLsCmd.Flags().StringVar(
+		&stateDirectory,
+		"state-directory",
+		os.ExpandEnv("$HOME/.kube/switch-state"),
+		"path to the state directory.")
+
+	hookCmd.AddCommand(hookLsCmd)
+
 	hookCmd.Flags().StringVar(
 		&configPath,
 		"config-path",
@@ -159,13 +229,17 @@ func init() {
 	rootCommand.AddCommand(hookCmd)
 	rootCommand.AddCommand(historyCmd)
 	rootCommand.AddCommand(previousContextCmd)
+	rootCommand.AddCommand(aliasContextCmd)
 
 	setContextCmd.SilenceUsage = true
+	aliasContextCmd.SilenceErrors = true
+	aliasRmCmd.SilenceErrors = true
 
 	setCommonFlags(setContextCmd)
 	setCommonFlags(listContextsCmd)
 	setCommonFlags(historyCmd)
 	setCommonFlags(previousContextCmd)
+	setCommonFlags(aliasContextCmd)
 }
 
 func NewCommandStartSwitcher() *cobra.Command {
