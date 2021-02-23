@@ -54,26 +54,25 @@ Usage:
 
 Available Commands:
   <context-name>  Switch to context name provided as first argument
-  help            Help about any command
-  history         Switch to any previous context from the history (short: h)
-  clean           Cleans all temporary kubeconfig files
+  history, h      Switch to any previous context from the history (short: h)
   hooks           Runs configured hooks
   alias           Create an alias for a context. Use <ALIAS>=<CONTEXT_NAME> (<ALIAS>=. to rename current-context to <ALIAS>). To list all use "alias ls" and to remove an alias use "alias rm <name>"
   list-contexts   List all available contexts without fuzzy search
+  clean           Cleans all temporary kubeconfig files
   -               Switch to the previous context from the history
-  -d <NAME>       Delete context <NAME> ('.' for current-context). Only works on the current kubeconfig file - only implemented for compatibility with kubectx.
+  -d <NAME>       Delete context <NAME> ('.' for current-context) from the local kubeconfig file.
   -c, --current   Show the current context name
-  -u, --unset     Unset the current context
+  -u, --unset     Unset the current context from the local kubeconfig file
 
 Flags:
       --config-path string         path on the local filesystem to the configuration file. (default "~/.kube/switch-config.yaml")
-  -h, --help                       help for switch
       --kubeconfig-name string     only shows Kubeconfig files with this name. Accepts wilcard arguments "*" and "?". Defaults to "config". (default "config")
       --kubeconfig-path string     path to be recursively searched for Kubeconfig files. Can be a file or directory on the local filesystem or a path in Vault. (default "~/.kube/config")
       --show-preview               show preview of the selected Kubeconfig. Possibly makes sense to disable when using vault as the Kubeconfig store to prevent excessive requests against the API. (default true)
       --state-directory string     path to the local directory used for storing internal state. (default "~/.kube/switch-state")
       --store string               the backing store to be searched for Kubeconfig files. Can be either "filesystem" or "vault" (default "filesystem")
       --vault-api-address string   the API address of the Vault store. Overrides the default "vaultAPIAddress" field in the SwitchConfig. This flag is overridden by the environment variable "VAULT_ADDR".
+      -h, --help                   help about any command
 
 Use "switch [command] --help" for more information about a command.
 '
