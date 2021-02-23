@@ -56,7 +56,7 @@ Available Commands:
   <context-name>  Switch to context name provided as first argument
   history, h      Switch to any previous context from the history (short: h)
   hooks           Runs configured hooks
-  alias           Create an alias for a context. Use <ALIAS>=<CONTEXT_NAME> (<ALIAS>=. to rename current-context to <ALIAS>). To list all use "alias ls" and to remove an alias use "alias rm <name>"
+  alias           Create an alias for a context. Use <ALIAS>=<CONTEXT_NAME> (<ALIAS>=. to rename current-context to <ALIAS>). To list all use "alias ls" and to remove an alias use "alias rm <ALIAS>"
   list-contexts   List all available contexts without fuzzy search
   clean           Cleans all temporary kubeconfig files
   -               Switch to the previous context from the history
@@ -296,7 +296,6 @@ function switch(){
      if [[ "$ALIAS_ARGUMENTS" == *=. ]]; then
         lastCharRemoved=${ALIAS_ARGUMENTS: : -1}
         currentContextAlias=$lastCharRemoved$(kubectl config current-context)
-        echo "c: $currentContextAlias"
         $EXECUTABLE_PATH alias "$currentContextAlias"
         return
      fi

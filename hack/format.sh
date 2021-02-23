@@ -1,7 +1,6 @@
 #!/bin/bash
 set -e
 
-go fmt ./...
+echo "> Format"
 
-importsort -w ./pkg
-importsort -w ./cmd
+goimports -l -w $@

@@ -1,16 +1,24 @@
 #!/bin/bash
 set -e
 
-DIRNAME="$(echo "$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )")"
+echo "> Check"
 
 echo "Executing golangci-lint"
 golangci-lint run "${SOURCE_TREES[@]}"
 
-echo "Checking for format issues with importsort"
-unsorted_files="$(importsort -l ./pkg/main.go)"
-if [[ "$unsorted_files" ]]; then
-    echo "Unformatted files detected:"
-    echo "$unsorted_files"
-    exit 1
+echo "Executing go vet"
+go vet -mod=vendor $@
+
+echo "Executing gofmt/goimports"
+folders=()
+for f in $@; do
+  folders+=( "$(echo $f | sed 's/\.\/\(.*\)\/\.\.\./\1/')" )
+done
+unformatted_files="$(goimports -l ${folders[*]})"
+if [[ "$unformatted_files" ]]; then
+  echo "Unformatted files detected:"
+  echo "$unformatted_files"
+  exit 1
 fi
+
 echo "All checks successful"

@@ -154,8 +154,7 @@ func init() {
 				return err
 			}
 
-			list_contexts.ListContexts(stores, config, stateDirectory)
-			return nil
+			return list_contexts.ListContexts(stores, config, stateDirectory)
 		},
 	}
 

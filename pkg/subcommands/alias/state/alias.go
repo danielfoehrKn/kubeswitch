@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/danielfoehrkn/kubectlSwitch/types"
-	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
@@ -14,8 +13,6 @@ const (
 	// aliasFileName is the filename of the state file that contains all created aliases
 	aliasFileName = "alias"
 )
-
-var logger = logrus.New()
 
 type Alias struct {
 	aliasFilepath string

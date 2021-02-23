@@ -1,10 +1,10 @@
 .PHONY: format
 format:
-	@./hack/format.sh
+	@./hack/format.sh ./cmd ./pkg
 
 .PHONY: check
 check:
-	@./hack/check.sh
+	@./hack/check.sh ./cmd/... ./pkg/...
 
 .PHONY: build
 build: build-switcher build-hooks

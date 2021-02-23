@@ -40,7 +40,6 @@ func ListHooks(log *logrus.Entry, configPath, stateDir string) error {
 			hookState, err := state.GetHookState(log, stateFileName)
 			if err != nil {
 				nextExecution = "?"
-				continue
 			} else if hookState != nil {
 				if time.Now().UTC().After(hookState.LastExecutionTime.UTC().Add(*hook.Execution.Interval)) {
 					nextExecution = "Now"

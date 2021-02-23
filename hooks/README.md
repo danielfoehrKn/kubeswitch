@@ -11,12 +11,32 @@ Usage:
   --run-hooks-immediately run hooks right away. Do not respect the hooks execution configuration. (default "true").
 ```
 
-Hooks are executed prior to the fuzzy search via `$ switch` or can be called directly via `$ switch hooks --hook-name=<name>`.
+Hooks are executed prior to the fuzzy search via `$ switch` or 
+can be called directly via `$ switch hooks --hook-name=<name>`.
 
 The default location for the config file is at `~/.kube/switch-config.yaml` or can be set with `--hook-config-path`.
  
 You can find several demo configuration files [here](https://github.com/danielfoehrKn/kubeconfig-switch/tree/master/resources/demo-configs).
 
+### See configured Hooks
+
+This shows an overview of all configured hooks including their type, interval and when the next execution will be.
+```
+$ switch hooks ls
+
++---------------------------+------------+----------+----------------+
+| NAME                      | TYPE       | INTERVAL | NEXT EXECUTION |
++---------------------------+------------+----------+----------------+
+| sync-local-landscape      | Executable | 24h0m0s  | 3h48m0s        |
+| sync-dev-landscape        | Executable | 6h0m0s   | 4h39m0s        |
+| sync-ns2-canary-landscape | Executable | 12h0m0s  | 3h57m0s        |
+| sync-live-landscape       | Executable | 24h0m0s  | 3h47m0s        |
+| sync-ns2-live-landscape   | Executable | 48h0m0s  | 27h47m0s       |
+| sync-canary-landscape     | Executable | 48h0m0s  | 27h47m0s       |
++---------------------------+------------+----------+----------------+
+| TOTAL                     | 6          |          |                |
++---------------------------+------------+----------+----------------+
+```
 ### Hook calling an executable
 
 Hooks can call an arbitrary executable and pass arguments.
