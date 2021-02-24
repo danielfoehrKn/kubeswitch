@@ -4,6 +4,7 @@ go 1.12
 
 require (
 	github.com/gardener/gardener v1.11.3
+	github.com/google/addlicense v0.0.0-20200906110928-a0294312aa76 // indirect
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/jedib0t/go-pretty/v6 v6.1.0
@@ -12,6 +13,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/cobra v1.0.0
+	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	gopkg.in/yaml.v2 v2.3.0
 	gopkg.in/yaml.v3 v3.0.0-20191120175047-4206685974f2
 	k8s.io/api v0.18.8

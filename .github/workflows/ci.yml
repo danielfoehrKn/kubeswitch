@@ -24,9 +24,8 @@ jobs:
       uses: actions/checkout@master
     - name: Run make check
       run: |
-        curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b $(go env GOPATH)/bin v1.37.1
-        GO111MODULE=off go get golang.org/x/tools/cmd/goimports
         export PATH=${PATH}:`go env GOPATH`/bin
+        make install-requirements
         make check
     - name: Run unit tests
       run: go test ./...
