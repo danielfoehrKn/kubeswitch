@@ -256,7 +256,7 @@ This has implications on how Kubeconfig files are managed.
 installations with possibly thousands of Kubeconfig files in [various locations](docs/kubeconfig_stores.md).
 
 Has build-in
- - convenience features(terminal window isolation, context history, [context aliasing](#define-context-alias), [improved search experience](#improved-search-experience), sanitized kubeconfig preview);
+ - convenience features (terminal window isolation, context history, [context aliasing](#define-context-alias), [improved search experience](#improved-search-experience), sanitized kubeconfig preview);
  - advanced search capabilities (search index, hot reload);
  - as well as integration points with external systems ([hooks](hooks/README.md)).
 
