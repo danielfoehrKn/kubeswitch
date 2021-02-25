@@ -34,8 +34,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/danielfoehrkn/kubectlSwitch/hooks/gardener-landscape-sync/pkg/hookstore"
-	"github.com/danielfoehrkn/kubectlSwitch/pkg/index"
+	"github.com/danielfoehrkn/k8ctx/hooks/gardener-landscape-sync/pkg/hookstore"
+	"github.com/danielfoehrkn/k8ctx/pkg/index"
 )
 
 func RunHook(log *logrus.Entry, kubeconfigStore hookstore.KubeconfigStore, clean bool, shootKubeconfigName, gardenKubeconfigPath, exportPath, landscapeName, stateDir string) error {

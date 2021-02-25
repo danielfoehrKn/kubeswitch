@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/danielfoehrkn/kubectlSwitch/cmd/switcher"
+	"github.com/danielfoehrkn/k8ctx/cmd/switcher"
 )
 
 func main() {

@@ -22,7 +22,7 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/danielfoehrkn/kubectlSwitch/types"
+	"github.com/danielfoehrkn/k8ctx/types"
 )
 
 func (s *FileStore) GetKind() types.StoreKind {

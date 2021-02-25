@@ -21,9 +21,9 @@ import (
 	"os/exec"
 	"time"
 
-	k8ctxconfig "github.com/danielfoehrkn/kubectlSwitch/pkg/config"
-	"github.com/danielfoehrkn/kubectlSwitch/pkg/state"
-	"github.com/danielfoehrkn/kubectlSwitch/types"
+	k8ctxconfig "github.com/danielfoehrkn/k8ctx/pkg/config"
+	"github.com/danielfoehrkn/k8ctx/pkg/state"
+	"github.com/danielfoehrkn/k8ctx/types"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/sirupsen/logrus"
 )

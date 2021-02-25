@@ -19,7 +19,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/danielfoehrkn/kubectlSwitch/types"
+	"github.com/danielfoehrkn/k8ctx/types"
 	"gopkg.in/yaml.v2"
 )
 

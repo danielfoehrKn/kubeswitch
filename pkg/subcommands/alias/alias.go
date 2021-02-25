@@ -18,11 +18,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/danielfoehrkn/kubectlSwitch/pkg"
-	"github.com/danielfoehrkn/kubectlSwitch/pkg/store"
-	"github.com/danielfoehrkn/kubectlSwitch/pkg/subcommands/alias/state"
-	kubeconfigutil "github.com/danielfoehrkn/kubectlSwitch/pkg/util/kubectx_copied"
-	"github.com/danielfoehrkn/kubectlSwitch/types"
+	"github.com/danielfoehrkn/k8ctx/pkg"
+	"github.com/danielfoehrkn/k8ctx/pkg/store"
+	"github.com/danielfoehrkn/k8ctx/pkg/subcommands/alias/state"
+	kubeconfigutil "github.com/danielfoehrkn/k8ctx/pkg/util/kubectx_copied"
+	"github.com/danielfoehrkn/k8ctx/types"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/sirupsen/logrus"
 )

@@ -17,11 +17,11 @@ package pkg
 import (
 	"sync"
 
-	"github.com/danielfoehrkn/kubectlSwitch/pkg/index"
-	"github.com/danielfoehrkn/kubectlSwitch/pkg/store"
-	aliasstate "github.com/danielfoehrkn/kubectlSwitch/pkg/subcommands/alias/state"
-	aliasutil "github.com/danielfoehrkn/kubectlSwitch/pkg/subcommands/alias/util"
-	"github.com/danielfoehrkn/kubectlSwitch/types"
+	"github.com/danielfoehrkn/k8ctx/pkg/index"
+	"github.com/danielfoehrkn/k8ctx/pkg/store"
+	aliasstate "github.com/danielfoehrkn/k8ctx/pkg/subcommands/alias/state"
+	aliasutil "github.com/danielfoehrkn/k8ctx/pkg/subcommands/alias/util"
+	"github.com/danielfoehrkn/k8ctx/types"
 )
 
 type DiscoveredContext struct {

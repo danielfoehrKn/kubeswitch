@@ -17,9 +17,9 @@ package list_contexts
 import (
 	"fmt"
 
-	"github.com/danielfoehrkn/kubectlSwitch/pkg"
-	"github.com/danielfoehrkn/kubectlSwitch/pkg/store"
-	"github.com/danielfoehrkn/kubectlSwitch/types"
+	"github.com/danielfoehrkn/k8ctx/pkg"
+	"github.com/danielfoehrkn/k8ctx/pkg/store"
+	"github.com/danielfoehrkn/k8ctx/types"
 	"github.com/sirupsen/logrus"
 )
 

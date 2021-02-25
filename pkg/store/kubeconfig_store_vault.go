@@ -21,7 +21,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/danielfoehrkn/kubectlSwitch/types"
+	"github.com/danielfoehrkn/k8ctx/types"
 	"github.com/sirupsen/logrus"
 )
 

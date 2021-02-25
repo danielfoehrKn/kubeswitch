@@ -23,8 +23,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/danielfoehrkn/kubectlSwitch/hooks/gardener-landscape-sync/pkg"
-	"github.com/danielfoehrkn/kubectlSwitch/hooks/gardener-landscape-sync/pkg/hookstore"
+	"github.com/danielfoehrkn/k8ctx/hooks/gardener-landscape-sync/pkg"
+	"github.com/danielfoehrkn/k8ctx/hooks/gardener-landscape-sync/pkg/hookstore"
 )
 
 const vaultTokenFileName = ".vault-token"
