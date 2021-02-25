@@ -55,7 +55,7 @@ _kube_contexts()
   fi
 
   if [[ $curr_arg != --* ]]; then
-    contexts=$(switch list-contexts)
+    contexts=$(k8ctx list-contexts)
   fi
 
   COMPREPLY=( $(compgen -W "history
@@ -78,4 +78,4 @@ _kube_contexts()
   $contexts " -- $curr_arg ) );
 }
 
-complete -F _kube_contexts switch
+complete -F _kube_contexts k8ctx

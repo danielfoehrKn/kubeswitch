@@ -2,6 +2,7 @@
 /tmp
 /dev
 **/dev
+/hack/hooks
 
 .vscode
 .idea
@@ -9,10 +10,10 @@
 .cache_ggshield
 *~
 
-/hack/switch/switch.tar.gz
+/hack/k8ctx/k8ctx.tar.gz
 
-/hack/switch/switcher_darwin_amd64
-/hack/switch/switcher_darwin_amd64.tar.gz
+/hack/k8ctx/switcher_darwin_amd64
+/hack/k8ctx/switcher_darwin_amd64.tar.gz
 
-/hack/switch/switcher_linux_amd64
+/hack/k8ctx/switcher_linux_amd64
 /hack/switch/switcher_linux_amd64.tar.gz

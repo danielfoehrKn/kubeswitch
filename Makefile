@@ -11,8 +11,8 @@ build: build-switcher build-hooks
 
 .PHONY: build-switcher
 build-switcher:
-	@env GOOS=linux GOARCH=amd64 go build -o hack/switch/switcher_linux_amd64 ./cmd/main.go
-	@env GOOS=darwin GOARCH=amd64 go build -o hack/switch/switcher_darwin_amd64 ./cmd/main.go
+	@env GOOS=linux GOARCH=amd64 go build -o hack/k8ctx/switcher_linux_amd64 ./cmd/main.go
+	@env GOOS=darwin GOARCH=amd64 go build -o hack/k8ctx/switcher_darwin_amd64 ./cmd/main.go
 
 .PHONY: build-hooks
 build-hooks:

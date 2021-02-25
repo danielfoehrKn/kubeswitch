@@ -53,8 +53,8 @@ var (
 	logger = logrus.New()
 )
 
-func Switcher(stores []store.KubeconfigStore, switchConfig *types.Config, stateDir string, showPreview bool) error {
-	c, err := DoSearch(stores, switchConfig, stateDir)
+func Switcher(stores []store.KubeconfigStore, config *types.Config, stateDir string, showPreview bool) error {
+	c, err := DoSearch(stores, config, stateDir)
 	if err != nil {
 		return err
 	}

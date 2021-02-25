@@ -1,28 +1,28 @@
 # Hooks
 
-By providing a configuration file, the `switch` tool can call arbitrary hooks (an executable or inline shell command).
+By providing a configuration file, the `k8ctx` tool can call arbitrary hooks (an executable or inline shell command).
 
 ```
-switch hooks help
+k8ctx hooks help
 Usage:
-  --config-path path to the configuration file. (default "~/.kube/switch-config.yaml")
-  --state-directory path to the state directory. (default "~/.kube/switch-state")
+  --config-path path to the configuration file. (default "~/.kube/k8ctx-config.yaml")
+  --state-directory path to the state directory. (default "~/.kube/k8ctx-state")
   --hook-name the name of the hook that should be run.
   --run-hooks-immediately run hooks right away. Do not respect the hooks execution configuration. (default "true").
 ```
 
-Hooks are executed prior to the fuzzy search via `$ switch` or 
-can be called directly via `$ switch hooks --hook-name=<name>`.
+Hooks are executed prior to the fuzzy search via `$ k8ctx` or 
+can be called directly via `$ k8ctx hooks --hook-name=<name>`.
 
-The default location for the config file is at `~/.kube/switch-config.yaml` or can be set with `--hook-config-path`.
+The default location for the config file is at `~/.kube/k8ctx-config.yaml` or can be set with `--hook-config-path`.
  
-You can find several demo configuration files [here](https://github.com/danielfoehrKn/kubeconfig-switch/tree/master/resources/demo-configs).
+You can find several demo configuration files [here](https://github.com/danielfoehrKn/k8ctx/tree/master/resources/demo-configs).
 
 ### See configured Hooks
 
 This shows an overview of all configured hooks including their type, interval and when the next execution will be.
 ```
-$ switch hooks ls
+$ k8ctx hooks ls
 
 +---------------------------+------------+----------+----------------+
 | NAME                      | TYPE       | INTERVAL | NEXT EXECUTION |
@@ -42,21 +42,21 @@ $ switch hooks ls
 Hooks can call an arbitrary executable and pass arguments.
 
 Below is the configuration to use with [Gardener](https://github.com/gardener/gardener) installations.
-The Hook [`gardener-landscape-sync`](https://github.com/danielfoehrKn/kubeconfig-switch/tree/master/hooks/gardener-landscape-sync) downloads the 
+The Hook [`gardener-landscape-sync`](https://github.com/danielfoehrKn/k8ctx/tree/master/hooks/gardener-landscape-sync) downloads the 
 kubeconfig files for all available Kubernetes clusters to the local filesystem.
 The hook is executed every 6 hours.
-Not specifying an execution interval means that the hook shall only be run on demand via `switch hooks --hook-name <name>`.
+Not specifying an execution interval means that the hook shall only be run on demand via `k8ctx hooks --hook-name <name>`.
 
 ```
-kind: SwitchConfig
+kind: K8ctxConfig
 hooks:
   - name: sync-dev-landscape
     type: Executable
-    path: /Users/<your-user>/go/src/github.com/danielfoehrkn/kubeconfig-switch/hack/hooks/hook-gardener-landscape-sync
+    path: /Users/<your-user>/go/src/github.com/danielfoehrkn/k8ctx/hack/hooks/hook-gardener-landscape-sync
     arguments:
       - "sync"
       - "--garden-kubeconfig-path"
-      - "/Users/<your-user>/.kube/switch/dev/dev-virtual-garden/config"
+      - "/Users/<your-user>/.kube/k8ctx/dev/dev-virtual-garden/config"
       - "--export-path"
       - "/Users/<your-user>/.kube/gardener-landscapes"
       - "--landscape-name"
@@ -72,18 +72,18 @@ A hook can also just execute shell commands directly.
 For example, the below configuration uses an inline command to garbage collection temporary kubeconfig files every 6 hours.
 
 ```
-kind: SwitchConfig
+kind: K8ctxConfig
 hooks:
   - name: inline
     type: InlineCommand
     execution:
       interval: 6h
     arguments:
-      - "/Users/<your-user>/go/src/github.com/danielfoehrkn/kubeconfig-switch/hack/switch/switcher clean && echo ' Garbage collection complete.'"
+      - "/Users/<your-user>/go/src/github.com/danielfoehrkn/k8ctx/hack/k8ctx/switcher clean && echo ' Garbage collection complete.'"
 ```
 
 ### Hook State
 
 To remember the last execution time for hooks, a file is written into the state directory.
-The default location for the hook state files are at `~/.kube/switch-state` or can be set with `--state-directory`.
+The default location for the hook state files are at `~/.kube/k8ctx-state` or can be set with `--state-directory`.
  

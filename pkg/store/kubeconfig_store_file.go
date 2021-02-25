@@ -127,7 +127,7 @@ func (s *FilesystemStore) VeryKubeconfigPaths() error {
 	}
 
 	if len(validKubeconfigDirectories) == 0 && len(validKubeconfigFilepaths) == 0 {
-		return fmt.Errorf("none of the %d specified kubeconfig path(s) exist. Either specifiy an existing path via flag '--kubeconfig-path' or in the switch config file", len(s.KubeconfigPaths))
+		return fmt.Errorf("none of the %d specified kubeconfig path(s) exist. Either specifiy an existing path via flag '--kubeconfig-path' or in the k8ctx config file", len(s.KubeconfigPaths))
 	}
 	s.kubeconfigDirectories = validKubeconfigDirectories
 	s.kubeconfigFilepaths = validKubeconfigFilepaths

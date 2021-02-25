@@ -1,13 +1,13 @@
-# Kubeswitch
+# K8ctx
 
-![Latest GitHub release](https://img.shields.io/github/v/release/danielfoehrkn/kubeswitch.svg)
-[![Go Report Card](https://goreportcard.com/badge/github.com/danielfoehrKn/kubeswitch)](https://goreportcard.com/badge/github.com/danielfoehrKn/kubeswitch)
-[![Build](https://github.com/danielfoehrKn/kubeswitch/workflows/Build/badge.svg)](https://github.com/danielfoehrKn/kubeswitch/actions?query=workflow%3A"Build")
+![Latest GitHub release](https://img.shields.io/github/v/release/danielfoehrkn/k8ctx.svg)
+[![Go Report Card](https://goreportcard.com/badge/github.com/danielfoehrKn/k8ctx)](https://goreportcard.com/badge/github.com/danielfoehrKn/k8ctx)
+[![Build](https://github.com/danielfoehrKn/k8ctx/workflows/Build/badge.svg)](https://github.com/danielfoehrKn/k8ctx/actions?query=workflow%3A"Build")
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 
-The `kubectx` for operators. 
-Kubeswitch (short: `switch`) takes kube context switching to the next level,
+The `kubectx` for operators.
+`k8ctx` takes kube context switching to the next level,
 catering to operators of large scale Kubernetes installations.
 Designed as a [drop-in replacement](#difference-to-kubectx) for [kubectx](https://github.com/ahmetb/kubectx).
 
@@ -37,7 +37,7 @@ Designed as a [drop-in replacement](#difference-to-kubectx) for [kubectx](https:
   - Integrate custom functionality using [Hooks](./hooks/README.md) (comparable with Git pre-commit hooks).
   - Build your own integration e.g., sync Kubeconfig files of clusters from Git or remote systems like [Gardener](https://gardener.cloud/).
 
-![demo GIF](resources/pictures/switch-demo-large.gif)
+![demo GIF](resources/gifs/k8ctx-demo.gif)
 
 ## Non-goals
 
@@ -49,66 +49,66 @@ Designed as a [drop-in replacement](#difference-to-kubectx) for [kubectx](https:
 
 ### Option 1 - Homebrew
 
-Mac and Linux users can install both the `switcher` tool and the `switch` script with `homebrew`. 
+Mac and Linux users can install both the `k8ctx` script and the `switcher` binary with `homebrew`. 
 ```
-$ brew install danielfoehrkn/switch/switch
-```
-
-Source the `switch` script from the `homebrew` installation path.
-```
-$ source $HOMEBREW_CELLAR/switch/v0.2.0/switch.sh
+$ brew install danielfoehrkn/k8ctx/k8ctx
 ```
 
-Updating the version of the `switch` utility via `brew` (e.g changing from version 0.1.0 to 0.2.0) requires to change the sourced path.
+Source the `k8ctx` script from the `homebrew` installation path.
+```
+$ source $HOMEBREW_CELLAR/k8ctx/v0.2.0/k8ctx.sh
+```
+
+Updating the version of the `k8ctx` utility via `brew` (e.g changing from version 0.1.0 to 0.2.0) requires to change the sourced path.
 
 ### Option 2 - Manual Installation
 
 #### From Source
 
 ```
-$ go get github.com/danielfoehrKn/kubeswitch
+$ go get github.com/danielfoehrKn/k8ctx
 ```
 
 From the repository root run `make build-switcher`.
-This builds the binaries to `/hack/switch/`.
+This builds the binaries to `/hack/k8ctx/`.
 Copy the build binary for your OS / Architecture to e.g. `/usr/local/bin`
-and source the switch script from `/hack/switch/switch.sh`.
+and source the k8ctx script from `/hack/k8ctx/k8ctx.sh`.
 
 #### Github Releases
 
-Download the switch script and the switcher binary for your OS / Architecture (darwin / linux).
+Download the k8ctx script and the switcher binary for your OS / Architecture (darwin / linux).
 ```
 # grab pre-compiled switcher binary for your OS/architecture
 OS=linux #darwin
-wget https://github.com/danielfoehrKn/kubeswitch/releases/download/0.2.0/switcher_${OS}_amd64.tar.gz
+wget https://github.com/danielfoehrKn/k8ctx/releases/download/0.2.0/switcher_${OS}_amd64.tar.gz
 tar -zxvf switcher_${OS}_amd64.tar.gz
 cp switcher_${OS}_amd64 /usr/local/bin/switcher
 rm switcher_${OS}_amd64.tar.gz
 
-# grab switch script
-wget https://github.com/danielfoehrKn/kubeswitch/releases/download/0.2.0/switch.tar.gz
-tar -zxvf switch.tar.gz
-cp switch.sh /usr/local/bin/switch.sh
-rm switch.tar.gz
+# grab k8ctx script
+wget https://github.com/danielfoehrKn/k8ctx/releases/download/0.2.0/k8ctx.tar.gz
+tar -zxvf k8ctx.tar.gz
+cp k8ctx.sh /usr/local/bin/k8ctx.sh
+rm k8ctx.tar.gz
 ```
 
-Source `switch.sh` in `.bashrc`/`.zsh` via:
+Source `k8ctx.sh` in `.bashrc`/`.zsh` via:
 ```
-$ source /usr/local/bin/switch.sh
+$ source /usr/local/bin/k8ctx.sh
 ```
 ### Command completion
 
 Please [see here](docs/command_completion.md) how to install command completion for bash and zsh shells.
-This completes both the `switch` commands as well as the context names.
+This completes both the `k8ctx` commands as well as the context names.
 
 ## Usage 
 
 ```
-$ switch -h
+$ k8ctx -h
 
 Usage:
-  switch [flags]
-  switch [command]
+  k8ctx [flags]
+  k8ctx [command]
 
 Available Commands:
   <context-name>  Switch to context name provided as first argument
@@ -123,17 +123,17 @@ Available Commands:
   -u, --unset     Unset the current context from the local kubeconfig file
 
 Flags:
-      --config-path string         path on the local filesystem to the configuration file. (default "~/.kube/switch-config.yaml")
+      --config-path string         path on the local filesystem to the configuration file. (default "~/.kube/k8ctx-config.yaml")
       --kubeconfig-name string     only shows Kubeconfig files with this name. Accepts wilcard arguments "*" and "?". Defaults to "config". (default "config")
       --kubeconfig-path string     path to be recursively searched for Kubeconfig files. Can be a file or directory on the local filesystem or a path in Vault. (default "~/.kube/config")
       --show-preview               show preview of the selected Kubeconfig. Possibly makes sense to disable when using vault as the Kubeconfig store to prevent excessive requests against the API. (default true)
-      --state-directory string     path to the local directory used for storing internal state. (default "~/.kube/switch-state")
+      --state-directory string     path to the local directory used for storing internal state. (default "~/.kube/k8ctx-state")
       --store string               the backing store to be searched for Kubeconfig files. Can be either "filesystem" or "vault" (default "filesystem")
-      --vault-api-address string   the API address of the Vault store. Overrides the default "vaultAPIAddress" field in the SwitchConfig. This flag is overridden by the environment variable "VAULT_ADDR".
+      --vault-api-address string   the API address of the Vault store. Overrides the default "vaultAPIAddress" field in the K8ctxConfig. This flag is overridden by the environment variable "VAULT_ADDR".
       -h, --help                   help about any command
 ```
 
-Just type `switch` to search over the context names defined in the default Kubeconfig file `~/.kube/config`
+Just type `k8ctx` to search over the context names defined in the default Kubeconfig file `~/.kube/config`
 or from the environment variable `KUBECONFIG`.
 
 To recursively **search over multiple directories, files and Kubeconfig stores**, please see the [documentation](docs/kubeconfig_stores.md) 
@@ -150,18 +150,18 @@ To search over multiple directories and setup Kubeconfig stores (such as Vault),
 
 ## Transition from Kubectx
 
-Offers a smooth transition as `Kubeswitch` is a 
+Offers a smooth transition as `k8ctx` is a 
 drop-in replacement for _kubectx_.
 You can set an alias and keep using your existing setup.
 ```
-  alias kubectx='switch'
-  alias kctx='switch'
+  alias kubectx='k8ctx'
+  alias kctx='k8ctx'
 ```
 
-However, that does not mean that `Kubeswitch` behaves exactly like `kubectx`. 
+However, that does not mean that `k8ctx` behaves exactly like `kubectx`. 
 Please [see here](#difference-to-kubectx) to read about some main differences to kubectx.
 
-## Define Context Alias
+## Alias
 
 An alias for any context name can be defined. 
 An alias **does not modify** or rename the context in the kubeconfig file (unlike `kubectx`), 
@@ -170,14 +170,14 @@ instead it is just injected for the search.
 Define an alias.
 
 ```
-$ switch alias mediathekview=gke_mediathekviewmobile-real_europe-west1-c_mediathekviewmobile
+$ k8ctx alias mediathekview=gke_mediathekviewmobile-real_europe-west1-c_mediathekviewmobile
 ```
 
-It is also possible to use `switch alias <alias>=.` to create an alias for the current context.
+It is also possible to use `k8ctx alias <alias>=.` to create an alias for the current context.
 
 See the created alias
 ```
-$ switch alias ls
+$ k8ctx alias ls
 +---------------+-------------------------------------------------------------------------------+
 | ALIAS         | CONTEXT                                                                       |
 +---------------+-------------------------------------------------------------------------------+
@@ -190,7 +190,7 @@ $ switch alias ls
 Remove the alias
 
 ```
-$ switch alias rm mediathekview
+$ k8ctx alias rm mediathekview
 ```
 
 ### Search Index
@@ -198,18 +198,18 @@ $ switch alias rm mediathekview
 See [here](docs/search_index.md) how to use a search index to speed up search operations.
 Using the search index is especially useful when
 - dealing with large amounts of Kubeconfigs and querying the Kubeconfig store is slow (e.g. searching a large directory)
-- when using vault as the Kubeconfig store to save requests against the Vault API
+- when using a remote systems (such as Vault) as the Kubeconfig store to increase search speed, reduce latency and save API requests
 
 ### Hot Reload
 
 For large directories with many Kubeconfig files, the Kubeconfigs are added to the search set on the fly.
 For smaller directory sizes, the search feels instantaneous.
 
-![demo GIF](resources/pictures/hot-reload.gif)
+![demo GIF](resources/gifs/hot-reload.gif)
 
 ## Improved Search Experience 
 
-The `switch` tool just recursively searches through a specified path in a Kubeconfig store for Kubeconfig files matching a name.
+The `k8ctx` tool just recursively searches through a specified path in a Kubeconfig store for Kubeconfig files matching a name.
 The path layout presented below is purely optional.
 
 When dealing with a large amount of Kubeconfig names, the `context` names are not necessarily unique or convey a meaning (especially when they are generated names).
@@ -221,8 +221,8 @@ Each Kubernetes landscape (called `dev`, `canary` and `live`) have their own dir
 Every `Kubeconfig` is named `config`.
 
 ```
-$ tree .kube/switch
-.kube/switch
+$ tree .kube/my-path
+.kube/my-path
 ├── canary
 │   └── config
 ├── dev
@@ -234,14 +234,14 @@ $ tree .kube/switch
 This is how the search looks like for this directory.
 The parent directory name is part of the search.
 
-![demo GIF](resources/pictures/search-show-parent-folder.png)
+![demo GIF](resources/gifs/search-show-parent-folder.png)
 
 Limitation: Please make sure that within one directory, there are no kubeconfig files that have the same context names.
 
 ### Extensibilty 
 
 Customization is possible by using `Hooks` (think Git pre-commit hooks). 
-Hooks can call an arbitrary executable or execute commands at a certain time (e.g every 6 hours) prior to the search via `switch`.
+Hooks can call an arbitrary executable or execute commands at a certain time (e.g every 6 hours) prior to the search via `k8ctx`.
 For more information [take a look here](./hooks/README.md).
 
 ### Difference to kubectx
@@ -250,32 +250,32 @@ For more information [take a look here](./hooks/README.md).
 operating large Kubernetes installations where clusters spin up on demand,
 have cryptic context names or are stored in various kubeconfig stores (e.g., Vault).
 
-`Kubeswitch` is build for a world where Kubernetes clusters are [treated as cattle, not pets](https://devops.stackexchange.com/questions/653/what-is-the-definition-of-cattle-not-pets).
+`k8ctx` is build for a world where Kubernetes clusters are [treated as cattle, not pets](https://devops.stackexchange.com/questions/653/what-is-the-definition-of-cattle-not-pets).
 This has implications on how Kubeconfig files are managed. 
-`Kubeswitch` is fundamentally designed for the modern Kubernetes operator of large dynamic Kubernetes 
+`k8ctx` is fundamentally designed for the modern Kubernetes operator of large dynamic Kubernetes 
 installations with possibly thousands of Kubeconfig files in [various locations](docs/kubeconfig_stores.md).
 
 Has build-in
- - convenience features (terminal window isolation, context history, [context aliasing](#define-context-alias), [improved search experience](#improved-search-experience), sanitized kubeconfig preview);
+ - convenience features (terminal window isolation, context history, [context aliasing](#alias), [improved search experience](#improved-search-experience), sanitized kubeconfig preview);
  - advanced search capabilities (search index, hot reload);
  - as well as integration points with external systems ([hooks](hooks/README.md)).
 
 
-In addition, `Kubeswitch` is a drop-in replacement for _kubectx_.
+In addition, `k8ctx` is a drop-in replacement for _kubectx_.
 You can set an alias and keep using your existing setup.
 ```
-  alias kubectx='switch'
-  alias kctx='switch'
+  alias kubectx='k8ctx'
+  alias kctx='k8ctx'
 ```
 
-However, that does not mean that `Kubeswitch` behaves exactly like `kubectx`.
+However, that does not mean that `k8ctx` behaves exactly like `kubectx`.
 
 **Alias Names**
 
 `kubectx` supports renaming context names using `kubectx <NEW_NAME>=<NAME>`.
-Use `switch <NEW_NAME>=<NAME>` to create an alias.
+Use `k8ctx <NEW_NAME>=<NAME>` to create an alias.
 An alias **does not modify** or rename the context in the kubeconfig file. 
-It is just a local configuration that can be removed again via `switch alias rm <NAME>`.
+It is just a local configuration that can be removed again via `k8ctx alias rm <NAME>`.
 Directly modifying the Kubeconfig is problematic: 
  - Common tooling might be used across the team which needs to rely on predictable cluster naming conventions
  - Modifying the file is not always possible e.g., when the Kubeconfig is actually stored in a Vault
@@ -287,12 +287,12 @@ Directly modifying the Kubeconfig is problematic:
 This has the disadvantage that every other terminal using the same 
 Kubeconfig file (e.g, via environment variable _KUBECONFIG_) will also be affected and change the context.
 
-A guideline of `Kubeswitch` is to not modify the underlying Kubeconfig file.
+A guideline of `k8ctx` is to not modify the underlying Kubeconfig file.
 Hence, a temporary copy of the original Kubeconfig file is created and used to modify the context.
 This way, each terminal window works on its own copy of the Kubeconfig file and cannot interfere with each other.
 
 ### Future Plans
 
-- Cleanup temporary kubeconfig files after the terminal session ended (instead of using `switch clean`)
+- Cleanup temporary kubeconfig files after the terminal session ended (instead of using `k8ctx clean`)
 - Act as a credential helper for kubeconfig files to inject the credentials from the backing store
 - Support more storage backends (e.g local password managers)

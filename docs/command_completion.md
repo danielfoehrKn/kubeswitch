@@ -5,7 +5,7 @@ You need to do it manually.
 
 ## Bash
 
-Source this [this script ](../completion/_switch.bash) from your `~/.bashrc`
+Source this [this script ](../completion/_k8ctx.bash) from your `~/.bashrc`
 or put it into [your completions directory](https://serverfault.com/questions/506612/standard-place-for-user-defined-bash-completion-d-scripts).
 
 ## Zsh

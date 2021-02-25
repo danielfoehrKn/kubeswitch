@@ -1,0 +1,9 @@
+kind: K8ctxConfig
+hooks:
+  - name: demo-hook
+    type: Executable
+    path: /Users/<your-user>/go/src/github.com/danielfoehrkn/k8ctx/resources/config/hook-with-args/demo-executable.sh
+    arguments:
+      - "--name bernd"
+    execution:
+      interval: 10m

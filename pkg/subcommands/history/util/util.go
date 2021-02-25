@@ -22,7 +22,7 @@ import (
 
 const (
 	// historyFileName is a constant for the filename storing the history of contexts
-	historyFileName = "$HOME/.kube/.switch_history"
+	historyFileName = "$HOME/.kube/.k8ctx_history"
 )
 
 // AppendContextToHistory appends the given context (should include the parent folder name for uniqueness)

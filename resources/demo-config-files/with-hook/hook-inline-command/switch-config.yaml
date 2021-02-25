@@ -1,8 +1,0 @@
-kind: SwitchConfig
-hooks:
-  - name: inline
-    type: InlineCommand
-    execution:
-      interval: 10s
-    arguments:
-      - "/Users/<your-user>/go/src/github.com/danielfoehrkn/kubeconfig-switch/hack/switch/switcher clean && echo ' Garbage collection complete.'"

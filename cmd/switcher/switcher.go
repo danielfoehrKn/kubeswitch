@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	"github.com/danielfoehrkn/kubectlSwitch/pkg"
-	"github.com/danielfoehrkn/kubectlSwitch/pkg/config"
+	k8ctxconfig "github.com/danielfoehrkn/kubectlSwitch/pkg/config"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/store"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/subcommands/alias"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/subcommands/clean"
@@ -54,8 +54,8 @@ var (
 	runImmediately bool
 
 	rootCommand = &cobra.Command{
-		Use:   "switch",
-		Short: "Launch the kubeconfig switcher",
+		Use:   "k8ctx",
+		Short: "Launch the k8ctx binary",
 		Long:  `The kubectx for operators.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			stores, config, err := initialize()
@@ -110,7 +110,7 @@ func init() {
 	aliasRmCmd.Flags().StringVar(
 		&stateDirectory,
 		"state-directory",
-		os.ExpandEnv("$HOME/.kube/switch-state"),
+		os.ExpandEnv("$HOME/.kube/k8ctx-state"),
 		"path to the state directory.")
 
 	aliasContextCmd.AddCommand(aliasLsCmd)
@@ -175,7 +175,7 @@ func init() {
 	deleteCmd := &cobra.Command{
 		Use:   "clean",
 		Short: "Cleans all temporary kubeconfig files",
-		Long:  `Cleans the temporary kubeconfig files created in the directory $HOME/.kube/switch_tmp`,
+		Long:  `Cleans the temporary kubeconfig files created in the directory $HOME/.kube/k8ctx_tmp`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return clean.Clean()
 		},
@@ -201,13 +201,13 @@ func init() {
 	hookLsCmd.Flags().StringVar(
 		&configPath,
 		"config-path",
-		os.ExpandEnv("$HOME/.kube/switch-config.yaml"),
+		os.ExpandEnv("$HOME/.kube/k8ctx-config.yaml"),
 		"path on the local filesystem to the configuration file.")
 
 	hookLsCmd.Flags().StringVar(
 		&stateDirectory,
 		"state-directory",
-		os.ExpandEnv("$HOME/.kube/switch-state"),
+		os.ExpandEnv("$HOME/.kube/k8ctx-state"),
 		"path to the state directory.")
 
 	hookCmd.AddCommand(hookLsCmd)
@@ -215,13 +215,13 @@ func init() {
 	hookCmd.Flags().StringVar(
 		&configPath,
 		"config-path",
-		os.ExpandEnv("$HOME/.kube/switch-config.yaml"),
+		os.ExpandEnv("$HOME/.kube/k8ctx-config.yaml"),
 		"path on the local filesystem to the configuration file.")
 
 	hookCmd.Flags().StringVar(
 		&stateDirectory,
 		"state-directory",
-		os.ExpandEnv("$HOME/.kube/switch-state"),
+		os.ExpandEnv("$HOME/.kube/k8ctx-state"),
 		"path to the state directory.")
 
 	hookCmd.Flags().StringVar(
@@ -284,19 +284,19 @@ func setCommonFlags(command *cobra.Command) {
 		&vaultAPIAddressFromFlag,
 		"vault-api-address",
 		"",
-		"the API address of the Vault store. Overrides the default \"vaultAPIAddress\" field in the SwitchConfig. This flag is overridden by the environment variable \"VAULT_ADDR\".")
+		"the API address of the Vault store. Overrides the default \"vaultAPIAddress\" field in the K8ctxConfig. This flag is overridden by the environment variable \"VAULT_ADDR\".")
 	command.Flags().StringVar(
 		&stateDirectory,
 		"state-directory",
-		os.ExpandEnv("$HOME/.kube/switch-state"),
+		os.ExpandEnv("$HOME/.kube/k8ctx-state"),
 		"path to the local directory used for storing internal state.")
 	command.Flags().StringVar(
 		&configPath,
 		"config-path",
-		os.ExpandEnv("$HOME/.kube/switch-config.yaml"),
+		os.ExpandEnv("$HOME/.kube/k8ctx-config.yaml"),
 		"path on the local filesystem to the configuration file.")
 
-	// not used for setContext command. Makes call in switch.sh script easier (no need to exclude flag from call)
+	// not used for setContext command. Makes call in k8ctx.sh script easier (no need to exclude flag from call)
 	command.Flags().BoolVar(
 		&showPreview,
 		"show-preview",
@@ -305,25 +305,25 @@ func setCommonFlags(command *cobra.Command) {
 }
 
 func initialize() ([]store.KubeconfigStore, *types.Config, error) {
-	switchConfig, err := config.LoadConfigFromFile(configPath)
+	config, err := k8ctxconfig.LoadConfigFromFile(configPath)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to read switch config file: %v", err)
+		return nil, nil, fmt.Errorf("failed to read k8ctx config file: %v", err)
 	}
 
-	if switchConfig == nil {
-		switchConfig = &types.Config{}
+	if config == nil {
+		config = &types.Config{}
 	}
 
 	if len(kubeconfigPath) > 0 {
-		switchConfig.KubeconfigPaths = append(switchConfig.KubeconfigPaths, types.KubeconfigPath{
+		config.KubeconfigPaths = append(config.KubeconfigPaths, types.KubeconfigPath{
 			Path:  kubeconfigPath,
 			Store: types.StoreKind(storageBackend),
 		})
 	}
 
 	kubeconfigEnv := os.Getenv("KUBECONFIG")
-	if len(kubeconfigEnv) > 0 && !isDuplicatePath(switchConfig.KubeconfigPaths, kubeconfigEnv) && !strings.HasSuffix(kubeconfigEnv, ".tmp") {
-		switchConfig.KubeconfigPaths = append(switchConfig.KubeconfigPaths, types.KubeconfigPath{
+	if len(kubeconfigEnv) > 0 && !isDuplicatePath(config.KubeconfigPaths, kubeconfigEnv) && !strings.HasSuffix(kubeconfigEnv, ".tmp") {
+		config.KubeconfigPaths = append(config.KubeconfigPaths, types.KubeconfigPath{
 			Path:  kubeconfigEnv,
 			Store: types.StoreKind(storageBackend),
 		})
@@ -335,7 +335,7 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 		stores             []store.KubeconfigStore
 	)
 
-	for _, configuredKubeconfigPath := range switchConfig.KubeconfigPaths {
+	for _, configuredKubeconfigPath := range config.KubeconfigPaths {
 		var s store.KubeconfigStore
 
 		switch configuredKubeconfigPath.Store {
@@ -346,7 +346,7 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 			useFilesystemStore = true
 			s = &store.FilesystemStore{
 				Logger:          logrus.New().WithField("store", types.StoreKindFilesystem),
-				KubeconfigPaths: switchConfig.KubeconfigPaths,
+				KubeconfigPaths: config.KubeconfigPaths,
 				KubeconfigName:  kubeconfigName,
 			}
 		case types.StoreKindVault:
@@ -354,7 +354,7 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 				continue
 			}
 			useVaultStore = true
-			vaultStore, err := getVaultStore(switchConfig.VaultAPIAddress, switchConfig.KubeconfigPaths)
+			vaultStore, err := getVaultStore(config.VaultAPIAddress, config.KubeconfigPaths)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -365,7 +365,7 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 
 		stores = append(stores, s)
 	}
-	return stores, switchConfig, nil
+	return stores, config, nil
 }
 
 func isDuplicatePath(paths []types.KubeconfigPath, newPath string) bool {
@@ -377,8 +377,8 @@ func isDuplicatePath(paths []types.KubeconfigPath, newPath string) bool {
 	return false
 }
 
-func getVaultStore(vaultAPIAddressFromSwitchConfig string, paths []types.KubeconfigPath) (*store.VaultStore, error) {
-	vaultAPI := vaultAPIAddressFromSwitchConfig
+func getVaultStore(vaultAPIAddressFromConfig string, paths []types.KubeconfigPath) (*store.VaultStore, error) {
+	vaultAPI := vaultAPIAddressFromConfig
 
 	if len(vaultAPIAddressFromFlag) > 0 {
 		vaultAPI = vaultAPIAddressFromFlag
@@ -390,7 +390,7 @@ func getVaultStore(vaultAPIAddressFromSwitchConfig string, paths []types.Kubecon
 	}
 
 	if len(vaultAPI) == 0 {
-		return nil, fmt.Errorf("when using the vault kubeconfig store, the API address of the vault has to be provided either by command line argument \"vaultAPI\", via environment variable \"VAULT_ADDR\" or via SwitchConfig file")
+		return nil, fmt.Errorf("when using the vault kubeconfig store, the API address of the vault has to be provided either by command line argument \"vaultAPI\", via environment variable \"VAULT_ADDR\" or via K8ctxConfig file")
 	}
 
 	home, err := os.UserHomeDir()
@@ -415,10 +415,10 @@ func getVaultStore(vaultAPIAddressFromSwitchConfig string, paths []types.Kubecon
 		return nil, fmt.Errorf("when using the vault kubeconfig store, a vault API token must be provided. Per default, the token file in \"~.vault-token\" is used. The default token can be overriden via the environment variable \"VAULT_TOKEN\"")
 	}
 
-	config := &vaultapi.Config{
+	vaultConfig := &vaultapi.Config{
 		Address: vaultAPI,
 	}
-	client, err := vaultapi.NewClient(config)
+	client, err := vaultapi.NewClient(vaultConfig)
 	if err != nil {
 		return nil, err
 	}

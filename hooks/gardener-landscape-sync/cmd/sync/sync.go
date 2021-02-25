@@ -144,7 +144,7 @@ func init() {
 	rootCommand.Flags().StringVar(
 		&stateDir,
 		"state-directory",
-		os.ExpandEnv("$HOME/.kube/switch-state"),
+		os.ExpandEnv("$HOME/.kube/k8ctx-state"),
 		"path to the switchers state directory used to read the Search Index.")
 	rootCommand.Flags().StringVar(
 		&vaultAPIAddress,

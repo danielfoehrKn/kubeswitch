@@ -43,15 +43,15 @@ type SearchIndex struct {
 }
 
 // New creates a new SearchIndex
-func New(log *logrus.Entry, storeKind types.StoreKind, switchStateDirectory string) (*SearchIndex, error) {
-	if _, err := os.Stat(switchStateDirectory); os.IsNotExist(err) {
-		if err := os.Mkdir(switchStateDirectory, 0755); err != nil {
+func New(log *logrus.Entry, storeKind types.StoreKind, stateDirectory string) (*SearchIndex, error) {
+	if _, err := os.Stat(stateDirectory); os.IsNotExist(err) {
+		if err := os.Mkdir(stateDirectory, 0755); err != nil {
 			return nil, err
 		}
 	}
 
-	indexStateFilepath := fmt.Sprintf("%s/switch.%s.%s", switchStateDirectory, storeKind, indexStateFileName)
-	indexFilepath := fmt.Sprintf("%s/switch.%s.%s", switchStateDirectory, storeKind, indexFileName)
+	indexStateFilepath := fmt.Sprintf("%s/k8ctx.%s.%s", stateDirectory, storeKind, indexStateFileName)
+	indexFilepath := fmt.Sprintf("%s/k8ctx.%s.%s", stateDirectory, storeKind, indexFileName)
 
 	i := SearchIndex{
 		log:                 log,
@@ -109,7 +109,7 @@ func (i *SearchIndex) loadFromFile() (*types.Index, error) {
 }
 
 // ShouldBeUsed checks if the index file with pre-computed mappings should be used
-func (i *SearchIndex) ShouldBeUsed(switchConfig *types.Config) (bool, error) {
+func (i *SearchIndex) ShouldBeUsed(config *types.Config) (bool, error) {
 	indexState, err := i.getIndexState()
 	if err != nil {
 		return false, fmt.Errorf("failed to get index state: %v", err)
@@ -121,11 +121,11 @@ func (i *SearchIndex) ShouldBeUsed(switchConfig *types.Config) (bool, error) {
 		return false, nil
 	}
 
-	if switchConfig == nil || switchConfig.KubeconfigRediscoveryInterval == nil {
+	if config == nil || config.KubeconfigRediscoveryInterval == nil {
 		return false, nil
 	}
 
-	return time.Now().UTC().Before(indexState.LastUpdateTime.UTC().Add(*switchConfig.KubeconfigRediscoveryInterval)), nil
+	return time.Now().UTC().Before(indexState.LastUpdateTime.UTC().Add(*config.KubeconfigRediscoveryInterval)), nil
 }
 
 func (i *SearchIndex) WriteState(toWrite types.IndexState) error {

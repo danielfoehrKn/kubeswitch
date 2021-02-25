@@ -5,18 +5,18 @@ echo '
 Run configured hooks
 
 Usage:
-  switch hooks [flags]
-  switch hooks [command]
+  k8ctx hooks [flags]
+  k8ctx hooks [command]
 
 Available Commands:
   ls          List configured hooks
 
 Flags:
-      --config-path string        path on the local filesystem to the configuration file. (default "~/.kube/switch-config.yaml")
+      --config-path string        path on the local filesystem to the configuration file. (default "~/.kube/k8ctx-config.yaml")
   -h, --help                      help for hooks
       --hook-name string          the name of the hook that should be run.
       --run-immediately           run hooks right away. Do not respect the hooks execution configuration. (default true)
-      --state-directory string    path to the state directory. (default "~/.kube/switch-state")
+      --state-directory string    path to the state directory. (default "~/.kube/k8ctx-state")
 '
 }
 
@@ -25,32 +25,32 @@ echo '
 Create an alias for a context.
 
 Usage:
-  switch alias ALIAS=CONTEXT_NAME
-  switch alias [flags]
-  switch alias [command]
+  k8ctx alias ALIAS=CONTEXT_NAME
+  k8ctx alias [flags]
+  k8ctx alias [command]
 
 Available Commands:
   ls          List all existing aliases
   rm          Remove an existing alias
 
 Flags:
-      --config-path string         path on the local filesystem to the configuration file. (default "~/.kube/switch-config.yaml")
+      --config-path string         path on the local filesystem to the configuration file. (default "~/.kube/k8ctx-config.yaml")
   -h, --help                       help for alias
       --kubeconfig-name string     only shows kubeconfig files with this name. Accepts wilcard arguments "*" and "?". Defaults to "config". (default "config")
       --kubeconfig-path string     path to be recursively searched for kubeconfig files.  Can be a file or a directory on the local filesystem or a path in Vault. (default "~/.kube/config")
-      --state-directory string     path to the local directory used for storing internal state. (default "~/.kube/switch-state")
+      --state-directory string     path to the local directory used for storing internal state. (default "~/.kube/k8ctx-state")
       --store string               the backing store to be searched for kubeconfig files. Can be either "filesystem" or "vault" (default "filesystem")
-      --vault-api-address string   the API address of the Vault store. Overrides the default "vaultAPIAddress" field in the SwitchConfig. This flag is overridden by the environment variable "VAULT_ADDR".
+      --vault-api-address string   the API address of the Vault store. Overrides the default "vaultAPIAddress" field in the K8ctxConfig. This flag is overridden by the environment variable "VAULT_ADDR".
 '
 }
 
-switchUsage() {
+k8ctxUsage() {
 echo '
 The kubectx for operators.
 
 Usage:
-  switch [flags]
-  switch [command]
+  k8ctx [flags]
+  k8ctx [command]
 
 Available Commands:
   <context-name>  Switch to context name provided as first argument
@@ -65,16 +65,16 @@ Available Commands:
   -u, --unset     Unset the current context from the local kubeconfig file
 
 Flags:
-      --config-path string         path on the local filesystem to the configuration file. (default "~/.kube/switch-config.yaml")
+      --config-path string         path on the local filesystem to the configuration file. (default "~/.kube/k8ctx-config.yaml")
       --kubeconfig-name string     only shows Kubeconfig files with this name. Accepts wilcard arguments "*" and "?". Defaults to "config". (default "config")
       --kubeconfig-path string     path to be recursively searched for Kubeconfig files. Can be a file or directory on the local filesystem or a path in Vault. (default "~/.kube/config")
       --show-preview               show preview of the selected Kubeconfig. Possibly makes sense to disable when using vault as the Kubeconfig store to prevent excessive requests against the API. (default true)
-      --state-directory string     path to the local directory used for storing internal state. (default "~/.kube/switch-state")
+      --state-directory string     path to the local directory used for storing internal state. (default "~/.kube/k8ctx-state")
       --store string               the backing store to be searched for Kubeconfig files. Can be either "filesystem" or "vault" (default "filesystem")
-      --vault-api-address string   the API address of the Vault store. Overrides the default "vaultAPIAddress" field in the SwitchConfig. This flag is overridden by the environment variable "VAULT_ADDR".
+      --vault-api-address string   the API address of the Vault store. Overrides the default "vaultAPIAddress" field in the K8ctxConfig. This flag is overridden by the environment variable "VAULT_ADDR".
       -h, --help                   help about any command
 
-Use "switch [command] --help" for more information about a command.
+Use "k8ctx [command] --help" for more information about a command.
 '
 }
 
@@ -103,7 +103,7 @@ usage()
 }
 
 
-function switch(){
+function k8ctx(){
 #  if the executable path is not set, the switcher binary has to be on the path
 # this is the case when installing it via homebrew
   DEFAULT_EXECUTABLE_PATH='switcher'

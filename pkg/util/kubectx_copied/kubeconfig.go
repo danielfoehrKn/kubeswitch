@@ -25,7 +25,7 @@ import (
 
 const (
 	// TemporaryKubeconfigDir is a constant for the directory where the switcher stores the temporary kubeconfig files
-	TemporaryKubeconfigDir = "$HOME/.kube/.switch_tmp"
+	TemporaryKubeconfigDir = "$HOME/.kube/.k8ctx_tmp"
 )
 
 type Kubeconfig struct {

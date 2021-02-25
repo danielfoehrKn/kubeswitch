@@ -24,7 +24,7 @@ import (
 	"github.com/ktr0731/go-fuzzyfinder"
 )
 
-func ListHistory(stores []store.KubeconfigStore, switchConfig *types.Config, stateDir string) error {
+func ListHistory(stores []store.KubeconfigStore, config *types.Config, stateDir string) error {
 	history, err := util.ReadHistory()
 	if err != nil {
 		return err
@@ -40,10 +40,10 @@ func ListHistory(stores []store.KubeconfigStore, switchConfig *types.Config, sta
 		return err
 	}
 
-	return setcontext.SetContext(history[idx], stores, switchConfig, stateDir)
+	return setcontext.SetContext(history[idx], stores, config, stateDir)
 }
 
-func SetPreviousContext(stores []store.KubeconfigStore, switchConfig *types.Config, stateDir string) error {
+func SetPreviousContext(stores []store.KubeconfigStore, config *types.Config, stateDir string) error {
 	history, err := util.ReadHistory()
 	if err != nil {
 		return err
@@ -60,5 +60,5 @@ func SetPreviousContext(stores []store.KubeconfigStore, switchConfig *types.Conf
 		position = 1
 	}
 
-	return setcontext.SetContext(history[position], stores, switchConfig, stateDir)
+	return setcontext.SetContext(history[position], stores, config, stateDir)
 }

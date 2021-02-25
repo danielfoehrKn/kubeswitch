@@ -9,7 +9,7 @@ On top of that, projects like [Gardener](https://gardener.cloud/), [SIG Cluster-
 and maintain clusters at scale.
 Many have moved on from treating Kubernetes clusters
 [as pets to treating them as cattle](https://devops.stackexchange.com/questions/653/what-is-the-definition-of-cattle-not-pets).
-Hence there is a need for a tool that is build for this reality.
+Hence, there is a need for a tool that is build for this reality.
 
 The idea of `k8ctx` is to enable seamless interaction with Kubeconfig files
 for operators of large scale Kubernetes landscapes.
@@ -17,9 +17,9 @@ No matter if they are stored on disk, in an Enterprise Vault, are spread in diff
 or need to be synchronized from a remote system.
 
 `k8ctx` offers
-- Convenience features (terminal window isolation, context history, [context aliasing](https://github.com/danielfoehrKn/kubeswitch#define-context-alias), [improved search experience](https://github.com/danielfoehrKn/kubeswitch#improved-search-experience), sanitized Kubeconfig preview);
+- Convenience features (terminal window isolation, context history, [context aliasing](https://github.com/danielfoehrKn/k8ctx#alias), [improved search experience](https://github.com/danielfoehrKn/k8ctx#improved-search-experience), sanitized Kubeconfig preview);
 - advanced search capabilities (search index, hot reload, unified search over all kubeconfig stores);
-- as well as custom integration points with external systems (see [hooks](https://github.com/danielfoehrKn/kubeswitch/tree/master/hooks/README.md)).
+- as well as custom integration points with external systems (see [hooks](https://github.com/danielfoehrKn/k8ctx/tree/master/hooks/README.md)).
 
 To not break existing setups, `k8ctx` is a drop-in replacement for _kubectx_.
 You can just set an alias.
@@ -55,8 +55,8 @@ Future plans are to act as an authentication helper for Kubeconfig files
 to inject the credentials from the backing store
 and to support more storage backends on top of Vault and the local filesystem.
 
-This should not be a long ramble, so I invite you to check out [k8ctx on Github](https://github.com/danielfoehrKn/kubeswitch) 
-with more information or head straight to the [installation section](https://github.com/danielfoehrKn/kubeswitch#installation).
+This should not be a long ramble, so I invite you to check out [k8ctx on Github](https://github.com/danielfoehrKn/k8ctx) 
+with more information or head straight to the [installation section](https://github.com/danielfoehrKn/k8ctx#installation).
 Of course contributions are more than welcome.
 Cheers,
 Daniel

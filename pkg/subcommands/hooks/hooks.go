@@ -21,7 +21,7 @@ import (
 	"os/exec"
 	"time"
 
-	config2 "github.com/danielfoehrkn/kubectlSwitch/pkg/config"
+	k8ctxconfig "github.com/danielfoehrkn/kubectlSwitch/pkg/config"
 	"github.com/danielfoehrkn/kubectlSwitch/pkg/state"
 	"github.com/danielfoehrkn/kubectlSwitch/types"
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -29,7 +29,7 @@ import (
 )
 
 func ListHooks(log *logrus.Entry, configPath, stateDir string) error {
-	config, err := config2.LoadConfigFromFile(configPath)
+	config, err := k8ctxconfig.LoadConfigFromFile(configPath)
 	if err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func ListHooks(log *logrus.Entry, configPath, stateDir string) error {
 }
 
 func Hooks(log *logrus.Entry, configPath string, stateDirectory string, flagHookName string, runImmediately bool) error {
-	config, err := config2.LoadConfigFromFile(configPath)
+	config, err := k8ctxconfig.LoadConfigFromFile(configPath)
 	if err != nil {
 		return err
 	}

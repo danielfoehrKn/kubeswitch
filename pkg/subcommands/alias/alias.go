@@ -102,10 +102,10 @@ func RemoveAlias(aliasToRemove, stateDir string) error {
 	return nil
 }
 
-// Alias just maintains an alias record in the switch
+// Alias just maintains an alias record in the k8ctx
 // state folder instead of renaming a context in the kubeconfig
 // this works independent of the backing store
-func Alias(aliasName, ctxNameToBeAliased string, stores []store.KubeconfigStore, switchConfig *types.Config, stateDir string) error {
+func Alias(aliasName, ctxNameToBeAliased string, stores []store.KubeconfigStore, config *types.Config, stateDir string) error {
 	if _, err := os.Stat(stateDir); os.IsNotExist(err) {
 		if err := os.Mkdir(stateDir, 0755); err != nil {
 			return err
@@ -117,7 +117,7 @@ func Alias(aliasName, ctxNameToBeAliased string, stores []store.KubeconfigStore,
 		return err
 	}
 
-	c, err := pkg.DoSearch(stores, switchConfig, stateDir)
+	c, err := pkg.DoSearch(stores, config, stateDir)
 	if err != nil {
 		return err
 	}

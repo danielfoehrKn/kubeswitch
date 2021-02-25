@@ -39,7 +39,7 @@ type DiscoveredContext struct {
 
 // DoSearch executes a concurrent search over the given kubeconfig stores
 // returns results from all stores on the return channel
-func DoSearch(stores []store.KubeconfigStore, switchConfig *types.Config, stateDir string) (*chan DiscoveredContext, error) {
+func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir string) (*chan DiscoveredContext, error) {
 	// first get defined alias in order to check if found kubecontext names should be display and returned
 	// with a different name
 	alias, err := aliasstate.GetDefaultAlias(stateDir)
@@ -68,7 +68,7 @@ func DoSearch(stores []store.KubeconfigStore, switchConfig *types.Config, stateD
 			return nil, err
 		}
 
-		shouldReadFromIndex, err := shouldReadFromIndex(searchIndex, kubeconfigStore, switchConfig)
+		shouldReadFromIndex, err := shouldReadFromIndex(searchIndex, kubeconfigStore, config)
 		if err != nil {
 			return nil, err
 		}
@@ -155,11 +155,11 @@ func DoSearch(stores []store.KubeconfigStore, switchConfig *types.Config, stateD
 	return &resultChannel, nil
 }
 
-func shouldReadFromIndex(searchIndex *index.SearchIndex, kubeconfigStore store.KubeconfigStore, switchConfig *types.Config) (bool, error) {
+func shouldReadFromIndex(searchIndex *index.SearchIndex, kubeconfigStore store.KubeconfigStore, config *types.Config) (bool, error) {
 	if searchIndex.HasContent() && searchIndex.HasKind(kubeconfigStore.GetKind()) {
 		// found an index for the correct Store kind
 		// check if should use existing index or not
-		shouldReadFromIndex, err := searchIndex.ShouldBeUsed(switchConfig)
+		shouldReadFromIndex, err := searchIndex.ShouldBeUsed(config)
 		if err != nil {
 			return false, err
 		}
