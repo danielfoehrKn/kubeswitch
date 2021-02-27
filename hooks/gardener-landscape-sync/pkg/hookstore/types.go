@@ -19,7 +19,7 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/danielfoehrkn/k8ctx/types"
+	"github.com/danielfoehrkn/kubeswitch/types"
 )
 
 const (

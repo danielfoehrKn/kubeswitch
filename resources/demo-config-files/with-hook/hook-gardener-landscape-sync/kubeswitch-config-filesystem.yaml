@@ -1,20 +1,16 @@
-kind: K8ctxConfig
+kind: SwitchConfig
 hooks:
   - name: sync-dev-landscape
     type: Executable
-    path: /Users/<your-user>/go/src/github.com/danielfoehrkn/k8ctx/hack/hooks/hook-gardener-landscape-sync
+    path: /Users/<your-user>/go/src/github.com/danielfoehrkn/kubeswitch/hack/hooks/hook-gardener-landscape-sync
     arguments:
       - "sync"
       - "--garden-kubeconfig-path"
-      - "/<path in vault>"
+      - "/Users/<your-user>/.kube/kubeswitch/dev/dev-virtual-garden/config"
       - "--export-path"
       - "/Users/<your-user>/.kube/gardener-landscapes"
       - "--landscape-name"
       - "dev"
       - "--clean-directory=true"
-      - "--store"
-      - "vault"
-      - "--vault-api-address"
-      - "http:/...."
     execution:
       interval: 6h

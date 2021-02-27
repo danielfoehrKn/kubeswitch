@@ -15,7 +15,7 @@
 package store
 
 import (
-	"github.com/danielfoehrkn/k8ctx/types"
+	"github.com/danielfoehrkn/kubeswitch/types"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
 )

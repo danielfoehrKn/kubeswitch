@@ -1,4 +1,4 @@
-module github.com/danielfoehrkn/k8ctx
+module github.com/danielfoehrkn/kubeswitch
 
 go 1.12
 

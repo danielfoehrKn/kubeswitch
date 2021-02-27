@@ -23,8 +23,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/danielfoehrkn/k8ctx/hooks/gardener-landscape-sync/pkg"
-	"github.com/danielfoehrkn/k8ctx/hooks/gardener-landscape-sync/pkg/hookstore"
+	"github.com/danielfoehrkn/kubeswitch/hooks/gardener-landscape-sync/pkg"
+	"github.com/danielfoehrkn/kubeswitch/hooks/gardener-landscape-sync/pkg/hookstore"
 )
 
 const vaultTokenFileName = ".vault-token"
@@ -144,7 +144,7 @@ func init() {
 	rootCommand.Flags().StringVar(
 		&stateDir,
 		"state-directory",
-		os.ExpandEnv("$HOME/.kube/k8ctx-state"),
+		os.ExpandEnv("$HOME/.kube/switch-state"),
 		"path to the switchers state directory used to read the Search Index.")
 	rootCommand.Flags().StringVar(
 		&vaultAPIAddress,

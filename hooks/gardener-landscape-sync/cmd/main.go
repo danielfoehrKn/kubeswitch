@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"os"
 
-	cmd "github.com/danielfoehrkn/k8ctx/hooks/gardener-landscape-sync/cmd/sync"
+	cmd "github.com/danielfoehrkn/kubeswitch/hooks/gardener-landscape-sync/cmd/sync"
 )
 
 func main() {

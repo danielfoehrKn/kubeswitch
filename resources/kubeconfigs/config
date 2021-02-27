@@ -1,18 +1,18 @@
 kind: Config
 apiVersion: v1
-current-context: k8ctx-demo
+current-context: switch-demo
 contexts:
-- name: k8ctx-demo
+- name: switch-demo
   context:
-    cluster: k8ctx-demo-cluster
-    user: k8ctx-demo-user
+    cluster: switch-demo-cluster
+    user: switch-demo-user
 clusters:
-- name: k8ctx-demo-cluster
+- name: switch-demo-cluster
   cluster:
     certificate-authority-data: ZHVtbXk=
     server: https://api.dev-seed-gcp.shoot.dev.dummy.com
 users:
-- name: k8ctx-demo-user
+- name: switch-demo-user
   user:
     client-certificate-data: ZHVtbXk=
     client-key-data: ZHVtbXky

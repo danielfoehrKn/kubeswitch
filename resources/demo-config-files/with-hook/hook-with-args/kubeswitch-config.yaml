@@ -1,0 +1,9 @@
+kind: SwitchConfig
+hooks:
+  - name: demo-hook
+    type: Executable
+    path: /Users/<your-user>/go/src/github.com/danielfoehrkn/kubeswitch/resources/config/hook-with-args/demo-executable.sh
+    arguments:
+      - "--name bernd"
+    execution:
+      interval: 10m

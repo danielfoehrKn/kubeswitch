@@ -20,16 +20,16 @@ import (
 	"os"
 	"strings"
 
-	"github.com/danielfoehrkn/k8ctx/pkg"
-	k8ctxconfig "github.com/danielfoehrkn/k8ctx/pkg/config"
-	"github.com/danielfoehrkn/k8ctx/pkg/store"
-	"github.com/danielfoehrkn/k8ctx/pkg/subcommands/alias"
-	"github.com/danielfoehrkn/k8ctx/pkg/subcommands/clean"
-	"github.com/danielfoehrkn/k8ctx/pkg/subcommands/history"
-	"github.com/danielfoehrkn/k8ctx/pkg/subcommands/hooks"
-	list_contexts "github.com/danielfoehrkn/k8ctx/pkg/subcommands/list-contexts"
-	setcontext "github.com/danielfoehrkn/k8ctx/pkg/subcommands/set-context"
-	"github.com/danielfoehrkn/k8ctx/types"
+	"github.com/danielfoehrkn/kubeswitch/pkg"
+	switchconfig "github.com/danielfoehrkn/kubeswitch/pkg/config"
+	"github.com/danielfoehrkn/kubeswitch/pkg/store"
+	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/alias"
+	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/clean"
+	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/history"
+	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/hooks"
+	list_contexts "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/list-contexts"
+	setcontext "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/set-context"
+	"github.com/danielfoehrkn/kubeswitch/types"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -54,8 +54,8 @@ var (
 	runImmediately bool
 
 	rootCommand = &cobra.Command{
-		Use:   "k8ctx",
-		Short: "Launch the k8ctx binary",
+		Use:   "switch",
+		Short: "Launch the switch binary",
 		Long:  `The kubectx for operators.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			stores, config, err := initialize()
@@ -110,7 +110,7 @@ func init() {
 	aliasRmCmd.Flags().StringVar(
 		&stateDirectory,
 		"state-directory",
-		os.ExpandEnv("$HOME/.kube/k8ctx-state"),
+		os.ExpandEnv("$HOME/.kube/switch-state"),
 		"path to the state directory.")
 
 	aliasContextCmd.AddCommand(aliasLsCmd)
@@ -175,7 +175,7 @@ func init() {
 	deleteCmd := &cobra.Command{
 		Use:   "clean",
 		Short: "Cleans all temporary kubeconfig files",
-		Long:  `Cleans the temporary kubeconfig files created in the directory $HOME/.kube/k8ctx_tmp`,
+		Long:  `Cleans the temporary kubeconfig files created in the directory $HOME/.kube/switch_tmp`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return clean.Clean()
 		},
@@ -201,13 +201,13 @@ func init() {
 	hookLsCmd.Flags().StringVar(
 		&configPath,
 		"config-path",
-		os.ExpandEnv("$HOME/.kube/k8ctx-config.yaml"),
+		os.ExpandEnv("$HOME/.kube/switch-config.yaml"),
 		"path on the local filesystem to the configuration file.")
 
 	hookLsCmd.Flags().StringVar(
 		&stateDirectory,
 		"state-directory",
-		os.ExpandEnv("$HOME/.kube/k8ctx-state"),
+		os.ExpandEnv("$HOME/.kube/switch-state"),
 		"path to the state directory.")
 
 	hookCmd.AddCommand(hookLsCmd)
@@ -215,13 +215,13 @@ func init() {
 	hookCmd.Flags().StringVar(
 		&configPath,
 		"config-path",
-		os.ExpandEnv("$HOME/.kube/k8ctx-config.yaml"),
+		os.ExpandEnv("$HOME/.kube/switch-config.yaml"),
 		"path on the local filesystem to the configuration file.")
 
 	hookCmd.Flags().StringVar(
 		&stateDirectory,
 		"state-directory",
-		os.ExpandEnv("$HOME/.kube/k8ctx-state"),
+		os.ExpandEnv("$HOME/.kube/switch-state"),
 		"path to the state directory.")
 
 	hookCmd.Flags().StringVar(
@@ -284,19 +284,19 @@ func setCommonFlags(command *cobra.Command) {
 		&vaultAPIAddressFromFlag,
 		"vault-api-address",
 		"",
-		"the API address of the Vault store. Overrides the default \"vaultAPIAddress\" field in the K8ctxConfig. This flag is overridden by the environment variable \"VAULT_ADDR\".")
+		"the API address of the Vault store. Overrides the default \"vaultAPIAddress\" field in the SwitchConfig. This flag is overridden by the environment variable \"VAULT_ADDR\".")
 	command.Flags().StringVar(
 		&stateDirectory,
 		"state-directory",
-		os.ExpandEnv("$HOME/.kube/k8ctx-state"),
+		os.ExpandEnv("$HOME/.kube/switch-state"),
 		"path to the local directory used for storing internal state.")
 	command.Flags().StringVar(
 		&configPath,
 		"config-path",
-		os.ExpandEnv("$HOME/.kube/k8ctx-config.yaml"),
+		os.ExpandEnv("$HOME/.kube/switch-config.yaml"),
 		"path on the local filesystem to the configuration file.")
 
-	// not used for setContext command. Makes call in k8ctx.sh script easier (no need to exclude flag from call)
+	// not used for setContext command. Makes call in switch.sh script easier (no need to exclude flag from call)
 	command.Flags().BoolVar(
 		&showPreview,
 		"show-preview",
@@ -305,9 +305,9 @@ func setCommonFlags(command *cobra.Command) {
 }
 
 func initialize() ([]store.KubeconfigStore, *types.Config, error) {
-	config, err := k8ctxconfig.LoadConfigFromFile(configPath)
+	config, err := switchconfig.LoadConfigFromFile(configPath)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to read k8ctx config file: %v", err)
+		return nil, nil, fmt.Errorf("failed to read switch config file: %v", err)
 	}
 
 	if config == nil {
@@ -390,7 +390,7 @@ func getVaultStore(vaultAPIAddressFromConfig string, paths []types.KubeconfigPat
 	}
 
 	if len(vaultAPI) == 0 {
-		return nil, fmt.Errorf("when using the vault kubeconfig store, the API address of the vault has to be provided either by command line argument \"vaultAPI\", via environment variable \"VAULT_ADDR\" or via K8ctxConfig file")
+		return nil, fmt.Errorf("when using the vault kubeconfig store, the API address of the vault has to be provided either by command line argument \"vaultAPI\", via environment variable \"VAULT_ADDR\" or via SwitchConfig file")
 	}
 
 	home, err := os.UserHomeDir()

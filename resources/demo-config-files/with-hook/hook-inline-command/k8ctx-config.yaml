@@ -1,8 +1,0 @@
-kind: K8ctxConfig
-hooks:
-  - name: inline
-    type: InlineCommand
-    execution:
-      interval: 10s
-    arguments:
-      - "/Users/<your-user>/go/src/github.com/danielfoehrkn/k8ctx/hack/k8ctx/switcher clean && echo ' Garbage collection complete.'"

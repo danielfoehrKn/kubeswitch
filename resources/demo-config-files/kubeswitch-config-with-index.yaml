@@ -1,4 +1,4 @@
-kind: K8ctxConfig
+kind: SwitchConfig
 # reads from the index instead of the backing store (filesystem/vault)
 # until one hour passes. Then refreshes the index
 # if this field is not specified, the index is not used at all

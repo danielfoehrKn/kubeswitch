@@ -20,7 +20,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/danielfoehrkn/k8ctx/types"
+	"github.com/danielfoehrkn/kubeswitch/types"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )

@@ -17,10 +17,10 @@ package history
 import (
 	"fmt"
 
-	"github.com/danielfoehrkn/k8ctx/pkg/store"
-	"github.com/danielfoehrkn/k8ctx/pkg/subcommands/history/util"
-	setcontext "github.com/danielfoehrkn/k8ctx/pkg/subcommands/set-context"
-	"github.com/danielfoehrkn/k8ctx/types"
+	"github.com/danielfoehrkn/kubeswitch/pkg/store"
+	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/history/util"
+	setcontext "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/set-context"
+	"github.com/danielfoehrkn/kubeswitch/types"
 	"github.com/ktr0731/go-fuzzyfinder"
 )
 

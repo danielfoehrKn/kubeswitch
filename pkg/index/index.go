@@ -20,7 +20,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/danielfoehrkn/k8ctx/types"
+	"github.com/danielfoehrkn/kubeswitch/types"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
@@ -50,8 +50,8 @@ func New(log *logrus.Entry, storeKind types.StoreKind, stateDirectory string) (*
 		}
 	}
 
-	indexStateFilepath := fmt.Sprintf("%s/k8ctx.%s.%s", stateDirectory, storeKind, indexStateFileName)
-	indexFilepath := fmt.Sprintf("%s/k8ctx.%s.%s", stateDirectory, storeKind, indexFileName)
+	indexStateFilepath := fmt.Sprintf("%s/switch.%s.%s", stateDirectory, storeKind, indexStateFileName)
+	indexFilepath := fmt.Sprintf("%s/switch.%s.%s", stateDirectory, storeKind, indexFileName)
 
 	i := SearchIndex{
 		log:                 log,

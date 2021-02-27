@@ -1,6 +1,6 @@
-# Setup Vault for `k8ctx`
+# Setup Vault for `kubeswitch`
 
-Vault can be used as the kubeconfig store for `k8ctx`.
+Vault can be used as the kubeconfig store for `kubeswitch`.
 Currently, the [key-value secrets engine](https://www.vaultproject.io/docs/secrets/kv) is supported.
 In addition, only one Vault instance can be configured. However, you can configure 
 multiple search paths within this one Vault instance.
@@ -36,9 +36,9 @@ If you deal with large numbers of changing kubeconfigs,
 it is recommended to setup an automation to sync the kubeconfigs to the vault instance.
 You can use [Hooks](../hooks/README.md) to achieve that.
 
-## Configure `k8ctx` to use Vault as Kubeconfig store
+## Configure `kubeswitch` to use Vault as Kubeconfig store
 
-Please [see here](kubeconfig_stores.md) on how to configure `k8ctx` either via CLI flags or a `K8ctxConfig` file.
+Please [see here](kubeconfig_stores.md) on how to configure `kubeswitch` either via CLI flags or a `SwitchConfig` file.
 
 ## Additional Considerations
 
@@ -48,4 +48,4 @@ However, for security reasons they should instead be stored in a Vault.
 
 Because in my case there is no central Vault with up to date kubeconfigs,
 I run a [local `vault` instance](https://www.vaultproject.io/docs/concepts/dev-server) that uses an encrypted RAM disk for storage.
-The kubeconfigs are regularly synced to the local vault with a [custom `k8ctx hook`](../hooks/README.md).
+The kubeconfigs are regularly synced to the local vault with a [custom `switch hook`](../hooks/README.md).

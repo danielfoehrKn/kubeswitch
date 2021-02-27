@@ -19,7 +19,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/danielfoehrkn/k8ctx/types"
+	"github.com/danielfoehrkn/kubeswitch/types"
 	"gopkg.in/yaml.v2"
 )
 
@@ -36,7 +36,7 @@ type Alias struct {
 // GetDefaultAlias get the default alias with the path to the state file set
 func GetDefaultAlias(stateDir string) (*Alias, error) {
 	a := Alias{
-		aliasFilepath: fmt.Sprintf("%s/k8ctx.%s", stateDir, aliasFileName),
+		aliasFilepath: fmt.Sprintf("%s/switch.%s", stateDir, aliasFileName),
 	}
 
 	if err := a.loadFromFile(); err != nil {

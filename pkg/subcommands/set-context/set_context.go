@@ -17,11 +17,11 @@ package setcontext
 import (
 	"fmt"
 
-	"github.com/danielfoehrkn/k8ctx/pkg"
-	"github.com/danielfoehrkn/k8ctx/pkg/store"
-	"github.com/danielfoehrkn/k8ctx/pkg/subcommands/history/util"
-	kubeconfigutil "github.com/danielfoehrkn/k8ctx/pkg/util/kubectx_copied"
-	"github.com/danielfoehrkn/k8ctx/types"
+	"github.com/danielfoehrkn/kubeswitch/pkg"
+	"github.com/danielfoehrkn/kubeswitch/pkg/store"
+	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/history/util"
+	kubeconfigutil "github.com/danielfoehrkn/kubeswitch/pkg/util/kubectx_copied"
+	"github.com/danielfoehrkn/kubeswitch/types"
 	"github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
 )

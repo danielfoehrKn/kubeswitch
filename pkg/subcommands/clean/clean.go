@@ -19,7 +19,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	kubeconfigutil "github.com/danielfoehrkn/k8ctx/pkg/util/kubectx_copied"
+	kubeconfigutil "github.com/danielfoehrkn/kubeswitch/pkg/util/kubectx_copied"
 )
 
 func Clean() error {

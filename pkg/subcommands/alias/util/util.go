@@ -14,7 +14,7 @@
 
 package util
 
-import kubeconfigutil "github.com/danielfoehrkn/k8ctx/pkg/util/kubectx_copied"
+import kubeconfigutil "github.com/danielfoehrkn/kubeswitch/pkg/util/kubectx_copied"
 
 // GetContextForAlias returns the alias for the given context or an empty string given a map (context -> alias)
 func GetContextForAlias(context string, mapping map[string]string) string {

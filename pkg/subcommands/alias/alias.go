@@ -18,11 +18,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/danielfoehrkn/k8ctx/pkg"
-	"github.com/danielfoehrkn/k8ctx/pkg/store"
-	"github.com/danielfoehrkn/k8ctx/pkg/subcommands/alias/state"
-	kubeconfigutil "github.com/danielfoehrkn/k8ctx/pkg/util/kubectx_copied"
-	"github.com/danielfoehrkn/k8ctx/types"
+	"github.com/danielfoehrkn/kubeswitch/pkg"
+	"github.com/danielfoehrkn/kubeswitch/pkg/store"
+	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/alias/state"
+	kubeconfigutil "github.com/danielfoehrkn/kubeswitch/pkg/util/kubectx_copied"
+	"github.com/danielfoehrkn/kubeswitch/types"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/sirupsen/logrus"
 )
@@ -102,7 +102,7 @@ func RemoveAlias(aliasToRemove, stateDir string) error {
 	return nil
 }
 
-// Alias just maintains an alias record in the k8ctx
+// Alias just maintains an alias record in the switch
 // state folder instead of renaming a context in the kubeconfig
 // this works independent of the backing store
 func Alias(aliasName, ctxNameToBeAliased string, stores []store.KubeconfigStore, config *types.Config, stateDir string) error {
