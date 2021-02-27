@@ -1,0 +1,36 @@
+name: releaser
+
+on:
+  release:
+    types:
+      - published
+jobs:
+  update_kubeswitch_in_homebrew_tap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build the binary-files
+        id: build_binary_files
+        run: |
+          sudo apt-get update
+          sudo apt-get install make -y
+          make build-switcher
+          echo ::set-output name=latest_release_filtered_tag::${GITHUB_REF##*/}
+      - name: Upload binaries to release
+        uses: AButler/upload-release-assets@v2.0
+        with:
+          files: 'hack/switch/switcher_linux_amd64;hack/switch/switcher_darwin_amd64,hack/switch/switch.sh'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          release-tag: ${{ steps.build_binary_files.outputs.latest_release_filtered_tag }}
+      - name: Send update with latest versions to danielfoehrkn/homebrew-switch
+        run: |
+          mac_sha256sum=$(sha256sum hack/switch/switcher_darwin_amd64 | awk '{print $1}')
+          linux_sha256sum=$(sha256sum hack/switch/switcher_linux_amd64 | awk '{print $1}')
+          switch_script_sha256sum=$(sha256sum hack/switch/switch.sh | awk '{print $1}')
+
+          echo '{"event_type": "update", "client_payload": { "tag": "'"${{ steps.build_binary_files.outputs.latest_release_filtered_tag }}"'", "mac_sha": "'"$mac_sha256sum"'", "linux_sha": "'"$linux_sha256sum"'", "switch_script_sha": "'"$switch_script_sha256sum"'"}}'
+
+          curl -X POST https://api.github.com/repos/danielfoehrkn/homebrew-switch/dispatches \
+          -H 'Accept: application/vnd.github.everest-preview+json' \
+          -u ${{ secrets.ACCESS_TOKEN }} \
+          --data '{"event_type": "update", "client_payload": { "tag": "'"${{ steps.build_binary_files.outputs.latest_release_filtered_tag }}"'", "mac_sha": "'"$mac_sha256sum"'", "linux_sha": "'"$linux_sha256sum"'", "switch_script_sha": "'"$switch_script_sha256sum"'"}}'
