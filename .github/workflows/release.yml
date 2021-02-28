@@ -19,7 +19,7 @@ jobs:
       - name: Upload binaries to release
         uses: AButler/upload-release-assets@v2.0
         with:
-          files: 'hack/switch/switcher_linux_amd64;hack/switch/switcher_darwin_amd64;hack/switch/switch.sh'
+          files: 'hack/switch/*'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           release-tag: ${{ steps.build_binary_files.outputs.latest_release_filtered_tag }}
       - name: Send update with latest versions to danielfoehrkn/homebrew-switch
