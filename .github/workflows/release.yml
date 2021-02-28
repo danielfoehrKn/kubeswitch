@@ -30,7 +30,7 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           release-tag: ${{ steps.build_binary_files.outputs.latest_release_filtered_tag }}
       - name: Upload switch script to release
-        uses: AButler/upgload-release-assets@v2.0
+        uses: AButler/upload-release-assets@v2.0
         with:
           files: 'hack/switch/switch.sh'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
