@@ -80,6 +80,7 @@ Download the switch script and the switcher binary.
 OS=linux # darwin
 wget https://github.com/danielfoehrKn/kubeswitch/releases/download/0.3.0/switcher_${OS}_amd64
 mv switcher_${OS}_amd64 /usr/local/bin/switcher
+chmod +x /usr/local/bin/switcher
 
 # grab switch script
 wget https://github.com/danielfoehrKn/kubeswitch/releases/download/0.3.0/switch.sh
