@@ -51,15 +51,13 @@ Designed as a [drop-in replacement](#difference-to-kubectx) for [kubectx](https:
 
 Mac and Linux users can install both the `switch.sh` script and the `switcher` binary with `homebrew`. 
 ```
-$ brew install danielfoehrkn/switch/kubeswitch
+$ brew install danielfoehrkn/switch/switch
 ```
 
 Source the `switch.sh` script from the `homebrew` installation path.
 ```
-$ source $HOMEBREW_CELLAR/switch/v0.2.0/switch.sh
+$ INSTALLATION_PATH=$(brew --prefix switch) && source $INSTALLATION_PATH/switch.sh
 ```
-
-Updating the version of the `kubeswitch` utility via `brew` (e.g changing from version 0.1.0 to 0.2.0) requires to change the sourced path.
 
 ### Option 2 - Manual Installation
 
@@ -76,20 +74,16 @@ and source the switch script from `/hack/switch/switch.sh`.
 
 #### Github Releases
 
-Download the switch script and the switcher binary for your OS / Architecture (darwin / linux).
+Download the switch script and the switcher binary.
 ```
-# grab pre-compiled switcher binary for your OS/architecture
-OS=linux #darwin
-wget https://github.com/danielfoehrKn/kubeswitch/releases/download/0.2.0/switcher_${OS}_amd64.tar.gz
-tar -zxvf switcher_${OS}_amd64.tar.gz
-cp switcher_${OS}_amd64 /usr/local/bin/switcher
-rm switcher_${OS}_amd64.tar.gz
+# grab pre-compiled switcher binary for your OS / architecture
+OS=linux # darwin
+wget https://github.com/danielfoehrKn/kubeswitch/releases/download/0.3.0/switcher_${OS}_amd64
+mv switcher_${OS}_amd64 /usr/local/bin/switcher
 
 # grab switch script
-wget https://github.com/danielfoehrKn/kubeswitch/releases/download/0.2.0/switch.tar.gz
-tar -zxvf switch.tar.gz
-cp switch.sh /usr/local/bin/switch.sh
-rm switch.tar.gz
+wget https://github.com/danielfoehrKn/kubeswitch/releases/download/0.3.0/switch.sh
+mv switch.sh /usr/local/bin/switch.sh
 ```
 
 Source `switch.sh` in `.bashrc`/`.zsh` via:
