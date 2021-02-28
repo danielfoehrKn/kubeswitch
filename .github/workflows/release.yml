@@ -6,6 +6,7 @@ on:
       - published
 jobs:
   update_kubeswitch_in_homebrew_tap:
+    environment: Release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -29,7 +30,7 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           release-tag: ${{ steps.build_binary_files.outputs.latest_release_filtered_tag }}
       - name: Upload switch script to release
-        uses: AButler/upload-release-assets@v2.0
+        uses: AButler/upgload-release-assets@v2.0
         with:
           files: 'hack/switch/switch.sh'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -44,7 +45,9 @@ jobs:
           tag=${{ steps.build_binary_files.outputs.latest_release_filtered_tag }}
           echo '{"event_type": "update", "client_payload": { "tag": "'"${{ steps.build_binary_files.outputs.latest_release_filtered_tag }}"'", "mac_sha": "'"$mac_sha256sum"'", "linux_sha": "'"$linux_sha256sum"'", "switch_script_sha": "'"$switch_script_sha256sum"'"}}'
 
+
+
           curl -X POST https://api.github.com/repos/danielfoehrKn/homebrew-switch/dispatches \
           -H 'Accept: application/vnd.github.everest-preview+json' \
-          -u $ACCESS_TOKEN \
+          -u "$ACCESS_TOKEN" \
           --data '{"event_type": "update", "client_payload": { "tag": "'"$tag{{ steps.build_binary_files.outputs.latest_release_filtered_tag }}"'", "mac_sha": "'"$mac_sha256sum"'", "linux_sha": "'"$linux_sha256sum"'", "switch_script_sha": "'"$switch_script_sha256sum"'"}}'
