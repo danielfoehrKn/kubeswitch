@@ -47,7 +47,7 @@ Designed as a [drop-in replacement](#difference-to-kubectx) for [kubectx](https:
 
 ## Installation
 
-### Option 1 - Homebrew
+### Option 1a - Homebrew
 
 Mac and Linux users can install both the `switch.sh` script and the `switcher` binary with `homebrew`. 
 ```
@@ -57,6 +57,19 @@ $ brew install danielfoehrkn/switch/switch
 Source the `switch.sh` script from the `homebrew` installation path.
 ```
 $ INSTALLATION_PATH=$(brew --prefix switch) && source $INSTALLATION_PATH/switch.sh
+```
+
+### Option 1b - MacPorts
+
+Mac users can also install both `switch.sh` and `switcher` from [MacPorts](https://www.macports.org)
+```
+$ sudo port selfupdate
+$ sudo port install kubeswitch
+```
+
+Source the `switch.sh` script from the MacPorts root (/opt/local).
+```
+$ source /opt/local/libexec/kubeswitch/switch.sh
 ```
 
 ### Option 2 - Manual Installation
