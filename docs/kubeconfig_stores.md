@@ -119,6 +119,19 @@ kubeconfigPaths:
     store: filesystem
 ```
 
+## Specify the Kubeconfig name/pattern
+
+The name or pattern to use when searching for kubeconfig files within a store is specified via the command line flag `--kubeconfig-name`.  This can also be defined in config:
+
+```
+$ cat ~/.kube/switch-config.yaml
+kind: SwitchConfig
+kubeconfigName: "*.myconfig"
+kubeconfigPaths:
+  - path: "~/.kube/local-kubeconfigs/"
+    store: filesystem
+```
+
 ## Using both CLI and `SwitchConfig` file
 
 - The flag `--vault-api-address` takes presendence over the config field `vaultAPIAddress`.
