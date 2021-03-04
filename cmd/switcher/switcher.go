@@ -35,7 +35,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const vaultTokenFileName = ".vault-token"
+const (
+	vaultTokenFileName    = ".vault-token"
+	defaultKubeconfigName = "config"
+)
 
 var (
 	// root command
@@ -278,7 +281,7 @@ func setCommonFlags(command *cobra.Command) {
 	command.Flags().StringVar(
 		&kubeconfigName,
 		"kubeconfig-name",
-		"config",
+		defaultKubeconfigName,
 		"only shows kubeconfig files with this name. Accepts wilcard arguments '*' and '?'. Defaults to 'config'.")
 	command.Flags().StringVar(
 		&vaultAPIAddressFromFlag,
@@ -312,6 +315,12 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 
 	if config == nil {
 		config = &types.Config{}
+	}
+
+	if kubeconfigName == defaultKubeconfigName {
+		if config.KubeconfigName != "" {
+			kubeconfigName = config.KubeconfigName
+		}
 	}
 
 	if len(kubeconfigPath) > 0 {

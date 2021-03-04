@@ -25,6 +25,7 @@ const (
 
 type Config struct {
 	Kind                          string           `yaml:"kind"`
+	KubeconfigName                string           `yaml:"kubeconfigName"`
 	KubeconfigRediscoveryInterval *time.Duration   `yaml:"kubeconfigRediscoveryInterval"`
 	VaultAPIAddress               string           `yaml:"vaultAPIAddress"`
 	Hooks                         []Hook           `yaml:"hooks"`
