@@ -129,7 +129,7 @@ func (s *VaultStore) GetKubeconfigForPath(path string) ([]byte, error) {
 	return nil, fmt.Errorf("should not happen")
 }
 
-func (s *VaultStore) VeryKubeconfigPaths() error {
+func (s *VaultStore) VerifyKubeconfigPaths() error {
 	var duplicatePath = make(map[string]*struct{})
 
 	for _, path := range s.KubeconfigPaths {

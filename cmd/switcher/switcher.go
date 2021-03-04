@@ -38,6 +38,7 @@ import (
 const (
 	vaultTokenFileName    = ".vault-token"
 	defaultKubeconfigName = "config"
+	defaultKubeconfigPath = "$HOME/.kube/config"
 )
 
 var (
@@ -271,7 +272,7 @@ func setCommonFlags(command *cobra.Command) {
 	command.Flags().StringVar(
 		&kubeconfigPath,
 		"kubeconfig-path",
-		os.ExpandEnv("$HOME/.kube/config"),
+		defaultKubeconfigPath,
 		"path to be recursively searched for kubeconfig files.  Can be a file or a directory on the local filesystem or a path in Vault.")
 	command.Flags().StringVar(
 		&storageBackend,
@@ -323,12 +324,7 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 		}
 	}
 
-	if len(kubeconfigPath) > 0 {
-		config.KubeconfigPaths = append(config.KubeconfigPaths, types.KubeconfigPath{
-			Path:  kubeconfigPath,
-			Store: types.StoreKind(storageBackend),
-		})
-	}
+	addKubeconfigPathFromFlag(config)
 
 	kubeconfigEnv := os.Getenv("KUBECONFIG")
 	if len(kubeconfigEnv) > 0 && !isDuplicatePath(config.KubeconfigPaths, kubeconfigEnv) && !strings.HasSuffix(kubeconfigEnv, ".tmp") {
@@ -375,6 +371,27 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 		stores = append(stores, s)
 	}
 	return stores, config, nil
+}
+
+// addKubeconfigPathFromFlag adds the kubeconfig path configured in the flag --kubeconfug-path
+// to the available paths that should be searched
+// does not add the path in case the configured path does not exist
+// this is to not require a kubeconfig file in the default location
+func addKubeconfigPathFromFlag(config *types.Config) {
+	if len(kubeconfigPath) == 0 {
+		return
+	}
+
+	if kubeconfigPath == defaultKubeconfigPath {
+		if _, err := os.Stat(os.ExpandEnv(defaultKubeconfigPath)); err != nil {
+			return
+		}
+	}
+
+	config.KubeconfigPaths = append(config.KubeconfigPaths, types.KubeconfigPath{
+		Path:  os.ExpandEnv(defaultKubeconfigPath),
+		Store: types.StoreKind(storageBackend),
+	})
 }
 
 func isDuplicatePath(paths []types.KubeconfigPath, newPath string) bool {

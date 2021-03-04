@@ -1,6 +1,6 @@
 # The case of kubeswitch
 
-Managing a handful of Kubeconfig files and contexts is straight forward and well-supported by existing tools.
+Managing a handful of Kubeconfig files and contexts is straightforward and well-supported by existing tools.
 You can use `kubectl config view --flatten`, define aliases or use `kubectx`.
 
 Meanwhile, Kubernetes adoption has gone through the roof and large scale Kubernetes landscapes 

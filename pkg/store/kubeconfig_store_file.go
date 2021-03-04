@@ -83,7 +83,7 @@ func (s *FilesystemStore) GetKubeconfigForPath(path string) ([]byte, error) {
 	return ioutil.ReadFile(path)
 }
 
-func (s *FilesystemStore) VeryKubeconfigPaths() error {
+func (s *FilesystemStore) VerifyKubeconfigPaths() error {
 	var (
 		duplicatePath              = make(map[string]*struct{})
 		validKubeconfigFilepaths   []string

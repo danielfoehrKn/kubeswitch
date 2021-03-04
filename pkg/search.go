@@ -59,7 +59,7 @@ func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir str
 	for _, kubeconfigStore := range stores {
 		logger := kubeconfigStore.GetLogger()
 
-		if err := kubeconfigStore.VeryKubeconfigPaths(); err != nil {
+		if err := kubeconfigStore.VerifyKubeconfigPaths(); err != nil {
 			return nil, err
 		}
 

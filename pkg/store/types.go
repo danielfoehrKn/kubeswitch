@@ -28,7 +28,7 @@ type SearchResult struct {
 type KubeconfigStore interface {
 	GetLogger() *logrus.Entry
 	GetKind() types.StoreKind
-	VeryKubeconfigPaths() error
+	VerifyKubeconfigPaths() error
 	StartSearch(channel chan SearchResult)
 	GetKubeconfigForPath(path string) ([]byte, error)
 }
