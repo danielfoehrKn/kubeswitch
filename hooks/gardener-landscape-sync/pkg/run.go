@@ -133,7 +133,7 @@ func RunHook(log *logrus.Entry, kubeconfigStore hookstore.KubeconfigStore, clean
 	seedNames := map[string]struct{}{}
 	shootedSeedNames := map[string]struct{}{}
 
-	searchIndex, err := index.New(log, kubeconfigStore.GetKind(), stateDir)
+	searchIndex, err := index.New(log, kubeconfigStore.GetKind(), stateDir, "default")
 	if err != nil {
 		return err
 	}

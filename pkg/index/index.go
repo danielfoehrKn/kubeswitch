@@ -43,15 +43,15 @@ type SearchIndex struct {
 }
 
 // New creates a new SearchIndex
-func New(log *logrus.Entry, storeKind types.StoreKind, stateDirectory string) (*SearchIndex, error) {
+func New(log *logrus.Entry, storeKind types.StoreKind, stateDirectory string, storeID string) (*SearchIndex, error) {
 	if _, err := os.Stat(stateDirectory); os.IsNotExist(err) {
 		if err := os.Mkdir(stateDirectory, 0755); err != nil {
 			return nil, err
 		}
 	}
 
-	indexStateFilepath := fmt.Sprintf("%s/switch.%s.%s", stateDirectory, storeKind, indexStateFileName)
-	indexFilepath := fmt.Sprintf("%s/switch.%s.%s", stateDirectory, storeKind, indexFileName)
+	indexStateFilepath := fmt.Sprintf("%s/switch.%s.%s", stateDirectory, storeID, indexStateFileName)
+	indexFilepath := fmt.Sprintf("%s/switch.%s.%s", stateDirectory, storeID, indexFileName)
 
 	i := SearchIndex{
 		log:                 log,

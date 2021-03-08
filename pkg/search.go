@@ -64,7 +64,7 @@ func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir str
 			return nil, err
 		}
 
-		searchIndex, err := index.New(logger, kubeconfigStore.GetKind(), stateDir)
+		searchIndex, err := index.New(logger, kubeconfigStore.GetKind(), stateDir, kubeconfigStore.GetID())
 		if err != nil {
 			return nil, err
 		}

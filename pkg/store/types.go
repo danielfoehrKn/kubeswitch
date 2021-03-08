@@ -22,17 +22,38 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// SearchResult is a full kubeconfig path discovered from the kubeconfig store
+// given the contained kubeconfig path, the store knows how to retrieve and return the
+// actual kubeconfig
 type SearchResult struct {
 	KubeconfigPath string
 	Error          error
 }
 
 type KubeconfigStore interface {
-	GetLogger() *logrus.Entry
+	// GetID returns the unique store ID
+	// should be
+	// - "<store kind>.default" if the kubeconfigStore.ID is not set
+	// - "<store kind>.<id>" if the kubeconfigStore.ID is set
+	GetID() string
+
+	// GetKind returns the store kind (e.g., filesystem)
 	GetKind() types.StoreKind
+
+	// VerifyKubeconfigPaths verifies that the configured search paths are valid
+	// can also include additional preprocessing
 	VerifyKubeconfigPaths() error
+
+	// StartSearch starts the search over the configured search paths
+	// and populates the results via the given channel
 	StartSearch(channel chan SearchResult)
+
+	// GetKubeconfigForPath returns the byte representation of the kubeconfig
+	// the kubeconfig has to fetch the kubeconfig from its backing store (e.g., uses the HTTP API)
 	GetKubeconfigForPath(path string) ([]byte, error)
+
+	// GetLogger returns the logger of the store
+	GetLogger() *logrus.Entry
 }
 
 type FilesystemStore struct {

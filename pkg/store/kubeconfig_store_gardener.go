@@ -123,6 +123,18 @@ func ValidateGardenerStoreConfiguration(path *field.Path, store types.Kubeconfig
 	return config.LandscapeName, errors
 }
 
+func (s *GardenerStore) GetID() string {
+	id := "default"
+
+	if s.KubeconfigStore.ID != nil {
+		id = *s.KubeconfigStore.ID
+	} else if s.Config != nil && s.Config.LandscapeName != nil {
+		id = *s.Config.LandscapeName
+	}
+
+	return fmt.Sprintf("%s.%s", types.StoreKindGardener, id)
+}
+
 func (s *GardenerStore) GetKind() types.StoreKind {
 	return types.StoreKindGardener
 }

@@ -28,6 +28,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func (s *FilesystemStore) GetID() string {
+	id := "default"
+	if s.KubeconfigStore.ID != nil {
+		id = *s.KubeconfigStore.ID
+	}
+	return fmt.Sprintf("%s.%s", types.StoreKindFilesystem, id)
+}
+
 func (s *FilesystemStore) GetKind() types.StoreKind {
 	return types.StoreKindFilesystem
 }

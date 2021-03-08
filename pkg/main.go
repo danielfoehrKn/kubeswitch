@@ -44,7 +44,7 @@ var (
 	pathToKubeconfig     = make(map[string]string)
 	pathToKubeconfigLock = sync.RWMutex{}
 
-	pathToStore     = make(map[string]types.StoreKind)
+	pathToStoreID   = make(map[string]string)
 	pathToStoreLock = sync.RWMutex{}
 
 	aliasToContext     = make(map[string]string)
@@ -86,14 +86,14 @@ func Switcher(stores []store.KubeconfigStore, config *types.Config, stateDir str
 			writeToContextToPathMapping(contextName, discoveredContext.Path)
 			// associate (path -> store)
 			// required to map back from selected context -> path -> store -> store.getKubeconfig(path)
-			writeToPathToStoreKind(discoveredContext.Path, kubeconfigStore.GetKind())
+			writeToPathToStoreID(discoveredContext.Path, kubeconfigStore.GetID())
 		}
 	}(*c)
 
 	// remember the store for later kubeconfig retrieval
-	var kindToStore = map[types.StoreKind]store.KubeconfigStore{}
+	var kindToStore = map[string]store.KubeconfigStore{}
 	for _, s := range stores {
-		kindToStore[s.GetKind()] = s
+		kindToStore[s.GetID()] = s
 	}
 
 	kubeconfigPath, selectedContext, err := showFuzzySearch(kindToStore, showPreview)
@@ -105,7 +105,7 @@ func Switcher(stores []store.KubeconfigStore, config *types.Config, stateDir str
 		return nil
 	}
 
-	storeKind := readFromPathToStoreKind(kubeconfigPath)
+	storeKind := readFromPathToStoreID(kubeconfigPath)
 	store := kindToStore[storeKind]
 	kubeconfigData, err := store.GetKubeconfigForPath(kubeconfigPath)
 	if err != nil {
@@ -160,7 +160,7 @@ func writeIndex(store store.KubeconfigStore, searchIndex *index.SearchIndex, ctx
 	}
 }
 
-func showFuzzySearch(kindToStore map[types.StoreKind]store.KubeconfigStore, showPreview bool) (string, string, error) {
+func showFuzzySearch(storeIDToStore map[string]store.KubeconfigStore, showPreview bool) (string, string, error) {
 	log := logrus.New()
 	// display selection dialog for all the kubeconfig context names
 	idx, err := fuzzyfinder.Find(
@@ -177,8 +177,8 @@ func showFuzzySearch(kindToStore map[types.StoreKind]store.KubeconfigStore, show
 			// read the content of the kubeconfig here and display
 			currentContextName := readFromAllKubeconfigContextNames(i)
 			path := readFromContextToPathMapping(currentContextName)
-			storeType := readFromPathToStoreKind(path)
-			store := kindToStore[storeType]
+			storeID := readFromPathToStoreID(path)
+			store := storeIDToStore[storeID]
 			kubeconfig, err := getSanitizedKubeconfigForKubeconfigPath(store, path)
 			if err != nil {
 				log.Warnf("failed to show preview: %v", err)
@@ -250,16 +250,16 @@ func writeToContextToPathMapping(key, value string) {
 	contextToPathMapping[key] = value
 }
 
-func readFromPathToStoreKind(key string) types.StoreKind {
+func readFromPathToStoreID(key string) string {
 	pathToStoreLock.RLock()
 	defer pathToStoreLock.RUnlock()
-	return pathToStore[key]
+	return pathToStoreID[key]
 }
 
-func writeToPathToStoreKind(key string, value types.StoreKind) {
+func writeToPathToStoreID(key string, value string) {
 	pathToStoreLock.Lock()
 	defer pathToStoreLock.Unlock()
-	pathToStore[key] = value
+	pathToStoreID[key] = value
 }
 
 func readFromPathToKubeconfig(key string) string {

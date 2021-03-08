@@ -98,6 +98,14 @@ func NewVaultStore(vaultAPIAddressFromFlag, vaultTokenFileName, kubeconfigName s
 	}, nil
 }
 
+func (s *VaultStore) GetID() string {
+	id := "default"
+	if s.KubeconfigStore.ID != nil {
+		id = *s.KubeconfigStore.ID
+	}
+	return fmt.Sprintf("%s.%s", types.StoreKindVault, id)
+}
+
 func (s *VaultStore) GetKind() types.StoreKind {
 	return types.StoreKindVault
 }

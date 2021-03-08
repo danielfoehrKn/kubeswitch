@@ -92,7 +92,7 @@ type StoreConfigGardener struct {
 	GardenerAPIKubeconfigPath  	string 	`yaml:"gardenerAPIKubeconfigPath"`
 	// LandscapeName is a custom name for the Gardener landscape
 	// uses this name instead of the default ID from the Gardener API ConfigMap "cluster-identity"
-	// also used as the store ID instead of the kubeconfig store ID
+	// also used as the store ID if the kubeconfig store ID is not specified
 	// + optional
 	LandscapeName  				*string 	`yaml:"landscapeName"`
 }
