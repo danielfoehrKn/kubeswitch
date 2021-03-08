@@ -14,6 +14,9 @@
 
 package types
 
+// ContextAlias contains alias names for contexts
 type ContextAlias struct {
+	// ContextToAliasMapping defines how alias names are written
+	// used internally by the kubeswitch tool
 	ContextToAliasMapping map[string]string `yaml:"contextToAliasMapping"`
 }

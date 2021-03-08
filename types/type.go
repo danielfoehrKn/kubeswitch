@@ -14,33 +14,53 @@
 
 package types
 
+// KubeUser is a user in a kubeconfig file
 type KubeUser struct {
+	// Name is the name of the user
 	// only parse the name, not the credentials
 	Name string `yaml:"name"`
 }
 
+// KubeCluster is a cluster configuration of a kubeconfig file
 type KubeCluster struct {
+	// Name is the name of the cluster
 	Name    string `yaml:"name"`
+	// Cluster contains cluster configuration information
 	Cluster struct {
+		// CertificateAuthorityData contains CA info
 		CertificateAuthorityData string `yaml:"certificate-authority-data,omitempty"`
+		// Server is the API server address
 		Server                   string `yaml:"server"`
+		// Insecure defines if the API server can be accessed with no CA checks
 		Insecure                 bool   `yaml:"insecure-skip-tls-verify,omitempty"`
 	} `yaml:"cluster"`
 }
 
+// KubeConfig is a representation of a kubeconfig file
+// does not include sensitive fields that could include credentials
+// used to show a preview of the Kubeconfig file
 type KubeConfig struct {
+	// TypeMeta common k8s type meta definition
 	TypeMeta       TypeMeta `yaml:",inline"`
+	// CurrentContext is the current context of the kubeconfig file
 	CurrentContext string   `yaml:"current-context"`
+	// Contexts are all defined contexts of the kubeconfig file
 	Contexts       []struct {
+		// Name is the name of the context
 		Name    string `yaml:"name"`
+		// Context contains context configuration
 		Context struct {
+			// Cluster is the cluster identifier of the context
 			Cluster string `yaml:"cluster"`
+			// User is the user identifier of the context
 			User    string
 		} `yaml:"context"`
 	} `yaml:"contexts"`
 
+	// Clusters are the cluster configurations
 	Clusters []KubeCluster `yaml:"clusters"`
 
+	// Users are the user configurations
 	Users []KubeUser `yaml:"users"`
 }
 
