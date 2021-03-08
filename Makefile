@@ -2,8 +2,13 @@
 format:
 	@./hack/format.sh ./cmd ./pkg
 
+.PHONY: test
+test:
+	@./hack/test.sh ./cmd/... ./pkg/...
+
 .PHONY: check
 check:
+	@./hack/test.sh ./cmd/... ./pkg/...
 	@./hack/check.sh ./cmd/... ./pkg/...
 
 .PHONY: build

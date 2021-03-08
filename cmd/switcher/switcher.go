@@ -16,18 +16,15 @@ package switcher
 
 import (
 	"fmt"
-	"io/ioutil"
-	"log"
 	"os"
 	"strings"
 
-	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 
 	"github.com/danielfoehrkn/kubeswitch/pkg"
 	switchconfig "github.com/danielfoehrkn/kubeswitch/pkg/config"
+	"github.com/danielfoehrkn/kubeswitch/pkg/config/validation"
 	"github.com/danielfoehrkn/kubeswitch/pkg/store"
 	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/alias"
 	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/clean"
@@ -254,6 +251,7 @@ func init() {
 	setContextCmd.SilenceUsage = true
 	aliasContextCmd.SilenceErrors = true
 	aliasRmCmd.SilenceErrors = true
+	rootCommand.SilenceErrors = true
 
 	setCommonFlags(setContextCmd)
 	setCommonFlags(listContextsCmd)
@@ -321,38 +319,30 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 		config = &types.Config{}
 	}
 
+	if errList := validation.ValidateConfig(config); errList != nil && len(errList) > 0 {
+		return nil, nil, fmt.Errorf("the switch configuration file contains errors: %s", errList.ToAggregate().Error())
+	}
+
 	if kubeconfigName == defaultKubeconfigName {
-		if config.KubeconfigName != "" {
-			kubeconfigName = config.KubeconfigName
+		if config.KubeconfigName != nil && *config.KubeconfigName != "" {
+			kubeconfigName = *config.KubeconfigName
 		}
 	}
 
-
-	var (
-		useVaultStore      = false
-		useFilesystemStore = false
-		stores             []store.KubeconfigStore
-	)
+	var stores []store.KubeconfigStore
 
 	for _, kubeconfigStoreFromConfig := range config.KubeconfigStores {
 		var s store.KubeconfigStore
 
 		switch kubeconfigStoreFromConfig.Kind {
 		case types.StoreKindFilesystem:
-			// TODO: in the future we want to allow multiple filsystem store configurations
-			//  to e.g search for a diff. kubeconfig name or have a different rediscovery interval
-			if useFilesystemStore {
-				return nil, nil, fmt.Errorf("configuring multliple filesystem stores is not supported. Provide multiple kubeconfig paths within the filesystem store configuration")
-			}
-			useFilesystemStore = true
-
 			// add kubeconfig path that is set via an environment variable
 			kubeconfigEnv := os.Getenv("KUBECONFIG")
 			if len(kubeconfigEnv) > 0 && !isDuplicatePath(config.KubeconfigStores, kubeconfigEnv) && !strings.HasSuffix(kubeconfigEnv, ".tmp") {
 				kubeconfigStoreFromConfig.Paths = append(kubeconfigStoreFromConfig.Paths, kubeconfigEnv)
 			}
 
-			pathFromFlag := getKubeconfigPathFromFlag(config)
+			pathFromFlag := getKubeconfigPathFromFlag()
 			if len(kubeconfigPath) > 0 {
 				kubeconfigStoreFromConfig.Paths = append(kubeconfigStoreFromConfig.Paths, pathFromFlag)
 			}
@@ -364,21 +354,22 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 			}
 
 		case types.StoreKindVault:
-			if useVaultStore {
-				return nil, nil, fmt.Errorf("configuring multliple vault stores is not supported")
-			}
-			useVaultStore = true
-			vaultStore, err := newVaultStore(kubeconfigStoreFromConfig)
+			vaultStore, err := store.NewVaultStore(vaultAPIAddressFromFlag,
+				vaultTokenFileName,
+				kubeconfigName,
+				kubeconfigStoreFromConfig)
 			if err != nil {
 				return nil, nil, err
 			}
 			s = vaultStore
+
 		case types.StoreKindGardener:
 			gardenerStore, err := store.NewGardenerStore(kubeconfigStoreFromConfig, stateDirectory)
 			if err != nil {
 				return nil, nil, fmt.Errorf("unable to create Gardener store: %w", err)
 			}
 			s = gardenerStore
+
 		default:
 			return nil, nil, fmt.Errorf("unknown store %q", kubeconfigStoreFromConfig.Kind)
 		}
@@ -391,7 +382,7 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 // getKubeconfigPathFromFlag gets the kubeconfig path configured in the flag --kubeconfig-path
 // does not add the path in case the configured path does not exist
 // this is to not require a kubeconfig file in the default location
-func getKubeconfigPathFromFlag(config *types.Config) string {
+func getKubeconfigPathFromFlag() string {
 	if len(kubeconfigPath) == 0 {
 		return ""
 	}
@@ -416,71 +407,4 @@ func isDuplicatePath(kubeconfigStores []types.KubeconfigStore, newPath string) b
 		}
 	}
 	return false
-}
-
-func newVaultStore(kubeconfigStore types.KubeconfigStore) (*store.VaultStore, error) {
-	vaultStoreConfig := &types.StoreConfigVault{}
-	if kubeconfigStore.Config != nil {
-		buf, err := yaml.Marshal(kubeconfigStore.Config)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		err = yaml.Unmarshal(buf, vaultStoreConfig)
-		if err != nil {
-			return nil, fmt.Errorf("failed to unmarshal vault config: %w", err)
-		}
-	}
-
-	vaultAPI := vaultStoreConfig.VaultAPIAddress
-	if len(vaultAPIAddressFromFlag) > 0 {
-		vaultAPI = vaultAPIAddressFromFlag
-	}
-
-	vaultAddress := os.Getenv("VAULT_ADDR")
-	if len(vaultAddress) > 0 {
-		vaultAPI = vaultAddress
-	}
-
-	if len(vaultAPI) == 0 {
-		return nil, fmt.Errorf("when using the vault kubeconfig store, the API address of the vault has to be provided either by command line argument \"vaultAPI\", via environment variable \"VAULT_ADDR\" or via SwitchConfig file")
-	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return nil, err
-	}
-
-	var vaultToken string
-
-	// https://www.vaultproject.io/docs/commands/token-helper
-	tokenBytes, _ := ioutil.ReadFile(fmt.Sprintf("%s/%s", home, vaultTokenFileName))
-	if tokenBytes != nil {
-		vaultToken = string(tokenBytes)
-	}
-
-	vaultTokenEnv := os.Getenv("VAULT_TOKEN")
-	if len(vaultTokenEnv) > 0 {
-		vaultToken = vaultTokenEnv
-	}
-
-	if len(vaultToken) == 0 {
-		return nil, fmt.Errorf("when using the vault kubeconfig store, a vault API token must be provided. Per default, the token file in \"~.vault-token\" is used. The default token can be overriden via the environment variable \"VAULT_TOKEN\"")
-	}
-
-	vaultConfig := &vaultapi.Config{
-		Address: vaultAPI,
-	}
-	client, err := vaultapi.NewClient(vaultConfig)
-	if err != nil {
-		return nil, err
-	}
-	client.SetToken(vaultToken)
-
-	return &store.VaultStore{
-		Logger:          logrus.New().WithField("store", types.StoreKindVault),
-		KubeconfigName:  kubeconfigName,
-		KubeconfigStore: kubeconfigStore,
-		Client:          client,
-	}, nil
 }

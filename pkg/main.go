@@ -226,7 +226,6 @@ func getSanitizedKubeconfigForKubeconfigPath(kubeconfigStore store.KubeconfigSto
 	return string(kubeconfigData), nil
 }
 
-
 func readFromAllKubeconfigContextNames(index int) string {
 	allKubeconfigContextNamesLock.RLock()
 	defer allKubeconfigContextNamesLock.RUnlock()

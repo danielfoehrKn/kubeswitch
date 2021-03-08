@@ -34,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -44,22 +45,17 @@ import (
 
 const (
 	cmNameClusterIdentity = "cluster-identity"
-	keyClusterIdentity = cmNameClusterIdentity
+	keyClusterIdentity    = cmNameClusterIdentity
 )
 
+// NewGardenerStore creates a new Gardener store
 func NewGardenerStore(store types.KubeconfigStore, stateDir string) (*GardenerStore, error) {
-	// always find the kubeconfigs of all Shoot on the landscape
-	// in the future it could be restricted via paths to only certain namespaces
-	if len(store.Paths) > 0 {
-		return nil, fmt.Errorf("specifying a path for the Gardener store is currently not supported")
-	}
-
 	config, err := getStoreConfig(store)
 	if err != nil {
 		return nil, err
 	}
 
-	gardenClient, err := getGardenClient(config, err)
+	gardenClient, err := getGardenClient(config)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +68,7 @@ func NewGardenerStore(store types.KubeconfigStore, stateDir string) (*GardenerSt
 		return nil, fmt.Errorf("unable to get gardener landscape identity from config map %s/%s: %w", metav1.NamespaceSystem, cmNameClusterIdentity, err)
 	}
 
-	identity, ok  := cm.Data[keyClusterIdentity]
+	identity, ok := cm.Data[keyClusterIdentity]
 	if !ok {
 		return nil, fmt.Errorf("unable to get gardener landscape identity from config map %s/%s: data key %q not found", metav1.NamespaceSystem, cmNameClusterIdentity, keyClusterIdentity)
 	}
@@ -88,11 +84,44 @@ func NewGardenerStore(store types.KubeconfigStore, stateDir string) (*GardenerSt
 		KubeconfigStore:   store,
 		Config:            config,
 		LandscapeIdentity: identity,
-		LandscapeName: 		landscapeName,
-		StateDirectory: 	stateDir,
+		LandscapeName:     landscapeName,
+		StateDirectory:    stateDir,
 	}, nil
 }
 
+// ValidateGardenerStoreConfiguration validates the store configuration for Gardener
+// returns the optional landscape name as well as the error list
+func ValidateGardenerStoreConfiguration(path *field.Path, store types.KubeconfigStore) (*string, field.ErrorList) {
+	var errors = field.ErrorList{}
+
+	// always find the kubeconfigs of all Shoot on the landscape
+	// in the future it could be restricted via paths to only certain namespaces
+	if len(store.Paths) > 0 {
+		errors = append(errors, field.Forbidden(path.Child("paths"), "specifying a path for the Gardener store is currently not supported"))
+	}
+
+	configPath := path.Child("config")
+	if store.Config == nil {
+		errors = append(errors, field.Required(configPath, "Missing configuration in the SwitchConfig file for the Gardener store"))
+		return nil, errors
+	}
+
+	config, err := getStoreConfig(store)
+	if err != nil {
+		errors = append(errors, field.Invalid(configPath, store.Config, err.Error()))
+		return nil, errors
+	}
+
+	if len(config.GardenerAPIKubeconfigPath) == 0 {
+		errors = append(errors, field.Invalid(configPath.Child("gardenerAPIKubeconfigPath"), config.GardenerAPIKubeconfigPath, "The kubeconfig to the Gardener API server must be set"))
+	}
+
+	if config.LandscapeName != nil && len(*config.LandscapeName) == 0 {
+		errors = append(errors, field.Invalid(configPath.Child("landscapeName"), *config.LandscapeName, "The optional Gardener landscape name must not be empty"))
+	}
+
+	return config.LandscapeName, errors
+}
 
 func (s *GardenerStore) GetKind() types.StoreKind {
 	return types.StoreKindGardener
@@ -134,7 +163,7 @@ func (s *GardenerStore) GetKubeconfigForPath(path string) ([]byte, error) {
 				if apierrors.IsNotFound(err) {
 					return nil, fmt.Errorf("kubeconfig secret for Shoot (%s/%s) not found", namespace, name)
 				}
-				return nil, fmt.Errorf("failed to get kubeconfig secret for Shoot (%s/%s): %w",  namespace, name, err)
+				return nil, fmt.Errorf("failed to get kubeconfig secret for Shoot (%s/%s): %w", namespace, name, err)
 			}
 		}
 
@@ -162,7 +191,7 @@ func (s *GardenerStore) StartSearch(channel chan SearchResult) {
 		LabelSelector: selector,
 	}); err != nil {
 		channel <- SearchResult{
-			Error:  fmt.Errorf("failed to retrieve secrets from Gardener API: %v", err),
+			Error: fmt.Errorf("failed to retrieve secrets from Gardener API: %v", err),
 		}
 		return
 	}
@@ -175,7 +204,7 @@ func (s *GardenerStore) StartSearch(channel chan SearchResult) {
 	shoots := &gardencorev1beta1.ShootList{}
 	if err := s.Client.List(ctx, shoots, &client.ListOptions{}); err != nil {
 		channel <- SearchResult{
-			Error:  fmt.Errorf("failed to list Shoots: %w", err),
+			Error: fmt.Errorf("failed to list Shoots: %w", err),
 		}
 		return
 	}
@@ -184,7 +213,7 @@ func (s *GardenerStore) StartSearch(channel chan SearchResult) {
 	projects := &gardencorev1beta1.ProjectList{}
 	if err := s.Client.List(ctx, projects, &client.ListOptions{}); err != nil {
 		channel <- SearchResult{
-			Error:  fmt.Errorf("failed to list projects: %w", err),
+			Error: fmt.Errorf("failed to list projects: %w", err),
 		}
 		return
 	}
@@ -193,7 +222,7 @@ func (s *GardenerStore) StartSearch(channel chan SearchResult) {
 	s.sendKubeconfigPaths(channel, shoots, buildNamespaceToProjectMap(projects))
 }
 
-func getGardenClient(config *types.StoreConfigGardener, err error) (client.Client, error) {
+func getGardenClient(config *types.StoreConfigGardener) (client.Client, error) {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(corev1.AddToScheme(scheme))
 	utilruntime.Must(gardencorev1beta1.AddToScheme(scheme))
@@ -230,17 +259,16 @@ func getStoreConfig(store types.KubeconfigStore) (*types.StoreConfigGardener, er
 
 	err = yaml.Unmarshal(buf, storeConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal gardener config: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal config for the Gardener kubeconfig store: %w", err)
 	}
 	return storeConfig, nil
 }
 
-
-func (s *GardenerStore) sendKubeconfigPaths(channel chan SearchResult, shoots *gardencorev1beta1.ShootList, namespaceToProjectName map[string]string) error {
+func (s *GardenerStore) sendKubeconfigPaths(channel chan SearchResult, shoots *gardencorev1beta1.ShootList, namespaceToProjectName map[string]string) {
 	var (
-		shootIdentifiers = sets.NewString()
+		shootIdentifiers       = sets.NewString()
 		shootedSeedIdentifiers = sets.NewString()
-		landscapeName = s.LandscapeIdentity
+		landscapeName          = s.LandscapeIdentity
 	)
 
 	// first, send the garden context name configured in the switch config
@@ -298,7 +326,6 @@ func (s *GardenerStore) sendKubeconfigPaths(channel chan SearchResult, shoots *g
 			Error:          nil,
 		}
 	}
-	return nil
 }
 
 func getGardenKubeconfigPath(landscapeIdentity string) string {
@@ -337,9 +364,8 @@ func (s *GardenerStore) createGardenKubeconfigAlias(landscapeName string, garden
 	return nil
 }
 
-
 func (s *GardenerStore) VerifyKubeconfigPaths() error {
-	if len(s.KubeconfigStore.Paths) == 1  && s.KubeconfigStore.Paths[0] == "/" {
+	if len(s.KubeconfigStore.Paths) == 1 && s.KubeconfigStore.Paths[0] == "/" {
 		return nil
 	}
 
@@ -410,7 +436,7 @@ type GardenerResource string
 
 const (
 	GardenerResourceShoot GardenerResource = "Shoot"
-	GardenerResourceSeed GardenerResource = "Seed"
+	GardenerResourceSeed  GardenerResource = "Seed"
 )
 
 // <namespace>-<name>
@@ -434,22 +460,21 @@ func getShootIdentifier(landscape, project, shoot string) string {
 // 1) type of the Gardener resource (shoot/seed)
 // 2) name of the resource
 // 3) optionally the namespace
-func parseIdentifier(path string) (string, GardenerResource, string, string,  error) {
+func parseIdentifier(path string) (string, GardenerResource, string, string, error) {
 	split := strings.Split(path, "--")
 	switch len(split) {
-	case 4 :
+	case 4:
 		if !strings.Contains(path, "shoot") {
 			return "", "", "", "", fmt.Errorf("cannot parse kubeconfig path %q", path)
 		}
-		return  split[0], GardenerResourceShoot, split[3], fmt.Sprintf("garden-%s", split[2]), nil
-	case 3 :
+		return split[0], GardenerResourceShoot, split[3], fmt.Sprintf("garden-%s", split[2]), nil
+	case 3:
 		if !strings.Contains(path, "seed") {
 			return "", "", "", "", fmt.Errorf("cannot parse kubeconfig path: %q", path)
 		}
-		return  split[0], GardenerResourceSeed, split[2], "", nil
+		return split[0], GardenerResourceSeed, split[2], "", nil
 
 	default:
 		return "", "", "", "", fmt.Errorf("cannot parse kubeconfig path: %q", path)
 	}
 }
-

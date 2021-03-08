@@ -17,13 +17,86 @@ package store
 import (
 	"encoding/base64"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 
-	"github.com/danielfoehrkn/kubeswitch/types"
+	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
+
+	"github.com/danielfoehrkn/kubeswitch/types"
 )
+
+func NewVaultStore(vaultAPIAddressFromFlag, vaultTokenFileName, kubeconfigName string, kubeconfigStore types.KubeconfigStore) (*VaultStore, error) {
+	vaultStoreConfig := &types.StoreConfigVault{}
+	if kubeconfigStore.Config != nil {
+		buf, err := yaml.Marshal(kubeconfigStore.Config)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = yaml.Unmarshal(buf, vaultStoreConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal vault config: %w", err)
+		}
+	}
+
+	vaultAPI := vaultStoreConfig.VaultAPIAddress
+	if len(vaultAPIAddressFromFlag) > 0 {
+		vaultAPI = vaultAPIAddressFromFlag
+	}
+
+	vaultAddress := os.Getenv("VAULT_ADDR")
+	if len(vaultAddress) > 0 {
+		vaultAPI = vaultAddress
+	}
+
+	if len(vaultAPI) == 0 {
+		return nil, fmt.Errorf("when using the vault kubeconfig store, the API address of the vault has to be provided either by command line argument \"vaultAPI\", via environment variable \"VAULT_ADDR\" or via SwitchConfig file")
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+
+	var vaultToken string
+
+	// https://www.vaultproject.io/docs/commands/token-helper
+	tokenBytes, _ := ioutil.ReadFile(fmt.Sprintf("%s/%s", home, vaultTokenFileName))
+	if tokenBytes != nil {
+		vaultToken = string(tokenBytes)
+	}
+
+	vaultTokenEnv := os.Getenv("VAULT_TOKEN")
+	if len(vaultTokenEnv) > 0 {
+		vaultToken = vaultTokenEnv
+	}
+
+	if len(vaultToken) == 0 {
+		return nil, fmt.Errorf("when using the vault kubeconfig store, a vault API token must be provided. Per default, the token file in \"~.vault-token\" is used. The default token can be overriden via the environment variable \"VAULT_TOKEN\"")
+	}
+
+	vaultConfig := &vaultapi.Config{
+		Address: vaultAPI,
+	}
+	client, err := vaultapi.NewClient(vaultConfig)
+	if err != nil {
+		return nil, err
+	}
+	client.SetToken(vaultToken)
+
+	return &VaultStore{
+		Logger:          logrus.New().WithField("store", types.StoreKindVault),
+		KubeconfigName:  kubeconfigName,
+		KubeconfigStore: kubeconfigStore,
+		Client:          client,
+	}, nil
+}
 
 func (s *VaultStore) GetKind() types.StoreKind {
 	return types.StoreKindVault

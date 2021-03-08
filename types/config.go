@@ -16,10 +16,15 @@ package types
 
 import (
 	"time"
+
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // StoreKind identifies a supported store kind - filesystem, vault, Gardener.
 type StoreKind string
+
+// ValidStoreKinds contains all valid store kinds
+var ValidStoreKinds = sets.NewString(string(StoreKindVault), string(StoreKindFilesystem), string(StoreKindGardener))
 
 const (
 	// StoreKindFilesystem is an identifier for the filesystem store
@@ -36,12 +41,14 @@ type Config struct {
 	// KubeconfigName is the global default for how the kubeconfig is
 	// identified in the backing store.
 	// Can be overridden in the individual kubeconfig store configuration
-	KubeconfigName                string            `yaml:"kubeconfigName"`
-	// KubeconfigRediscoveryInterval is the global default for how how often
+	// + optional
+	KubeconfigName                *string            `yaml:"kubeconfigName"`
+	// RefreshIndexAfter is the global default for how how often
 	// the index for this kubeconfig store shall be refreshed.
 	// Not setting this field will cause kubeswitch to not use an index
 	// Can be overridden in the individual kubeconfig store configuration
-	KubeconfigRediscoveryInterval *time.Duration    `yaml:"rediscoveryInterval"`
+	// + optional
+	RefreshIndexAfter *time.Duration `yaml:"refreshIndexAfter"`
 	// Hooks defines configurations for commands that shall be executed prior to the search
 	Hooks                         []Hook            `yaml:"hooks"`
 	// KubeconfigStores contains the configuration for kubeconfig stores
@@ -52,6 +59,7 @@ type KubeconfigStore struct {
 	// ID is the ID of the kubeconfig store.
 	// Used to write distinct index files for each store
 	// Not required if only one store of a store kind is configured
+	// + optional
 	ID 					*string 			`yaml:"id"`
 	// Kind identifies a supported store kind - filesystem, vault, Gardener.
 	Kind                StoreKind        	`yaml:"kind"`
@@ -59,12 +67,14 @@ type KubeconfigStore struct {
 	// For the Filesystem store, this is the name of the file that contains the kubeconfig
 	// For the Vault store, this is the secret key
 	// For the Gardener store this field is not used
-	KubeconfigName      string           	`yaml:"kubeconfigName"`
+	// + optional
+	KubeconfigName      *string           	`yaml:"kubeconfigName"`
 	// Paths contains the paths to search for in the backing store
 	Paths               []string         	`yaml:"paths"`
-	// RediscoveryInterval defines how often the index for this kubeconfig store shall be refreshed.
+	// RefreshIndexAfter defines how often the index for this kubeconfig store shall be refreshed.
 	// Not setting this field will cause kubeswitch to not use an index
-	RediscoveryInterval *time.Duration   	`yaml:"rediscoveryInterval"`
+	// + optional
+	RefreshIndexAfter *time.Duration `yaml:"refreshIndexAfter"`
 	// Config is store-specific configuration.
 	// Please check the documentation for each backing provider to see what confiuguration is
 	// possible here
@@ -83,5 +93,6 @@ type StoreConfigGardener struct {
 	// LandscapeName is a custom name for the Gardener landscape
 	// uses this name instead of the default ID from the Gardener API ConfigMap "cluster-identity"
 	// also used as the store ID instead of the kubeconfig store ID
+	// + optional
 	LandscapeName  				*string 	`yaml:"landscapeName"`
 }

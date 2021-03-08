@@ -15,6 +15,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install make -y
+          make check
           make build-switcher
           echo ::set-output name=latest_release_filtered_tag::${GITHUB_REF##*/}
       - name: Upload mac binaries to release

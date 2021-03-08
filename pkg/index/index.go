@@ -121,11 +121,11 @@ func (i *SearchIndex) ShouldBeUsed(config *types.Config) (bool, error) {
 		return false, nil
 	}
 
-	if config == nil || config.KubeconfigRediscoveryInterval == nil {
+	if config == nil || config.RefreshIndexAfter == nil {
 		return false, nil
 	}
 
-	return time.Now().UTC().Before(indexState.LastUpdateTime.UTC().Add(*config.KubeconfigRediscoveryInterval)), nil
+	return time.Now().UTC().Before(indexState.LastUpdateTime.UTC().Add(*config.RefreshIndexAfter)), nil
 }
 
 func (i *SearchIndex) WriteState(toWrite types.IndexState) error {
