@@ -17,8 +17,14 @@ package switcher
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"strings"
+
+	vaultapi "github.com/hashicorp/vault/api"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 
 	"github.com/danielfoehrkn/kubeswitch/pkg"
 	switchconfig "github.com/danielfoehrkn/kubeswitch/pkg/config"
@@ -30,9 +36,6 @@ import (
 	list_contexts "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/list-contexts"
 	setcontext "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/set-context"
 	"github.com/danielfoehrkn/kubeswitch/types"
-	vaultapi "github.com/hashicorp/vault/api"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 )
 
 const (
@@ -324,15 +327,6 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 		}
 	}
 
-	addKubeconfigPathFromFlag(config)
-
-	kubeconfigEnv := os.Getenv("KUBECONFIG")
-	if len(kubeconfigEnv) > 0 && !isDuplicatePath(config.KubeconfigPaths, kubeconfigEnv) && !strings.HasSuffix(kubeconfigEnv, ".tmp") {
-		config.KubeconfigPaths = append(config.KubeconfigPaths, types.KubeconfigPath{
-			Path:  kubeconfigEnv,
-			Store: types.StoreKind(storageBackend),
-		})
-	}
 
 	var (
 		useVaultStore      = false
@@ -340,32 +334,53 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 		stores             []store.KubeconfigStore
 	)
 
-	for _, configuredKubeconfigPath := range config.KubeconfigPaths {
+	for _, kubeconfigStoreFromConfig := range config.KubeconfigStores {
 		var s store.KubeconfigStore
 
-		switch configuredKubeconfigPath.Store {
+		switch kubeconfigStoreFromConfig.Kind {
 		case types.StoreKindFilesystem:
+			// TODO: in the future we want to allow multiple filsystem store configurations
+			//  to e.g search for a diff. kubeconfig name or have a different rediscovery interval
 			if useFilesystemStore {
-				continue
+				return nil, nil, fmt.Errorf("configuring multliple filesystem stores is not supported. Provide multiple kubeconfig paths within the filesystem store configuration")
 			}
 			useFilesystemStore = true
+
+			// add kubeconfig path that is set via an environment variable
+			kubeconfigEnv := os.Getenv("KUBECONFIG")
+			if len(kubeconfigEnv) > 0 && !isDuplicatePath(config.KubeconfigStores, kubeconfigEnv) && !strings.HasSuffix(kubeconfigEnv, ".tmp") {
+				kubeconfigStoreFromConfig.Paths = append(kubeconfigStoreFromConfig.Paths, kubeconfigEnv)
+			}
+
+			pathFromFlag := getKubeconfigPathFromFlag(config)
+			if len(kubeconfigPath) > 0 {
+				kubeconfigStoreFromConfig.Paths = append(kubeconfigStoreFromConfig.Paths, pathFromFlag)
+			}
+
 			s = &store.FilesystemStore{
 				Logger:          logrus.New().WithField("store", types.StoreKindFilesystem),
-				KubeconfigPaths: config.KubeconfigPaths,
+				KubeconfigStore: kubeconfigStoreFromConfig,
 				KubeconfigName:  kubeconfigName,
 			}
+
 		case types.StoreKindVault:
 			if useVaultStore {
-				continue
+				return nil, nil, fmt.Errorf("configuring multliple vault stores is not supported")
 			}
 			useVaultStore = true
-			vaultStore, err := getVaultStore(config.VaultAPIAddress, config.KubeconfigPaths)
+			vaultStore, err := newVaultStore(kubeconfigStoreFromConfig)
 			if err != nil {
 				return nil, nil, err
 			}
 			s = vaultStore
+		case types.StoreKindGardener:
+			gardenerStore, err := store.NewGardenerStore(kubeconfigStoreFromConfig, stateDirectory)
+			if err != nil {
+				return nil, nil, fmt.Errorf("unable to create Gardener store: %w", err)
+			}
+			s = gardenerStore
 		default:
-			return nil, nil, fmt.Errorf("unknown store %q", configuredKubeconfigPath.Store)
+			return nil, nil, fmt.Errorf("unknown store %q", kubeconfigStoreFromConfig.Kind)
 		}
 
 		stores = append(stores, s)
@@ -373,39 +388,51 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 	return stores, config, nil
 }
 
-// addKubeconfigPathFromFlag adds the kubeconfig path configured in the flag --kubeconfug-path
-// to the available paths that should be searched
+// getKubeconfigPathFromFlag gets the kubeconfig path configured in the flag --kubeconfig-path
 // does not add the path in case the configured path does not exist
 // this is to not require a kubeconfig file in the default location
-func addKubeconfigPathFromFlag(config *types.Config) {
+func getKubeconfigPathFromFlag(config *types.Config) string {
 	if len(kubeconfigPath) == 0 {
-		return
+		return ""
 	}
 
 	if kubeconfigPath == defaultKubeconfigPath {
 		if _, err := os.Stat(os.ExpandEnv(defaultKubeconfigPath)); err != nil {
-			return
+			return ""
 		}
 	}
 
-	config.KubeconfigPaths = append(config.KubeconfigPaths, types.KubeconfigPath{
-		Path:  os.ExpandEnv(defaultKubeconfigPath),
-		Store: types.StoreKind(storageBackend),
-	})
+	return os.ExpandEnv(defaultKubeconfigPath)
 }
 
-func isDuplicatePath(paths []types.KubeconfigPath, newPath string) bool {
-	for _, p := range paths {
-		if p.Path == newPath {
-			return true
+func isDuplicatePath(kubeconfigStores []types.KubeconfigStore, newPath string) bool {
+	// expensive operation in case there a lot of kubeconfig stores and paths
+	// but fortunately it is highly unlikely that there are ever that many stores and paths configured
+	for _, store := range kubeconfigStores {
+		for _, path := range store.Paths {
+			if path == newPath {
+				return true
+			}
 		}
 	}
 	return false
 }
 
-func getVaultStore(vaultAPIAddressFromConfig string, paths []types.KubeconfigPath) (*store.VaultStore, error) {
-	vaultAPI := vaultAPIAddressFromConfig
+func newVaultStore(kubeconfigStore types.KubeconfigStore) (*store.VaultStore, error) {
+	vaultStoreConfig := &types.StoreConfigVault{}
+	if kubeconfigStore.Config != nil {
+		buf, err := yaml.Marshal(kubeconfigStore.Config)
+		if err != nil {
+			log.Fatal(err)
+		}
 
+		err = yaml.Unmarshal(buf, vaultStoreConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal vault config: %w", err)
+		}
+	}
+
+	vaultAPI := vaultStoreConfig.VaultAPIAddress
 	if len(vaultAPIAddressFromFlag) > 0 {
 		vaultAPI = vaultAPIAddressFromFlag
 	}
@@ -453,7 +480,7 @@ func getVaultStore(vaultAPIAddressFromConfig string, paths []types.KubeconfigPat
 	return &store.VaultStore{
 		Logger:          logrus.New().WithField("store", types.StoreKindVault),
 		KubeconfigName:  kubeconfigName,
-		KubeconfigPaths: paths,
+		KubeconfigStore: kubeconfigStore,
 		Client:          client,
 	}, nil
 }

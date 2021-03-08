@@ -92,18 +92,14 @@ func (s *FilesystemStore) VerifyKubeconfigPaths() error {
 		homeDir                    = usr.HomeDir
 	)
 
-	for _, path := range s.KubeconfigPaths {
-		if path.Store != types.StoreKindFilesystem {
-			continue
-		}
-
+	for _, path := range s.KubeconfigStore.Paths {
 		// do not add duplicate paths
-		if duplicatePath[path.Path] != nil {
+		if duplicatePath[path] != nil {
 			continue
 		}
-		duplicatePath[path.Path] = &struct{}{}
+		duplicatePath[path] = &struct{}{}
 
-		kubeconfigPath := path.Path
+		kubeconfigPath := path
 		if kubeconfigPath == "~" {
 			kubeconfigPath = homeDir
 		} else if strings.HasPrefix(kubeconfigPath, "~/") {
@@ -127,7 +123,7 @@ func (s *FilesystemStore) VerifyKubeconfigPaths() error {
 	}
 
 	if len(validKubeconfigDirectories) == 0 && len(validKubeconfigFilepaths) == 0 {
-		return fmt.Errorf("none of the %d specified kubeconfig path(s) exist. Either specifiy an existing path via flag '--kubeconfig-path' or in the switch config file", len(s.KubeconfigPaths))
+		return fmt.Errorf("none of the %d specified kubeconfig path(s) exist. Either specifiy an existing path via flag '--kubeconfig-path' or in the switch config file", len(s.KubeconfigStore.Paths))
 	}
 	s.kubeconfigDirectories = validKubeconfigDirectories
 	s.kubeconfigFilepaths = validKubeconfigFilepaths

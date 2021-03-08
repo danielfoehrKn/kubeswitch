@@ -21,6 +21,7 @@ import (
 	"github.com/danielfoehrkn/kubeswitch/pkg/store"
 	aliasstate "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/alias/state"
 	aliasutil "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/alias/util"
+	"github.com/danielfoehrkn/kubeswitch/pkg/util"
 	"github.com/danielfoehrkn/kubeswitch/types"
 )
 
@@ -116,14 +117,23 @@ func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir str
 					continue
 				}
 
-				// get the context names from the parsed kubeconfig
-				contexts, err := getContextsForKubeconfigPath(store, channelResult.KubeconfigPath)
+				bytes, err := store.GetKubeconfigForPath(channelResult.KubeconfigPath)
 				if err != nil {
 					// do not throw Error, try to parse the other files
 					// this will happen a lot when using vault as storage because the secrets key value needs to match the desired kubeconfig name
 					// this however cannot be checked without retrieving the actual secret (path discovery is only list operation)
 					continue
 				}
+
+				// get the context names from the parsed kubeconfig
+				kubeconfigString, contexts, err := util.GetContextsForKubeconfigPath(bytes, store.GetKind(), channelResult.KubeconfigPath)
+				if err != nil {
+					// do not throw Error, try to parse the other files
+					continue
+				}
+
+				// save kubeconfig content to in-memory map to avoid duplicate read operation in getSanitizedKubeconfigForKubeconfigPath
+				writeToPathToKubeconfig(channelResult.KubeconfigPath, *kubeconfigString)
 
 				for _, contextName := range contexts {
 					// write to result channel

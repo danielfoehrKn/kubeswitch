@@ -21,6 +21,7 @@ type StoreKind string
 const (
 	StoreKindFilesystem StoreKind = "filesystem"
 	StoreKindVault      StoreKind = "vault"
+	StoreKindGardener   StoreKind = "gardener"
 )
 
 type Index struct {

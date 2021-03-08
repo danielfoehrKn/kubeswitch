@@ -18,6 +18,8 @@ import (
 	"github.com/danielfoehrkn/kubeswitch/types"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type SearchResult struct {
@@ -35,7 +37,7 @@ type KubeconfigStore interface {
 
 type FilesystemStore struct {
 	Logger                *logrus.Entry
-	KubeconfigPaths       []types.KubeconfigPath
+	KubeconfigStore       types.KubeconfigStore
 	KubeconfigName        string
 	kubeconfigDirectories []string
 	kubeconfigFilepaths   []string
@@ -45,6 +47,20 @@ type VaultStore struct {
 	Logger          *logrus.Entry
 	Client          *vaultapi.Client
 	KubeconfigName  string
-	KubeconfigPaths []types.KubeconfigPath
+	KubeconfigStore types.KubeconfigStore
 	vaultPaths      []string
+}
+
+type GardenerStore struct {
+	Logger            	*logrus.Entry
+	Client            	client.Client
+	KubeconfigStore   	types.KubeconfigStore
+	Config            	*types.StoreConfigGardener
+	LandscapeIdentity 	string
+	LandscapeName 	string
+	StateDirectory 		string
+	// if a search against the Gardener API has been executed, this is filled with
+	// all the Shoot secrets.
+	// This way we can save some requests against the API when getting the kubeconfig later
+	ShootNameToKubeconfigSecret  map[string]corev1.Secret
 }

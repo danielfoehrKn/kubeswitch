@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	// indexStateFileName is the filename of the index state file containing the last time a Store index has been updated
+	// indexStateFileName is the filename of the index state file containing the last time a Kind index has been updated
 	// located at the root of the given kubeconfigDirectory
 	indexStateFileName = "index.state"
 	// indexFileName is the filename of the file containing a pre-computed context -> kubeconfig path mapping

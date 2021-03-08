@@ -16,20 +16,20 @@ package pkg
 
 import (
 	"fmt"
-	"path/filepath"
-	"strings"
 	"sync"
 	"time"
+
+	"github.com/ktr0731/go-fuzzyfinder"
+	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 
 	"github.com/danielfoehrkn/kubeswitch/pkg/index"
 	"github.com/danielfoehrkn/kubeswitch/pkg/store"
 	aliasutil "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/alias/util"
-	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/history/util"
+	historyutil "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/history/util"
+	"github.com/danielfoehrkn/kubeswitch/pkg/util"
 	kubeconfigutil "github.com/danielfoehrkn/kubeswitch/pkg/util/kubectx_copied"
 	"github.com/danielfoehrkn/kubeswitch/types"
-	"github.com/ktr0731/go-fuzzyfinder"
-	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -126,7 +126,7 @@ func Switcher(stores []store.KubeconfigStore, config *types.Config, stateDir str
 		return fmt.Errorf("failed to write temporary kubeconfig file: %v", err)
 	}
 
-	if err := util.AppendContextToHistory(selectedContext); err != nil {
+	if err := historyutil.AppendContextToHistory(selectedContext); err != nil {
 		logger.Warnf("failed to append context to history file: %v", err)
 	}
 
@@ -146,7 +146,7 @@ func writeIndex(store store.KubeconfigStore, searchIndex *index.SearchIndex, ctx
 	}
 
 	if err := searchIndex.Write(index); err != nil {
-		store.GetLogger().Warnf("failed to write index file to speed up future fuzzy searches: %v", err)
+		store.GetLogger().Warnf("failed to write kubeconfig store index file: %v", err)
 		return
 	}
 
@@ -198,28 +198,6 @@ func showFuzzySearch(kindToStore map[types.StoreKind]store.KubeconfigStore, show
 	return kubeconfigPath, selectedContext, nil
 }
 
-func getContextsForKubeconfigPath(kubeconfigStore store.KubeconfigStore, kubeconfigPath string) ([]string, error) {
-	bytes, err := kubeconfigStore.GetKubeconfigForPath(kubeconfigPath)
-	if err != nil {
-		return nil, err
-	}
-
-	// parse into struct that does not contain the credentials
-	config, err := parseSanitizedKubeconfig(bytes)
-	if err != nil {
-		return nil, fmt.Errorf("could not parse Kubeconfig with path '%s': %v", kubeconfigPath, err)
-	}
-
-	kubeconfigData, err := yaml.Marshal(config)
-	if err != nil {
-		return nil, fmt.Errorf("could not marshal kubeconfig with path '%s': %v", kubeconfigPath, err)
-	}
-
-	// save kubeconfig content to in-memory map to avoid duplicate read operation in getSanitizedKubeconfigForKubeconfigPath
-	writeToPathToKubeconfig(kubeconfigPath, string(kubeconfigData))
-	return getContextsFromKubeconfig(kubeconfigStore.GetKind(), kubeconfigPath, config)
-}
-
 func getSanitizedKubeconfigForKubeconfigPath(kubeconfigStore store.KubeconfigStore, path string) (string, error) {
 	// during first run without index, the files are already read in the getContextsForKubeconfigPath and saved in-memory
 	kubeconfig := readFromPathToKubeconfig(path)
@@ -232,7 +210,7 @@ func getSanitizedKubeconfigForKubeconfigPath(kubeconfigStore store.KubeconfigSto
 		return "", fmt.Errorf("could not read file with path '%s': %v", path, err)
 	}
 
-	config, err := parseSanitizedKubeconfig(data)
+	config, err := util.ParseSanitizedKubeconfig(data)
 	if err != nil {
 		return "", fmt.Errorf("could not parse Kubeconfig with path '%s': %v", path, err)
 	}
@@ -248,40 +226,6 @@ func getSanitizedKubeconfigForKubeconfigPath(kubeconfigStore store.KubeconfigSto
 	return string(kubeconfigData), nil
 }
 
-func getContextsFromKubeconfig(kind types.StoreKind, path string, kubeconfig *types.KubeConfig) ([]string, error) {
-	parentFoldername := filepath.Base(filepath.Dir(path))
-	if kind == types.StoreKindVault {
-		// for vault, the secret name itself contains the semantic information (not the key of the kv-pair of the vault secret)
-		parentFoldername = filepath.Base(path)
-	}
-	return getContextNames(kubeconfig, parentFoldername), nil
-}
-
-func parseSanitizedKubeconfig(data []byte) (*types.KubeConfig, error) {
-	config := types.KubeConfig{}
-
-	// unmarshal in a form that does not include the credentials
-	err := yaml.Unmarshal(data, &config)
-	if err != nil {
-		return nil, fmt.Errorf("could not unmarshal kubeconfig: %v", err)
-	}
-	return &config, nil
-}
-
-// sets the parent folder name to each context in the kubeconfig file
-func getContextNames(config *types.KubeConfig, parentFoldername string) []string {
-	var contextNames []string
-	for _, context := range config.Contexts {
-		split := strings.Split(context.Name, "/")
-		if len(split) > 1 {
-			// already has the directory name in there. override it in case it changed
-			contextNames = append(contextNames, fmt.Sprintf("%s/%s", parentFoldername, split[len(split)-1]))
-		} else {
-			contextNames = append(contextNames, fmt.Sprintf("%s/%s", parentFoldername, context.Name))
-		}
-	}
-	return contextNames
-}
 
 func readFromAllKubeconfigContextNames(index int) string {
 	allKubeconfigContextNamesLock.RLock()

@@ -106,13 +106,13 @@ func RunHook(log *logrus.Entry, kubeconfigStore hookstore.KubeconfigStore, clean
 
 	shoots := &gardencorev1beta1.ShootList{}
 	if err := k8sclient.List(ctx, shoots, &client.ListOptions{}); err != nil {
-		return fmt.Errorf("Failed to  list secret objects: %v", err)
+		return fmt.Errorf("failed to list Shoots: %v", err)
 	}
 	log.Infof("Found %d shoots", len(shoots.Items))
 
 	projects := &gardencorev1beta1.ProjectList{}
 	if err := k8sclient.List(ctx, projects, &client.ListOptions{}); err != nil {
-		return fmt.Errorf("failed to  list secret objects: %v", err)
+		return fmt.Errorf("failed to  list projects: %v", err)
 	}
 	log.Infof("Found %d projects", len(projects.Items))
 

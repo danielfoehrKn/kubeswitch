@@ -19,8 +19,9 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/danielfoehrkn/kubeswitch/types"
 	"gopkg.in/yaml.v2"
+
+	"github.com/danielfoehrkn/kubeswitch/types"
 )
 
 // LoadConfigFromFile takes a filename and de-serializes the contents into a Configuration object.

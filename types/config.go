@@ -14,40 +14,31 @@
 
 package types
 
-import "time"
-
-type HookType string
-
-const (
-	HookTypeExecutable    HookType = "Executable"
-	HookTypeInlineCommand HookType = "InlineCommand"
+import (
+	"time"
 )
 
 type Config struct {
-	Kind                          string           `yaml:"kind"`
-	KubeconfigName                string           `yaml:"kubeconfigName"`
-	KubeconfigRediscoveryInterval *time.Duration   `yaml:"kubeconfigRediscoveryInterval"`
-	VaultAPIAddress               string           `yaml:"vaultAPIAddress"`
-	Hooks                         []Hook           `yaml:"hooks"`
-	KubeconfigPaths               []KubeconfigPath `yaml:"kubeconfigPaths"`
+	Kind                          string            `yaml:"kind"`
+	KubeconfigName                string            `yaml:"kubeconfigName"`
+	KubeconfigRediscoveryInterval *time.Duration    `yaml:"rediscoveryInterval"`
+	Hooks                         []Hook            `yaml:"hooks"`
+	KubeconfigStores              []KubeconfigStore `yaml:"kubeconfigStores"`
 }
 
-type KubeconfigPath struct {
-	Path  string    `yaml:"path"`
-	Store StoreKind `yaml:"store"`
+type KubeconfigStore struct {
+	Kind                StoreKind        	`yaml:"kind"`
+	KubeconfigName      string           	`yaml:"kubeconfigName"`
+	Paths               []string         	`yaml:"paths"`
+	RediscoveryInterval *time.Duration   	`yaml:"rediscoveryInterval"`
+	Config              interface{} 		`yaml:"config"`
 }
 
-type Hook struct {
-	Name      string   `yaml:"name"`
-	Type      HookType `yaml:"type"`
-	Path      *string  `yaml:"path"`
-	Arguments []string `yaml:"arguments"`
-	Execution *struct {
-		Interval *time.Duration `yaml:"interval"`
-	} `yaml:"execution"`
+type StoreConfigVault struct {
+	VaultAPIAddress  string `yaml:"vaultAPIAddress"`
 }
 
-type HookState struct {
-	HookName          string    `yaml:"hookName"`
-	LastExecutionTime time.Time `yaml:"lastExecutionTime"`
+type StoreConfigGardener struct {
+	GardenerAPIKubeconfigPath  	string 	`yaml:"gardenerAPIKubeconfigPath"`
+	LandscapeName  				*string 	`yaml:"landscapeName"`
 }

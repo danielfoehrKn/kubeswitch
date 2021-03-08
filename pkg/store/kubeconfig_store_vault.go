@@ -132,23 +132,19 @@ func (s *VaultStore) GetKubeconfigForPath(path string) ([]byte, error) {
 func (s *VaultStore) VerifyKubeconfigPaths() error {
 	var duplicatePath = make(map[string]*struct{})
 
-	for _, path := range s.KubeconfigPaths {
-		if path.Store != types.StoreKindVault {
-			continue
-		}
-
+	for _, path := range s.KubeconfigStore.Paths {
 		// do not add duplicate paths
-		if duplicatePath[path.Path] != nil {
+		if duplicatePath[path] != nil {
 			continue
 		}
-		duplicatePath[path.Path] = &struct{}{}
+		duplicatePath[path] = &struct{}{}
 
-		_, err := s.Client.Logical().Read(path.Path)
+		_, err := s.Client.Logical().Read(path)
 		if err != nil {
 			return err
 		}
 
-		s.vaultPaths = append(s.vaultPaths, path.Path)
+		s.vaultPaths = append(s.vaultPaths, path)
 	}
 	return nil
 }
