@@ -16,6 +16,7 @@ package pkg
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -178,13 +179,29 @@ func showFuzzySearch(storeIDToStore map[string]store.KubeconfigStore, showPrevie
 			currentContextName := readFromAllKubeconfigContextNames(i)
 			path := readFromContextToPathMapping(currentContextName)
 			storeID := readFromPathToStoreID(path)
-			store := storeIDToStore[storeID]
-			kubeconfig, err := getSanitizedKubeconfigForKubeconfigPath(store, path)
+			kubeconfigStore := storeIDToStore[storeID]
+			kubeconfig, err := getSanitizedKubeconfigForKubeconfigPath(kubeconfigStore, path)
 			if err != nil {
-				log.Warnf("failed to show preview: %v", err)
+				log.Debugf("failed to show preview: %v", err)
 				return ""
 			}
-			return kubeconfig
+
+			preview := kubeconfig
+			previewer, ok := kubeconfigStore.(store.Previewer)
+			if ok {
+				additionalPreview, err := previewer.GetSearchPreview(path)
+				if err != nil {
+					log.Debugf("failed to get preview for store %s: %v", kubeconfigStore.GetID(), err)
+				} else {
+					seperators := make([]string, 20)
+					for i := 0; i < 20; i++ {
+						seperators[i] = "-"
+					}
+					preview = fmt.Sprintf("%s \n %s \n \n %s", preview, strings.Join(seperators, "-"), additionalPreview)
+				}
+			}
+
+			return preview
 		}))
 
 	if err != nil {

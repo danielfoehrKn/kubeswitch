@@ -110,6 +110,10 @@ func (s *VaultStore) GetKind() types.StoreKind {
 	return types.StoreKindVault
 }
 
+func (s *VaultStore) GetStoreConfig() types.KubeconfigStore {
+	return s.KubeconfigStore
+}
+
 func (s *VaultStore) GetLogger() *logrus.Entry {
 	return s.Logger
 }

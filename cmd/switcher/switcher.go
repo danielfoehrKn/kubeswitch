@@ -251,7 +251,6 @@ func init() {
 	setContextCmd.SilenceUsage = true
 	aliasContextCmd.SilenceErrors = true
 	aliasRmCmd.SilenceErrors = true
-	rootCommand.SilenceErrors = true
 
 	setCommonFlags(setContextCmd)
 	setCommonFlags(listContextsCmd)

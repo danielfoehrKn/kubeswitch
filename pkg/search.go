@@ -169,7 +169,7 @@ func shouldReadFromIndex(searchIndex *index.SearchIndex, kubeconfigStore store.K
 	if searchIndex.HasContent() && searchIndex.HasKind(kubeconfigStore.GetKind()) {
 		// found an index for the correct Store kind
 		// check if should use existing index or not
-		shouldReadFromIndex, err := searchIndex.ShouldBeUsed(config)
+		shouldReadFromIndex, err := searchIndex.ShouldBeUsed(config, kubeconfigStore.GetStoreConfig().RefreshIndexAfter)
 		if err != nil {
 			return false, err
 		}

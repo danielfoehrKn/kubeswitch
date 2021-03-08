@@ -54,6 +54,15 @@ type KubeconfigStore interface {
 
 	// GetLogger returns the logger of the store
 	GetLogger() *logrus.Entry
+
+	// GetStoreConfig returns the store's configuration from the switch config file
+	GetStoreConfig() types.KubeconfigStore
+}
+
+// Previewer can be optionally implemented by stores to show custom preview content
+// before the kubeconfig
+type Previewer interface {
+	GetSearchPreview(path string) (string, error)
 }
 
 type FilesystemStore struct {
@@ -66,22 +75,22 @@ type FilesystemStore struct {
 
 type VaultStore struct {
 	Logger          *logrus.Entry
+	KubeconfigStore types.KubeconfigStore
 	Client          *vaultapi.Client
 	KubeconfigName  string
-	KubeconfigStore types.KubeconfigStore
 	vaultPaths      []string
 }
 
 type GardenerStore struct {
 	Logger            *logrus.Entry
-	Client            client.Client
 	KubeconfigStore   types.KubeconfigStore
+	Client            client.Client
 	Config            *types.StoreConfigGardener
 	LandscapeIdentity string
 	LandscapeName     string
 	StateDirectory    string
 	// if a search against the Gardener API has been executed, this is filled with
-	// all the Shoot secrets.
+	// all the discovered secrets.
 	// This way we can save some requests against the API when getting the kubeconfig later
-	ShootNameToKubeconfigSecret map[string]corev1.Secret
+	SecretNamespaceNameToSecret map[string]corev1.Secret
 }

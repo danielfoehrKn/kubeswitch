@@ -3,6 +3,7 @@ module github.com/danielfoehrkn/kubeswitch
 go 1.12
 
 require (
+	github.com/disiqueira/gotree v1.0.0
 	github.com/gardener/gardener v1.11.3
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/vault/api v1.0.4

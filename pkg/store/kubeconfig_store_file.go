@@ -36,6 +36,10 @@ func (s *FilesystemStore) GetID() string {
 	return fmt.Sprintf("%s.%s", types.StoreKindFilesystem, id)
 }
 
+func (s *FilesystemStore) GetStoreConfig() types.KubeconfigStore {
+	return s.KubeconfigStore
+}
+
 func (s *FilesystemStore) GetKind() types.StoreKind {
 	return types.StoreKindFilesystem
 }

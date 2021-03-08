@@ -14,6 +14,8 @@ github.com/cespare/xxhash/v2
 github.com/cyphar/filepath-securejoin
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
+# github.com/disiqueira/gotree v1.0.0
+github.com/disiqueira/gotree
 # github.com/docker/spdystream v0.0.0-20160310174837-449fdfce4d96
 github.com/docker/spdystream
 github.com/docker/spdystream/spdy

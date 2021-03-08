@@ -109,7 +109,7 @@ func (i *SearchIndex) loadFromFile() (*types.Index, error) {
 }
 
 // ShouldBeUsed checks if the index file with pre-computed mappings should be used
-func (i *SearchIndex) ShouldBeUsed(config *types.Config) (bool, error) {
+func (i *SearchIndex) ShouldBeUsed(config *types.Config, storeLocalRefreshIndexAfter *time.Duration) (bool, error) {
 	indexState, err := i.getIndexState()
 	if err != nil {
 		return false, fmt.Errorf("failed to get index state: %v", err)
@@ -121,11 +121,19 @@ func (i *SearchIndex) ShouldBeUsed(config *types.Config) (bool, error) {
 		return false, nil
 	}
 
-	if config == nil || config.RefreshIndexAfter == nil {
+	var refreshAfter *time.Duration
+	if config != nil && config.RefreshIndexAfter != nil {
+		refreshAfter = config.RefreshIndexAfter
+	}
+	if storeLocalRefreshIndexAfter != nil {
+		refreshAfter = storeLocalRefreshIndexAfter
+	}
+
+	if refreshAfter == nil {
 		return false, nil
 	}
 
-	return time.Now().UTC().Before(indexState.LastUpdateTime.UTC().Add(*config.RefreshIndexAfter)), nil
+	return time.Now().UTC().Before(indexState.LastUpdateTime.UTC().Add(*refreshAfter)), nil
 }
 
 func (i *SearchIndex) WriteState(toWrite types.IndexState) error {
