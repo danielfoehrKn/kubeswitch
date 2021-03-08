@@ -163,13 +163,25 @@ func (s *GardenerStore) GetKubeconfigForPath(path string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	kubeconfigSecret := corev1.Secret{}
+
 	switch resource {
 	case GardenerResourceSeed:
 		s.Logger.Debugf("getting kubeconfig for seed %q", name)
-
+		// at the moment, managed seeds can only refer to Shoots in the Garden namespace
+		// hence, get the kubeconfig secret from there
+		// we do not support managed seeds or external Seeds (that have a kubeconfig set) yet
+		if err := s.Client.Get(ctx, client.ObjectKey{Namespace: "garden", Name: fmt.Sprintf("%s.kubeconfig", name)}, &kubeconfigSecret); err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil, fmt.Errorf("kubeconfig secret for Seed %q not found", name)
+			}
+			return nil, fmt.Errorf("failed to get kubeconfig secret for Seed %q: %w", name, err)
+		}
 	case GardenerResourceShoot:
+		var ok bool
+
 		s.Logger.Debugf("getting kubeconfig for Shoot (%s/%s)", namespace, name)
-		kubeconfigSecret, ok := s.ShootNameToKubeconfigSecret[getSecretIdentifier(namespace, name)]
+		kubeconfigSecret, ok = s.ShootNameToKubeconfigSecret[getSecretIdentifier(namespace, name)]
 		if !ok {
 			if err := s.Client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: fmt.Sprintf("%s.kubeconfig", name)}, &kubeconfigSecret); err != nil {
 				if apierrors.IsNotFound(err) {
@@ -178,18 +190,16 @@ func (s *GardenerStore) GetKubeconfigForPath(path string) ([]byte, error) {
 				return nil, fmt.Errorf("failed to get kubeconfig secret for Shoot (%s/%s): %w", namespace, name, err)
 			}
 		}
-
-		value, found := kubeconfigSecret.Data[secrets.DataKeyKubeconfig]
-		if !found {
-			return nil, fmt.Errorf("kubeconfig secret for Shoot (%s/%s) does not contain a kubeconfig", namespace, name)
-		}
-
-		return value, nil
 	default:
 		return nil, fmt.Errorf("unknown Gardener resource %q", resource)
 	}
 
-	return nil, nil
+	value, found := kubeconfigSecret.Data[secrets.DataKeyKubeconfig]
+	if !found {
+		return nil, fmt.Errorf("kubeconfig secret for Shoot (%s/%s) does not contain a kubeconfig", namespace, name)
+	}
+
+	return value, nil
 }
 
 func (s *GardenerStore) StartSearch(channel chan SearchResult) {
@@ -214,7 +224,8 @@ func (s *GardenerStore) StartSearch(channel chan SearchResult) {
 	s.Logger.Debugf("Found %d kubeconfigs", len(shootNameToSecret))
 
 	shoots := &gardencorev1beta1.ShootList{}
-	if err := s.Client.List(ctx, shoots, &client.ListOptions{}); err != nil {
+	if err := s.Client.List(ctx, shoots, &client.ListOptions{Namespace: "garden"}); err != nil {
+		// if err := s.Client.List(ctx, shoots, &client.ListOptions{}); err != nil {
 		channel <- SearchResult{
 			Error: fmt.Errorf("failed to list Shoots: %w", err),
 		}
@@ -292,10 +303,6 @@ func (s *GardenerStore) sendKubeconfigPaths(channel chan SearchResult, shoots *g
 		KubeconfigPath: gardenKubeconfigPath,
 		Error:          nil,
 	}
-
-	// TODO: alias works, but now the sap-landscape-dev-garden context does not work any more
-	// need to have both dev-garden as well as well as sap-landscape-dev-garden
-	// can I somehow make that per store
 
 	// all search result use the landscape name instead of the identity if configured
 	// e.g dev-shoot-<shoot-name>
