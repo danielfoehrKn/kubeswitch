@@ -15,13 +15,22 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/cobra v1.0.0
+	golang.org/x/tools v0.1.0 // indirect
 	gopkg.in/yaml.v2 v2.3.0
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
 	k8s.io/api v0.19.6
 	k8s.io/apimachinery v0.19.6
 	k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible
+	k8s.io/kube-openapi v0.0.0-20210305164622-f622666832c1 // indirect
 	k8s.io/utils v0.0.0-20200912215256-4140de9c8800
 	sigs.k8s.io/controller-runtime v0.7.1
 )
 
-replace k8s.io/client-go => k8s.io/client-go v0.19.6
+replace (
+	// pin to same version to avoid dependency issues
+	k8s.io/api => k8s.io/api v0.19.6
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.19.6
+	k8s.io/apimachinery => k8s.io/apimachinery v0.19.6
+	k8s.io/apiserver => k8s.io/apiserver v0.19.6
+	k8s.io/client-go => k8s.io/client-go v0.19.6
+)
