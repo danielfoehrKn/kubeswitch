@@ -26,6 +26,12 @@ const OperatingSystemConfigResource = "OperatingSystemConfig"
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:resource:scope=Namespaced,path=operatingsystemconfigs,shortName=osc,singular=operatingsystemconfig
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name=Type,JSONPath=".spec.type",type=string,description="The type of the operating system configuration."
+// +kubebuilder:printcolumn:name=Purpose,JSONPath=".spec.purpose",type=string,description="The purpose of the operating system configuration."
+// +kubebuilder:printcolumn:name=Status,JSONPath=".status.lastOperation.state",type=string,description="Status of operating system configuration."
+// +kubebuilder:printcolumn:name=Age,JSONPath=".metadata.creationTimestamp",type=date,description="creation timestamp"
 
 // OperatingSystemConfig is a specification for a OperatingSystemConfig resource
 type OperatingSystemConfig struct {
@@ -33,7 +39,8 @@ type OperatingSystemConfig struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   OperatingSystemConfigSpec   `json:"spec"`
+	Spec OperatingSystemConfigSpec `json:"spec"`
+	// +optional
 	Status OperatingSystemConfigStatus `json:"status"`
 }
 
@@ -216,7 +223,9 @@ type CRIName string
 
 const (
 	// CRINameContainerD is a constant for ContainerD CRI name
-	CRINameContainerD = "containerd"
+	CRINameContainerD CRIName = "containerd"
+	// CRINameDocker is a constant for Docker CRI name
+	CRINameDocker CRIName = "docker"
 )
 
 // ContainerDRuntimeContainersBinFolder is the folder where Container Runtime binaries should be saved for ContainerD usage

@@ -23,11 +23,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// Config carries options for new ClientSets.
 type Config struct {
-	clientOptions       client.Options
-	restConfig          *rest.Config
-	cacheResync         *time.Duration
-	disableCachedClient bool
+	clientOptions   client.Options
+	restConfig      *rest.Config
+	cacheResync     *time.Duration
+	disableCache    bool
+	uncachedObjects []client.Object
 }
 
 // NewConfig returns a new Config with an empty REST config to allow testing ConfigFuncs without exporting
@@ -85,7 +87,15 @@ func WithCacheResyncPeriod(resync time.Duration) ConfigFunc {
 // DirectClient().
 func WithDisabledCachedClient() ConfigFunc {
 	return func(config *Config) error {
-		config.disableCachedClient = true
+		config.disableCache = true
+		return nil
+	}
+}
+
+// WithUncached disables the cached client for the specified objects' GroupKinds.
+func WithUncached(objs ...client.Object) ConfigFunc {
+	return func(config *Config) error {
+		config.uncachedObjects = append(config.uncachedObjects, objs...)
 		return nil
 	}
 }

@@ -23,19 +23,26 @@ type ErrorCode string
 
 const (
 	// ErrorInfraUnauthorized indicates that the last error occurred due to invalid infrastructure credentials.
+	// It is classified as a non-retryable error code.
 	ErrorInfraUnauthorized ErrorCode = "ERR_INFRA_UNAUTHORIZED"
 	// ErrorInfraInsufficientPrivileges indicates that the last error occurred due to insufficient infrastructure privileges.
+	// It is classified as a non-retryable error code.
 	ErrorInfraInsufficientPrivileges ErrorCode = "ERR_INFRA_INSUFFICIENT_PRIVILEGES"
 	// ErrorInfraQuotaExceeded indicates that the last error occurred due to infrastructure quota limits.
+	// It is classified as a non-retryable error code.
 	ErrorInfraQuotaExceeded ErrorCode = "ERR_INFRA_QUOTA_EXCEEDED"
 	// ErrorInfraDependencies indicates that the last error occurred due to dependent objects on the infrastructure level.
+	// It is classified as a non-retryable error code.
 	ErrorInfraDependencies ErrorCode = "ERR_INFRA_DEPENDENCIES"
 	// ErrorInfraResourcesDepleted indicates that the last error occurred due to depleted resource in the infrastructure.
 	ErrorInfraResourcesDepleted ErrorCode = "ERR_INFRA_RESOURCES_DEPLETED"
 	// ErrorCleanupClusterResources indicates that the last error occurred due to resources in the cluster that are stuck in deletion.
 	ErrorCleanupClusterResources ErrorCode = "ERR_CLEANUP_CLUSTER_RESOURCES"
 	// ErrorConfigurationProblem indicates that the last error occurred due to a configuration problem.
+	// It is classified as a non-retryable error code.
 	ErrorConfigurationProblem ErrorCode = "ERR_CONFIGURATION_PROBLEM"
+	// ErrorRetryableConfigurationProblem indicates that the last error occurred due to a retryable configuration problem.
+	ErrorRetryableConfigurationProblem ErrorCode = "ERR_RETRYABLE_CONFIGURATION_PROBLEM"
 )
 
 // LastError indicates the last occurred error for an operation on a resource.

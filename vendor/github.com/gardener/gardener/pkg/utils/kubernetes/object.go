@@ -18,28 +18,19 @@ import (
 	"context"
 
 	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
-// Object is wrapper interface combining runtime.Object and metav1.Object interfaces together.
-type Object interface {
-	runtime.Object
-	metav1.Object
-}
-
 // ObjectName returns the name of the given object in the format <namespace>/<name>
-func ObjectName(obj runtime.Object) string {
-	k, err := client.ObjectKeyFromObject(obj)
-	if err != nil {
-		return "/"
-	}
-	return k.String()
+func ObjectName(obj client.Object) string {
+	return client.ObjectKeyFromObject(obj).String()
 }
 
 // DeleteObjects deletes a list of Kubernetes objects.
-func DeleteObjects(ctx context.Context, c client.Client, objects ...runtime.Object) error {
+func DeleteObjects(ctx context.Context, c client.Client, objects ...client.Object) error {
 	for _, obj := range objects {
 		if err := DeleteObject(ctx, c, obj); err != nil {
 			return err
@@ -49,9 +40,28 @@ func DeleteObjects(ctx context.Context, c client.Client, objects ...runtime.Obje
 }
 
 // DeleteObject deletes a Kubernetes object. It ignores 'not found' and 'no match' errors.
-func DeleteObject(ctx context.Context, c client.Client, object runtime.Object) error {
+func DeleteObject(ctx context.Context, c client.Client, object client.Object) error {
 	if err := c.Delete(ctx, object); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
 		return err
 	}
 	return nil
+}
+
+// DeleteObjectsFromListConditionally takes a Kubernetes List object. It iterates over its items and, if provided,
+// executes the predicate function. If it evaluates to true then the object will be deleted.
+func DeleteObjectsFromListConditionally(ctx context.Context, c client.Client, listObj client.ObjectList, predicateFn func(runtime.Object) bool) error {
+	fns := make([]flow.TaskFn, 0, meta.LenList(listObj))
+
+	if err := meta.EachListItem(listObj, func(obj runtime.Object) error {
+		if predicateFn == nil || predicateFn(obj) {
+			fns = append(fns, func(ctx context.Context) error {
+				return client.IgnoreNotFound(c.Delete(ctx, obj.(client.Object)))
+			})
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	return flow.Parallel(fns...)(ctx)
 }

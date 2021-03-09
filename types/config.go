@@ -25,6 +25,8 @@ type StoreKind string
 
 // ValidStoreKinds contains all valid store kinds
 var ValidStoreKinds = sets.NewString(string(StoreKindVault), string(StoreKindFilesystem), string(StoreKindGardener))
+// ValidConfigVersions contains all valid config versions
+var ValidConfigVersions = sets.NewString("v1alpha1")
 
 const (
 	// StoreKindFilesystem is an identifier for the filesystem store
@@ -38,6 +40,9 @@ const (
 type Config struct {
 	// Kind is the type of the config. Expects "SwitchConfig"
 	Kind                          string            `yaml:"kind"`
+	// Version is the version of the config file.
+	// Possible values: "v1alpha1"
+	Version                        string          `yaml:"version"`
 	// KubeconfigName is the global default for how the kubeconfig is
 	// identified in the backing store.
 	// Can be overridden in the individual kubeconfig store configuration

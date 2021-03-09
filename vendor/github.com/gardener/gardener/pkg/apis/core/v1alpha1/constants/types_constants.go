@@ -72,10 +72,14 @@ const (
 	// StatefulSetNameAlertManager is a constant for the name of a Kubernetes stateful set object that contains
 	// the alertmanager pod.
 	StatefulSetNameAlertManager = "alertmanager"
+	// ETCDRoleMain is a constant for the main etcd role.
+	ETCDRoleMain = "main"
+	// ETCDRoleEvents is a constant for the events etcd role.
+	ETCDRoleEvents = "events"
 	// ETCDMain is a constant for the name of etcd-main Etcd object.
-	ETCDMain = "etcd-main"
+	ETCDMain = "etcd-" + ETCDRoleMain
 	// ETCDEvents is a constant for the name of etcd-events Etcd object.
-	ETCDEvents = "etcd-events"
+	ETCDEvents = "etcd-" + ETCDRoleEvents
 
 	// StatefulSetNamePrometheus is a constant for the name of a Kubernetes stateful set object that contains
 	// the prometheus pod.
@@ -126,8 +130,12 @@ const (
 
 	// DeprecatedShootUID is an annotation key for the shoot namespace in the seed cluster,
 	// which value will be the value of `shoot.status.uid`
-	// +deprecated: Use `Cluster` resource instead.
+	//
+	// Deprecated: Use the `Cluster` resource or the annotation key from the new API group `ShootUID`.
 	DeprecatedShootUID = "shoot.garden.sapcloud.io/uid"
+	// ShootUID is an annotation key for the shoot namespace in the seed cluster,
+	// which value will be the value of `shoot.status.uid`
+	ShootUID = "shoot.gardener.cloud/uid"
 
 	// SeedResourceManagerClass is the resource-class managed by the Gardener-Resource-Manager
 	// instance in the garden namespace on the seeds.
@@ -209,22 +217,15 @@ const (
 	// AnnotationShootUseAsSeed is a constant for an annotation on a Shoot resource indicating that the Shoot shall be registered as Seed in the
 	// Garden cluster once successfully created.
 	AnnotationShootUseAsSeed = "shoot.gardener.cloud/use-as-seed"
-	// AnnotationShootUseAsSeedDeprecated is a constant for an annotation on a Shoot resource indicating that the Shoot shall be registered as Seed in the
-	// Garden cluster once successfully created.
-	//
-	// Deprecated: Use `AnnotationShootUseAsSeed` instead.
-	AnnotationShootUseAsSeedDeprecated = "shoot.garden.sapcloud.io/use-as-seed"
 	// AnnotationShootIgnoreAlerts is the key for an annotation of a Shoot cluster whose value indicates
 	// if alerts for this cluster should be ignored
 	AnnotationShootIgnoreAlerts = "shoot.gardener.cloud/ignore-alerts"
-	// AnnotationShootIgnoreAlertsDeprecated is the key for an annotation of a Shoot cluster whose value indicates
-	// if alerts for this cluster should be ignored
-	//
-	// Deprecated: Use `AnnotationShootIgnoreAlerts` instead.
-	AnnotationShootIgnoreAlertsDeprecated = "shoot.garden.sapcloud.io/ignore-alerts"
 	// AnnotationShootSkipCleanup is a key for an annotation on a Shoot resource that declares that the clean up steps should be skipped when the
 	// cluster is deleted. Concretely, this will skip everything except the deletion of (load balancer) services and persistent volume resources.
 	AnnotationShootSkipCleanup = "shoot.gardener.cloud/skip-cleanup"
+	// AnnotationShootKonnectivityTunnel is the key for an annotation of a Shoot cluster whose value indicates
+	// if a konnectivity-tunnel should be deployed into the shoot cluster or not.
+	AnnotationShootKonnectivityTunnel = "alpha.featuregates.shoot.gardener.cloud/konnectivity-tunnel"
 
 	// OperatingSystemConfigUnitNameKubeletService is a constant for a unit in the operating system config that contains the kubelet service.
 	OperatingSystemConfigUnitNameKubeletService = "kubelet.service"

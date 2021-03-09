@@ -162,7 +162,7 @@ const (
 // NginxIngress describes configuration values for the nginx-ingress addon.
 type NginxIngress struct {
 	Addon
-	// LoadBalancerSourceRanges is list of whitelist IP sources for NginxIngress
+	// LoadBalancerSourceRanges is list of allowed IP sources for NginxIngress
 	LoadBalancerSourceRanges []string
 	// Config contains custom configuration for the nginx-ingress-controller configuration.
 	// See https://github.com/kubernetes/ingress-nginx/blob/master/docs/user-guide/nginx-configuration/configmap.md#configuration-options
@@ -179,7 +179,7 @@ type NginxIngress struct {
 // DNS holds information about the provider, the hosted zone id and the domain.
 type DNS struct {
 	// Domain is the external available domain of the Shoot cluster. This domain will be written into the
-	// kubeconfig that is handed out to end-users.
+	// kubeconfig that is handed out to end-users. Once set it is immutable.
 	Domain *string
 	// Providers is a list of DNS providers that shall be enabled for this shoot cluster. Only relevant if
 	// not a default domain is used.
@@ -366,6 +366,18 @@ type KubeAPIServerConfig struct {
 	// Starting from kubernetes v1.19, the API server's watch cache size is adapted dynamically and setting the watch
 	// cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).
 	WatchCacheSizes *WatchCacheSizes
+	// Requests contains configuration for request-specific settings for the kube-apiserver.
+	Requests *KubeAPIServerRequests
+}
+
+// KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.
+type KubeAPIServerRequests struct {
+	// MaxNonMutatingInflight is the maximum number of non-mutating requests in flight at a given time. When the server
+	// exceeds this, it rejects requests.
+	MaxNonMutatingInflight *int32
+	// MaxMutatingInflight is the maximum number of mutating requests in flight at a given time. When the server
+	// exceeds this, it rejects requests.
+	MaxMutatingInflight *int32
 }
 
 // ServiceAccountConfig is the kube-apiserver configuration for service accounts.
@@ -467,6 +479,8 @@ type KubeControllerManagerConfig struct {
 	HorizontalPodAutoscalerConfig *HorizontalPodAutoscalerConfig
 	// NodeCIDRMaskSize defines the mask size for node cidr in cluster (default is 24)
 	NodeCIDRMaskSize *int32
+	// PodEvictionTimeout defines the grace period for deleting pods on failed nodes.
+	PodEvictionTimeout *metav1.Duration
 }
 
 // HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager.
@@ -590,7 +604,7 @@ type KubeletConfig struct {
 	FailSwapOn *bool
 	// KubeReserved is the configuration for resources reserved for kubernetes node components (mainly kubelet and container runtime).
 	// When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
-	// Default: cpu=80m,memory=1Gi
+	// Default: cpu=80m,memory=1Gi,pid=20k
 	KubeReserved *KubeletConfigReserved
 	// SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald).
 	// When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
@@ -680,6 +694,13 @@ const (
 //////////////////////////////////////////////////////////////////////////////////////////////////
 // Maintenance relevant types                                                                   //
 //////////////////////////////////////////////////////////////////////////////////////////////////
+
+const (
+	// MaintenanceTimeWindowDurationMinimum is the minimum duration for a maintenance time window.
+	MaintenanceTimeWindowDurationMinimum = 30 * time.Minute
+	// MaintenanceTimeWindowDurationMaximum is the maximum duration for a maintenance time window.
+	MaintenanceTimeWindowDurationMaximum = 6 * time.Hour
+)
 
 // Maintenance contains information about the time window for maintenance operations and which
 // operations should be performed.
@@ -813,6 +834,7 @@ type WorkerSystemComponents struct {
 // WorkerKubernetes contains configuration for Kubernetes components related to this worker pool.
 type WorkerKubernetes struct {
 	// Kubelet contains configuration settings for all kubelets of this worker pool.
+	// If set, all `spec.kubernetes.kubelet` settings will be overwritten for this worker pool (no merge of settings).
 	Kubelet *KubeletConfig
 }
 
@@ -921,6 +943,9 @@ const (
 	ShootSystemComponentsHealthy ConditionType = "SystemComponentsHealthy"
 	// ShootHibernationPossible is a constant for a condition type indicating whether the Shoot can be hibernated.
 	ShootHibernationPossible ConditionType = "HibernationPossible"
+	// ShootMaintenancePreconditionsSatisfied is a constant for a condition type indicating whether all preconditions
+	// for a shoot maintenance operation are satisfied.
+	ShootMaintenancePreconditionsSatisfied ConditionType = "MaintenancePreconditionsSatisfied"
 )
 
 // DNSUnmanaged is a constant for the 'unmanaged' DNS provider.

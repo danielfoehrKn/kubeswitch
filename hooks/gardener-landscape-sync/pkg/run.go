@@ -260,7 +260,7 @@ func GetPreviousIdentifiers(searchIndex *index.SearchIndex, landscape string) (s
 
 func isShootedSeed(shoot gardencorev1beta1.Shoot) bool {
 	if shoot.Namespace == v1beta1constants.GardenNamespace && shoot.Annotations != nil {
-		_, ok := v1beta1constants.GetShootUseAsSeedAnnotation(shoot.Annotations)
+		_, ok := shoot.Annotations[v1beta1constants.AnnotationShootUseAsSeed]
 		return ok
 	}
 	return false

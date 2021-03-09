@@ -36,6 +36,9 @@ const (
 	// SecretNameSSHKeyPair is a constant for the name of a Kubernetes secret object that contains the SSH key pair
 	// (public and private key) that can be used to SSH into the shoot nodes.
 	SecretNameSSHKeyPair = "ssh-keypair"
+	// SecretNameServiceAccountKey is a constant for the name of a Kubernetes secret object that contains a
+	// PEM-encoded private RSA or ECDSA key used by the Kube Controller Manager to sign service account tokens
+	SecretNameServiceAccountKey = "service-account-key"
 
 	// SecretNameGardener is a constant for the name of a Kubernetes secret object that contains the client
 	// certificate and a kubeconfig for a shoot cluster. It is used by Gardener and can be used by extension
@@ -87,10 +90,14 @@ const (
 	// StatefulSetNameAlertManager is a constant for the name of a Kubernetes stateful set object that contains
 	// the alertmanager pod.
 	StatefulSetNameAlertManager = "alertmanager"
+	// ETCDRoleMain is a constant for the main etcd role.
+	ETCDRoleMain = "main"
+	// ETCDRoleEvents is a constant for the events etcd role.
+	ETCDRoleEvents = "events"
 	// ETCDMain is a constant for the name of etcd-main Etcd object.
-	ETCDMain = "etcd-main"
+	ETCDMain = "etcd-" + ETCDRoleMain
 	// ETCDEvents is a constant for the name of etcd-events Etcd object.
-	ETCDEvents = "etcd-events"
+	ETCDEvents = "etcd-" + ETCDRoleEvents
 	// StatefulSetNameLoki is a constant for the name of a Kubernetes stateful set object that contains
 	// the loki pod.
 	StatefulSetNameLoki = "loki"
@@ -100,6 +107,8 @@ const (
 
 	// GardenerPurpose is a constant for the key in a label describing the purpose of the respective object.
 	GardenerPurpose = "gardener.cloud/purpose"
+	// GardenerDescription is a constant for a key in an annotation describing what the resource is used for.
+	GardenerDescription = "gardener.cloud/description"
 
 	// GardenerOperation is a constant for an annotation on a resource that describes a desired operation.
 	GardenerOperation = "gardener.cloud/operation"
@@ -143,6 +152,8 @@ const (
 	GardenRoleMonitoring = "monitoring"
 	// GardenRoleOptionalAddon is the value of the GardenRole key indicating type 'optional-addon'.
 	GardenRoleOptionalAddon = "optional-addon"
+	// GardenRoleCloudConfig is the value of the GardenRole key indicating type 'cloud-config'.
+	GardenRoleCloudConfig = "cloud-config"
 	// GardenRoleKubeconfig is the value of the GardenRole key indicating type 'kubeconfig'.
 	GardenRoleKubeconfig = "kubeconfig"
 	// GardenRoleSSHKeyPair is the value of the GardenRole key indicating type 'ssh-keypair'.
@@ -150,8 +161,14 @@ const (
 
 	// DeprecatedShootUID is an annotation key for the shoot namespace in the seed cluster,
 	// which value will be the value of `shoot.status.uid`
-	// +deprecated: Use `Cluster` resource instead.
+	//
+	// Deprecated: Use the `Cluster` resource or the annotation key from the new API group `ShootUID`.
 	DeprecatedShootUID = "shoot.garden.sapcloud.io/uid"
+	// ShootUID is an annotation key for the shoot namespace in the seed cluster,
+	// which value will be the value of `shoot.status.uid`
+	ShootUID = "shoot.gardener.cloud/uid"
+	// ShootPurpose is a constant for the shoot purpose.
+	ShootPurpose = "shoot.gardener.cloud/purpose"
 
 	// SeedResourceManagerClass is the resource-class managed by the Gardener-Resource-Manager
 	// instance in the garden namespace on the seeds.
@@ -198,6 +215,13 @@ const (
 	// LabelNetworkPolicyFromPrometheus allows Ingress from Prometheus to pods labeled with 'networking.gardener.cloud/from-prometheus=allowed' and ports
 	// named 'metrics' in the PodSpecification.
 	LabelNetworkPolicyFromPrometheus = "networking.gardener.cloud/from-prometheus"
+	// LabelNetworkPolicyShootFromSeed allows Ingress traffic from the seed cluster (where the shoot's kube-apiserver
+	// runs).
+	LabelNetworkPolicyShootFromSeed = "networking.gardener.cloud/from-seed"
+	// LabelNetworkPolicyShootToAPIServer allows Egress traffic to the shoot's API server.
+	LabelNetworkPolicyShootToAPIServer = "networking.gardener.cloud/to-apiserver"
+	// LabelNetworkPolicyShootToKubelet allows Egress traffic to the kubelets.
+	LabelNetworkPolicyShootToKubelet = "networking.gardener.cloud/to-kubelet"
 	// LabelNetworkPolicyAllowed is a constant for allowing a network policy.
 	LabelNetworkPolicyAllowed = "allowed"
 	// LabelNetworkPolicyDisallowed is a constant for disallowing a network policy.
@@ -233,22 +257,26 @@ const (
 	// AnnotationShootUseAsSeed is a constant for an annotation on a Shoot resource indicating that the Shoot shall be registered as Seed in the
 	// Garden cluster once successfully created.
 	AnnotationShootUseAsSeed = "shoot.gardener.cloud/use-as-seed"
-	// AnnotationShootUseAsSeedDeprecated is a constant for an annotation on a Shoot resource indicating that the Shoot shall be registered as Seed in the
-	// Garden cluster once successfully created.
-	//
-	// Deprecated: Use `AnnotationShootUseAsSeed` instead.
-	AnnotationShootUseAsSeedDeprecated = "shoot.garden.sapcloud.io/use-as-seed"
+	// AnnotationManagedSeedAPIServer is a constant for an annotation on a Shoot resource containing the API server settings for a managed seed.
+	AnnotationManagedSeedAPIServer = "shoot.gardener.cloud/managed-seed-api-server"
 	// AnnotationShootIgnoreAlerts is the key for an annotation of a Shoot cluster whose value indicates
 	// if alerts for this cluster should be ignored
 	AnnotationShootIgnoreAlerts = "shoot.gardener.cloud/ignore-alerts"
-	// AnnotationShootIgnoreAlertsDeprecated is the key for an annotation of a Shoot cluster whose value indicates
-	// if alerts for this cluster should be ignored
-	//
-	// Deprecated: Use `AnnotationShootIgnoreAlerts` instead.
-	AnnotationShootIgnoreAlertsDeprecated = "shoot.garden.sapcloud.io/ignore-alerts"
 	// AnnotationShootSkipCleanup is a key for an annotation on a Shoot resource that declares that the clean up steps should be skipped when the
 	// cluster is deleted. Concretely, this will skip everything except the deletion of (load balancer) services and persistent volume resources.
 	AnnotationShootSkipCleanup = "shoot.gardener.cloud/skip-cleanup"
+	// AnnotationShootKonnectivityTunnel is the key for an annotation of a Shoot cluster whose value indicates
+	// if a konnectivity-tunnel should be deployed into the shoot cluster or not.
+	AnnotationShootKonnectivityTunnel = "alpha.featuregates.shoot.gardener.cloud/konnectivity-tunnel"
+
+	// AnnotationShootAPIServerSNIPodInjector is the key for an annotation of a Shoot cluster whose value indicates
+	// if pod injection of 'KUBERNETES_SERVICE_HOST' environment variable should happen for clusters where APIServerSNI
+	// featuregate is enabled.
+	// Any value than 'disable' enables this feature.
+	AnnotationShootAPIServerSNIPodInjector = "alpha.featuregates.shoot.gardener.cloud/apiserver-sni-pod-injector"
+	// AnnotationShootAPIServerSNIPodInjectorDisableValue is the value of the
+	// `alpha.featuregates.shoot.gardener.cloud/apiserver-sni-pod-injector` annotation that disables the pod injection.
+	AnnotationShootAPIServerSNIPodInjectorDisableValue = "disable"
 
 	// OperatingSystemConfigUnitNameKubeletService is a constant for a unit in the operating system config that contains the kubelet service.
 	OperatingSystemConfigUnitNameKubeletService = "kubelet.service"
@@ -276,21 +304,21 @@ const (
 
 	// LabelControllerRegistrationName is the key of a label on extension namespaces that indicates the controller registration name.
 	LabelControllerRegistrationName = "controllerregistration.core.gardener.cloud/name"
+	// LabelPodMaintenanceRestart is a constant for a label that describes that a pod should be restarted during maintenance.
+	LabelPodMaintenanceRestart = "maintenance.gardener.cloud/restart"
+	// LabelWorkerPool is a constant for a label that indicates the worker pool the node belongs to
+	LabelWorkerPool = "worker.gardener.cloud/pool"
+	// LabelWorkerPoolDeprecated is a deprecated constant for a label that indicates the worker pool the node belongs to
+	LabelWorkerPoolDeprecated = "worker.garden.sapcloud.io/group"
+	// LabelWorkerPoolSystemComponents is a constant that indicates whether the worker pool should host system components
+	LabelWorkerPoolSystemComponents = "worker.gardener.cloud/system-components"
 
 	// EventResourceReferenced indicates that the resource deletion is in waiting mode because the resource is still
 	// being referenced by at least one other resource (e.g. a SecretBinding is still referenced by a Shoot)
 	EventResourceReferenced = "ResourceReferenced"
 
-	// LabelPodMaintenanceRestart is a constant for a label that describes that a pod should be restarted during maintenance.
-	LabelPodMaintenanceRestart = "maintenance.gardener.cloud/restart"
-
-	// LabelWorkerPool is a constant for a label that indicates the worker pool the node belongs to
-	LabelWorkerPool = "worker.gardener.cloud/pool"
-	// LabelWorkerPoolDeprecated is a deprecated constant for a label that indicates the worker pool the node belongs to
-	LabelWorkerPoolDeprecated = "worker.garden.sapcloud.io/group"
-
-	// LabelWorkerPoolSystemComponents is a constant that indicates whether the worker pool should host system components
-	LabelWorkerPoolSystemComponents = "worker.gardener.cloud/system-components"
+	// PriorityClassNameShootControlPlane is the name of a priority class for critical pods of a shoot control plane.
+	PriorityClassNameShootControlPlane = "gardener-shoot-controlplane"
 
 	// ReferencedResourcesPrefix is the prefix used when copying referenced resources to the Shoot namespace in the Seed,
 	// to avoid naming collisions with resources managed by Gardener.
@@ -298,4 +326,18 @@ const (
 
 	// ClusterIdentity is a constant equal to the name and data key (that stores the identity) of the cluster-identity ConfigMap
 	ClusterIdentity = "cluster-identity"
+
+	// SeedNginxIngressClass defines the ingress class for the seed nginx ingress controller
+	SeedNginxIngressClass = "nginx-gardener"
+	// IngressKindNginx defines nginx as kind as managed Seed ingress
+	IngressKindNginx = "nginx"
+	// ShootNginxIngressClass defines the ingress class for the seed nginx ingress controller
+	ShootNginxIngressClass = "nginx"
 )
+
+// ControlPlaneSecretRoles contains all role values used for control plane secrets synced to the Garden cluster.
+var ControlPlaneSecretRoles = []string{
+	GardenRoleKubeconfig,
+	GardenRoleSSHKeyPair,
+	GardenRoleMonitoring,
+}

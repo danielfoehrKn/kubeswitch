@@ -47,6 +47,14 @@ type SeedList struct {
 	Items []Seed
 }
 
+// SeedTemplate is a template for creating a Seed object.
+type SeedTemplate struct {
+	// Standard object metadata.
+	metav1.ObjectMeta
+	// Specification of the desired behavior of the Seed.
+	Spec SeedSpec
+}
+
 // SeedSpec is the specification of a Seed.
 type SeedSpec struct {
 	// Backup holds the object store configuration for the backups of shoot (currently only etcd).
@@ -69,6 +77,8 @@ type SeedSpec struct {
 	Taints []SeedTaint
 	// Volume contains settings for persistentvolumes created in the seed cluster.
 	Volume *SeedVolume
+	// Ingress configures Ingress specific settings of the Seed cluster.
+	Ingress *Ingress
 }
 
 func (s *Seed) GetProviderType() string {
@@ -88,6 +98,11 @@ type SeedStatus struct {
 	ObservedGeneration int64
 	// ClusterIdentity is the identity of Seed cluster
 	ClusterIdentity *string
+	// Capacity represents the total resources of a seed.
+	Capacity corev1.ResourceList
+	// Allocatable represents the resources of a seed that are available for scheduling.
+	// Defaults to Capacity.
+	Allocatable corev1.ResourceList
 }
 
 // SeedBackup contains the object store configuration for backups for shoot (currently only etcd).
@@ -104,11 +119,43 @@ type SeedBackup struct {
 	SecretRef corev1.SecretReference
 }
 
-// SeedDNS contains DNS-relevant information about this seed cluster.
+// SeedDNS contains the external domain and configuration for the DNS provider
 type SeedDNS struct {
 	// IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used
-	// to construct ingress URLs for system applications running in Shoot clusters.
-	IngressDomain string
+	// to construct ingress URLs for system applications running in Shoot clusters. Once set this field is immutable.
+	// This will be removed in the next API version and replaced by spec.ingress.domain.
+	IngressDomain *string
+	// Provider configures a DNSProvider
+	Provider *SeedDNSProvider
+}
+
+// SeedDNSProvider configures a DNS provider
+type SeedDNSProvider struct {
+	// Type describes the type of the dns-provider, for example `aws-route53`
+	Type string
+	// SecretRef is a reference to a Secret object containing cloud provider credentials used for registering external domains.
+	SecretRef corev1.SecretReference
+	// Domains contains information about which domains shall be included/excluded for this provider.
+	Domains *DNSIncludeExclude
+	// Zones contains information about which hosted zones shall be included/excluded for this provider.
+	Zones *DNSIncludeExclude
+}
+
+// Ingress configures the Ingress specific settings of the Seed cluster
+type Ingress struct {
+	// Domain specifies the ingress domain of the Seed cluster pointing to the ingress controller endpoint. It will be used
+	// to construct ingress URLs for system applications running in Shoot clusters. Once set this field is immutable.
+	Domain string
+	// Controller configures a Gardener managed Ingress Controller listening on the ingressDomain
+	Controller IngressController
+}
+
+// IngressController enables a Gardener managed Ingress Controller listening on the ingressDomain
+type IngressController struct {
+	// Kind defines which kind of IngressController to use, for example `nginx`
+	Kind string
+	// ProviderConfig specifies infrastructure specific configuration for the ingressController
+	ProviderConfig *runtime.RawExtension
 }
 
 // SeedNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
@@ -207,20 +254,6 @@ type SeedTaint struct {
 }
 
 const (
-	// DeprecatedSeedTaintDisableCapacityReservation is a constant for a taint key on a seed that marks it for disabling
-	// excess capacity reservation. This can be useful for seed clusters which only host shooted seeds to reduce
-	// costs.
-	// deprecated
-	DeprecatedSeedTaintDisableCapacityReservation = "seed.gardener.cloud/disable-capacity-reservation"
-	// DeprecatedSeedTaintDisableDNS is a constant for a taint key on a seed that marks it for disabling DNS. All shoots
-	// using this seed won't get any DNS providers, DNS records, and no DNS extension controller is required to
-	// be installed here. This is useful for environment where DNS is not required.
-	// deprecated
-	DeprecatedSeedTaintDisableDNS = "seed.gardener.cloud/disable-dns"
-	// DeprecatedSeedTaintInvisible is a constant for a taint key on a seed that marks it as invisible. Invisible seeds
-	// are not considered by the gardener-scheduler.
-	// deprecated
-	DeprecatedSeedTaintInvisible = "seed.gardener.cloud/invisible"
 	// SeedTaintProtected is a constant for a taint key on a seed that marks it as protected. Protected seeds
 	// may only be used by shoots in the `garden` namespace.
 	SeedTaintProtected = "seed.gardener.cloud/protected"
@@ -243,6 +276,8 @@ type SeedVolumeProvider struct {
 }
 
 const (
+	// SeedBackupBucketsReady is a constant for a condition type indicating that associated BackupBuckets are ready.
+	SeedBackupBucketsReady ConditionType = "BackupBucketsReady"
 	// SeedBootstrapped is a constant for a condition type indicating that the seed cluster has been
 	// bootstrapped.
 	SeedBootstrapped ConditionType = "Bootstrapped"
@@ -250,4 +285,10 @@ const (
 	SeedExtensionsReady ConditionType = "ExtensionsReady"
 	// SeedGardenletReady is a constant for a condition type indicating that the Gardenlet is ready.
 	SeedGardenletReady ConditionType = "GardenletReady"
+)
+
+// Resource constants for Gardener object types
+const (
+	// ResourceShoots is a resource constant for the number of shoots.
+	ResourceShoots corev1.ResourceName = "shoots"
 )

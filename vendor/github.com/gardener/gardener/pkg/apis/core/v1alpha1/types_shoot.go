@@ -193,7 +193,7 @@ const (
 // NginxIngress describes configuration values for the nginx-ingress addon.
 type NginxIngress struct {
 	Addon `json:",inline" protobuf:"bytes,4,opt,name=addon"`
-	// LoadBalancerSourceRanges is list of whitelist IP sources for NginxIngress
+	// LoadBalancerSourceRanges is list of allowed IP sources for NginxIngress
 	// +optional
 	LoadBalancerSourceRanges []string `json:"loadBalancerSourceRanges,omitempty" protobuf:"bytes,1,rep,name=loadBalancerSourceRanges"`
 	// Config contains custom configuration for the nginx-ingress-controller configuration.
@@ -213,7 +213,7 @@ type NginxIngress struct {
 // DNS holds information about the provider, the hosted zone id and the domain.
 type DNS struct {
 	// Domain is the external available domain of the Shoot cluster. This domain will be written into the
-	// kubeconfig that is handed out to end-users.
+	// kubeconfig that is handed out to end-users. Once set it is immutable.
 	// +optional
 	Domain *string `json:"domain,omitempty" protobuf:"bytes,1,opt,name=domain"`
 	// Providers is a list of DNS providers that shall be enabled for this shoot cluster. Only relevant if
@@ -469,6 +469,21 @@ type KubeAPIServerConfig struct {
 	// cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).
 	// +optional
 	WatchCacheSizes *WatchCacheSizes `json:"watchCacheSizes,omitempty" protobuf:"bytes,9,opt,name=watchCacheSizes"`
+	// Requests contains configuration for request-specific settings for the kube-apiserver.
+	// +optional
+	Requests *KubeAPIServerRequests `json:"requests,omitempty" protobuf:"bytes,10,opt,name=requests"`
+}
+
+// KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.
+type KubeAPIServerRequests struct {
+	// MaxNonMutatingInflight is the maximum number of non-mutating requests in flight at a given time. When the server
+	// exceeds this, it rejects requests.
+	// +optional
+	MaxNonMutatingInflight *int32 `json:"maxNonMutatingInflight,omitempty" protobuf:"bytes,1,name=maxNonMutatingInflight"`
+	// MaxMutatingInflight is the maximum number of mutating requests in flight at a given time. When the server
+	// exceeds this, it rejects requests.
+	// +optional
+	MaxMutatingInflight *int32 `json:"maxMutatingInflight,omitempty" protobuf:"bytes,2,name=maxMutatingInflight"`
 }
 
 // ServiceAccountConfig is the kube-apiserver configuration for service accounts.
@@ -592,6 +607,9 @@ type KubeControllerManagerConfig struct {
 	// NodeCIDRMaskSize defines the mask size for node cidr in cluster (default is 24)
 	// +optional
 	NodeCIDRMaskSize *int32 `json:"nodeCIDRMaskSize,omitempty" protobuf:"varint,3,opt,name=nodeCIDRMaskSize"`
+	// PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.
+	// +optional
+	PodEvictionTimeout *metav1.Duration `json:"podEvictionTimeout,omitempty" protobuf:"bytes,4,opt,name=podEvictionTimeout"`
 }
 
 // HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager.
@@ -737,7 +755,7 @@ type KubeletConfig struct {
 	// KubeReserved is the configuration for resources reserved for kubernetes node components (mainly kubelet and container runtime).
 	// When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
 	// +optional
-	// Default: cpu=80m,memory=1Gi
+	// Default: cpu=80m,memory=1Gi,pid=20k
 	KubeReserved *KubeletConfigReserved `json:"kubeReserved,omitempty" protobuf:"bytes,14,opt,name=kubeReserved"`
 	// SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald).
 	// When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
@@ -851,6 +869,13 @@ const (
 //////////////////////////////////////////////////////////////////////////////////////////////////
 // Maintenance relevant types                                                                   //
 //////////////////////////////////////////////////////////////////////////////////////////////////
+
+const (
+	// MaintenanceTimeWindowDurationMinimum is the minimum duration for a maintenance time window.
+	MaintenanceTimeWindowDurationMinimum = 30 * time.Minute
+	// MaintenanceTimeWindowDurationMaximum is the maximum duration for a maintenance time window.
+	MaintenanceTimeWindowDurationMaximum = 6 * time.Hour
+)
 
 // Maintenance contains information about the time window for maintenance operations and which
 // operations should be performed.
@@ -1013,6 +1038,7 @@ type WorkerSystemComponents struct {
 // WorkerKubernetes contains configuration for Kubernetes components related to this worker pool.
 type WorkerKubernetes struct {
 	// Kubelet contains configuration settings for all kubelets of this worker pool.
+	// If set, all `spec.kubernetes.kubelet` settings will be overwritten for this worker pool (no merge of settings).
 	// +optional
 	Kubelet *KubeletConfig `json:"kubelet,omitempty" protobuf:"bytes,1,opt,name=kubelet"`
 }
@@ -1134,6 +1160,9 @@ const (
 	ShootSystemComponentsHealthy ConditionType = "SystemComponentsHealthy"
 	// ShootHibernationPossible is a constant for a condition type indicating whether the Shoot can be hibernated.
 	ShootHibernationPossible ConditionType = "HibernationPossible"
+	// ShootMaintenancePreconditionsSatisfied is a constant for a condition type indicating whether all preconditions
+	// for a shoot maintenance operation are satisfied.
+	ShootMaintenancePreconditionsSatisfied ConditionType = "MaintenancePreconditionsSatisfied"
 )
 
 // ShootPurpose is a type alias for string.

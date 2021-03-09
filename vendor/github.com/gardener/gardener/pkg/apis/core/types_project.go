@@ -63,7 +63,7 @@ type ProjectSpec struct {
 	// Namespace is the name of the namespace that has been created for the Project object.
 	// A nil value means that Gardener will determine the name of the namespace.
 	Namespace *string
-	// Tolerations contains the default tolerations and a whitelist for taints on seed clusters.
+	// Tolerations contains the default tolerations and a list for allowed taints on seed clusters.
 	Tolerations *ProjectTolerations
 }
 
@@ -136,6 +136,8 @@ const (
 	ProjectEventNamespaceReconcileFailed = "NamespaceReconcileFailed"
 	// ProjectEventNamespaceReconcileSuccessful indicates that the namespace reconciliation has succeeded.
 	ProjectEventNamespaceReconcileSuccessful = "NamespaceReconcileSuccessful"
+	// ProjectEventNamespaceNotEmpty indicates that the namespace cannot be released because it is not empty.
+	ProjectEventNamespaceNotEmpty = "NamespaceNotEmpty"
 	// ProjectEventNamespaceDeletionFailed indicates that the namespace deletion failed.
 	ProjectEventNamespaceDeletionFailed = "NamespaceDeletionFailed"
 	// ProjectEventNamespaceMarkedForDeletion indicates that the namespace has been successfully marked for deletion.

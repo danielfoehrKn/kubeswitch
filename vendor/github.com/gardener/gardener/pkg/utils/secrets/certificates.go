@@ -265,9 +265,9 @@ func LoadCertificate(name string, privateKeyPEM, certificatePEM []byte) (*Certif
 }
 
 // LoadCAFromSecret loads a CA certificate from an existing Kubernetes secret object. It returns the secret, the Certificate and an error.
-func LoadCAFromSecret(k8sClient client.Client, namespace, name string) (*corev1.Secret, *Certificate, error) {
+func LoadCAFromSecret(ctx context.Context, k8sClient client.Client, namespace, name string) (*corev1.Secret, *Certificate, error) {
 	secret := &corev1.Secret{}
-	if err := k8sClient.Get(context.TODO(), kutil.Key(namespace, name), secret); err != nil {
+	if err := k8sClient.Get(ctx, kutil.Key(namespace, name), secret); err != nil {
 		return nil, nil, err
 	}
 
@@ -335,7 +335,7 @@ func signCertificate(certificateTemplate *x509.Certificate, privateKey *rsa.Priv
 	return utils.EncodeCertificate(certificate), nil
 }
 
-func generateCA(k8sClusterClient kubernetes.Interface, config *CertificateSecretConfig, namespace string) (*corev1.Secret, *Certificate, error) {
+func generateCA(ctx context.Context, k8sClusterClient kubernetes.Interface, config *CertificateSecretConfig, namespace string) (*corev1.Secret, *Certificate, error) {
 	certificate, err := config.GenerateCertificate()
 	if err != nil {
 		return nil, nil, err
@@ -350,7 +350,7 @@ func generateCA(k8sClusterClient kubernetes.Interface, config *CertificateSecret
 		Data: certificate.SecretData(),
 	}
 
-	if err := k8sClusterClient.Client().Create(context.TODO(), secret); err != nil {
+	if err := k8sClusterClient.Client().Create(ctx, secret); err != nil {
 		return nil, nil, err
 	}
 	return secret, certificate, nil
@@ -367,7 +367,7 @@ func loadCA(name string, existingSecret *corev1.Secret) (*corev1.Secret, *Certif
 // GenerateCertificateAuthorities get a map of wanted certificates and check If they exist in the existingSecretsMap based on the keys in the map. If they exist it get only the certificate from the corresponding
 // existing secret and makes a certificate DataInterface from the existing secret. If there is no existing secret contaning the wanted certificate, we make one certificate and with it we deploy in K8s cluster
 // a secret with that  certificate and then return the newly existing secret. The function returns a map of secrets contaning the wanted CA, a map with the wanted CA certificate and an error.
-func GenerateCertificateAuthorities(k8sClusterClient kubernetes.Interface, existingSecretsMap map[string]*corev1.Secret, wantedCertificateAuthorities map[string]*CertificateSecretConfig, namespace string) (map[string]*corev1.Secret, map[string]*Certificate, error) {
+func GenerateCertificateAuthorities(ctx context.Context, k8sClusterClient kubernetes.Interface, existingSecretsMap map[string]*corev1.Secret, wantedCertificateAuthorities map[string]*CertificateSecretConfig, namespace string) (map[string]*corev1.Secret, map[string]*Certificate, error) {
 	type caOutput struct {
 		secret      *corev1.Secret
 		certificate *Certificate
@@ -388,7 +388,7 @@ func GenerateCertificateAuthorities(k8sClusterClient kubernetes.Interface, exist
 		if existingSecret, ok := existingSecretsMap[name]; !ok {
 			go func(config *CertificateSecretConfig) {
 				defer wg.Done()
-				secret, certificate, err := generateCA(k8sClusterClient, config, namespace)
+				secret, certificate, err := generateCA(ctx, k8sClusterClient, config, namespace)
 				results <- &caOutput{secret, certificate, err}
 			}(config)
 		} else {
@@ -422,12 +422,16 @@ func GenerateCertificateAuthorities(k8sClusterClient kubernetes.Interface, exist
 	return generatedSecrets, certificateAuthorities, nil
 }
 
+// TemporaryDirectoryForSelfGeneratedTLSCertificatesPattern is a constant for the pattern used when creating a temporary
+// directory for self-generated certificates.
+const TemporaryDirectoryForSelfGeneratedTLSCertificatesPattern = "self-generated-server-certificates-"
+
 // SelfGenerateTLSServerCertificate generates a new CA certificate and signs a server certificate with it. It'll store
 // the generated CA + server certificate bytes into a temporary directory with the default filenames, e.g. `DataKeyCertificateCA`.
 // The function will return the *Certificate object as well as the path of the temporary directory where the
 // certificates are stored.
 func SelfGenerateTLSServerCertificate(name string, dnsNames []string) (*Certificate, string, error) {
-	tempDir, err := ioutil.TempDir("", "self-generated-server-certificates-")
+	tempDir, err := ioutil.TempDir("", TemporaryDirectoryForSelfGeneratedTLSCertificatesPattern)
 	if err != nil {
 		return nil, "", err
 	}

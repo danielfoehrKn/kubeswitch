@@ -20,7 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
-	"github.com/danielfoehrkn/kubeswitch/pkg/store"
+	gardenerstore "github.com/danielfoehrkn/kubeswitch/pkg/store/gardener"
 	"github.com/danielfoehrkn/kubeswitch/types"
 )
 
@@ -35,6 +35,10 @@ func ValidateConfig(config *types.Config) field.ErrorList {
 
 	if config.RefreshIndexAfter != nil {
 		usesIndex = true
+	}
+
+	if !types.ValidConfigVersions.Has(config.Version) {
+		errors = append(errors, field.Invalid(field.NewPath("version"), config.Version, fmt.Sprintf("Config version %q is unknown. Valid versions are %q", config.Version, types.ValidConfigVersions)))
 	}
 
 	for i, kubeconfigStore := range config.KubeconfigStores {
@@ -60,7 +64,7 @@ func ValidateConfig(config *types.Config) field.ErrorList {
 		}
 
 		if kubeconfigStore.Kind == types.StoreKindGardener {
-			landscapeName, errorList := store.ValidateGardenerStoreConfiguration(indexFieldPath, kubeconfigStore)
+			landscapeName, errorList := gardenerstore.ValidateGardenerStoreConfiguration(indexFieldPath, kubeconfigStore)
 			errors = append(errors, errorList...)
 
 			// the Gardener landscape name is the default ID of the store

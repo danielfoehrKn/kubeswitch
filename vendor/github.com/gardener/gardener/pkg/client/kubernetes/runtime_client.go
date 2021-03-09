@@ -15,6 +15,7 @@
 package kubernetes
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -29,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 const (
@@ -45,8 +47,8 @@ func NewDirectClient(config *rest.Config, options client.Options) (client.Client
 }
 
 // NewRuntimeClientWithCache creates a new client.client with the given config and options.
-// The client uses a new cache, which will be started immediately using the given stop channel.
-func NewRuntimeClientWithCache(config *rest.Config, options client.Options, stopCh <-chan struct{}) (client.Client, error) {
+// The client uses a new cache, which will be started immediately using the given context.
+func NewRuntimeClientWithCache(ctx context.Context, config *rest.Config, options client.Options, uncachedObjects ...client.Object) (client.Client, error) {
 	if err := setClientOptionsDefaults(config, &options); err != nil {
 		return nil, err
 	}
@@ -59,36 +61,24 @@ func NewRuntimeClientWithCache(config *rest.Config, options client.Options, stop
 		return nil, fmt.Errorf("could not create new client cache: %w", err)
 	}
 
-	runtimeClient, err := newRuntimeClientWithCache(config, options, clientCache)
+	runtimeClient, err := newRuntimeClientWithCache(config, options, clientCache, uncachedObjects...)
 	if err != nil {
 		return nil, err
 	}
 
 	go func() {
-		if err := clientCache.Start(stopCh); err != nil {
+		if err := clientCache.Start(ctx); err != nil {
 			logger.NewLogger(fmt.Sprint(logrus.ErrorLevel)).Errorf("cache.Start returned error, which should never happen, ignoring.")
 		}
 	}()
 
-	clientCache.WaitForCacheSync(stopCh)
+	clientCache.WaitForCacheSync(ctx)
 
 	return runtimeClient, nil
 }
 
-func newRuntimeClientWithCache(config *rest.Config, options client.Options, cache cache.Cache) (client.Client, error) {
-	c, err := client.New(config, options)
-	if err != nil {
-		return nil, err
-	}
-
-	return &client.DelegatingClient{
-		Reader: &client.DelegatingReader{
-			CacheReader:  cache,
-			ClientReader: c,
-		},
-		Writer:       c,
-		StatusClient: c,
-	}, nil
+func newRuntimeClientWithCache(config *rest.Config, options client.Options, cache cache.Cache, uncachedObjects ...client.Object) (client.Client, error) {
+	return manager.NewClientBuilder().WithUncached(uncachedObjects...).Build(cache, config, options)
 }
 
 func setClientOptionsDefaults(config *rest.Config, options *client.Options) error {

@@ -31,7 +31,9 @@ var _ = Describe("ValidateConfig", func() {
 	var config types.Config
 
 	BeforeEach(func() {
-		config = types.Config{}
+		config = types.Config{
+			Version: "v1alpha1",
+		}
 	})
 
 	It("should successfully validate an empty config", func() {
@@ -44,6 +46,7 @@ var _ = Describe("ValidateConfig", func() {
 		rediscoveryInterval := time.Minute * 60
 		config := &types.Config{
 			KubeconfigName:    &kubeconfigName,
+			Version:           "v1alpha1",
 			RefreshIndexAfter: &rediscoveryInterval,
 			KubeconfigStores: []types.KubeconfigStore{
 				{
@@ -60,6 +63,7 @@ var _ = Describe("ValidateConfig", func() {
 
 	It("should throw error - invalid kubeconfig kind", func() {
 		config := &types.Config{
+			Version: "v1alpha1",
 			KubeconfigStores: []types.KubeconfigStore{
 				{
 					Kind:  "invalid-kind",
@@ -76,8 +80,22 @@ var _ = Describe("ValidateConfig", func() {
 		))
 	})
 
+	It("should throw error - invalid config version", func() {
+		config := &types.Config{
+			Version: "my-version",
+		}
+		errorList := validation.ValidateConfig(config)
+		Expect(errorList).To(ConsistOf(
+			PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("version"),
+			})),
+		))
+	})
+
 	It("should throw error - no paths are configured for the kubeconfig store", func() {
 		config := &types.Config{
+			Version: "v1alpha1",
 			KubeconfigStores: []types.KubeconfigStore{
 				{
 					Kind:  types.StoreKindVault,
@@ -97,6 +115,7 @@ var _ = Describe("ValidateConfig", func() {
 	It("should throw error - requires unique IDs when using multiple kubeconfig stores with the same kind and using an index", func() {
 		minute := time.Minute
 		config := &types.Config{
+			Version:           "v1alpha1",
 			RefreshIndexAfter: &minute,
 			KubeconfigStores: []types.KubeconfigStore{
 				{
@@ -123,6 +142,7 @@ var _ = Describe("ValidateConfig", func() {
 	It("should throw error - requires unique IDs (rediscovery interval set on stores instead of globally)", func() {
 		minute := time.Minute
 		config := &types.Config{
+			Version: "v1alpha1",
 			KubeconfigStores: []types.KubeconfigStore{
 				{
 					Kind:              types.StoreKindVault,
@@ -150,6 +170,7 @@ var _ = Describe("ValidateConfig", func() {
 	It("should validate successfully via multiple kubeconfig stores with the same kind", func() {
 		minute := time.Minute
 		config := &types.Config{
+			Version: "v1alpha1",
 			KubeconfigStores: []types.KubeconfigStore{
 				{
 					Kind:              types.StoreKindVault,
@@ -173,6 +194,7 @@ var _ = Describe("ValidateConfig", func() {
 	Context("Gardener store", func() {
 		It("should successfully validate the Gardener store config", func() {
 			config := &types.Config{
+				Version: "v1alpha1",
 				KubeconfigStores: []types.KubeconfigStore{
 					{
 						Kind: types.StoreKindGardener,
@@ -190,6 +212,7 @@ var _ = Describe("ValidateConfig", func() {
 		It("should successfully validate the Gardener store config - multiple stores without ID but with landscape name", func() {
 			duration := time.Minute
 			config := &types.Config{
+				Version:           "v1alpha1",
 				RefreshIndexAfter: &duration,
 				KubeconfigStores: []types.KubeconfigStore{
 					{
@@ -215,6 +238,7 @@ var _ = Describe("ValidateConfig", func() {
 
 		It("should throw error - providing paths for the Gardener store is not supported", func() {
 			config := &types.Config{
+				Version: "v1alpha1",
 				KubeconfigStores: []types.KubeconfigStore{
 					{
 						Kind:  types.StoreKindGardener,
@@ -238,6 +262,7 @@ var _ = Describe("ValidateConfig", func() {
 
 		It("should throw error - the Gardener store needs configuration", func() {
 			config := &types.Config{
+				Version: "v1alpha1",
 				KubeconfigStores: []types.KubeconfigStore{
 					{
 						Kind: types.StoreKindGardener,
@@ -257,6 +282,7 @@ var _ = Describe("ValidateConfig", func() {
 
 		It("should throw error - the Gardener store config cannot be parsed", func() {
 			config := &types.Config{
+				Version: "v1alpha1",
 				KubeconfigStores: []types.KubeconfigStore{
 					{
 						Kind:   types.StoreKindGardener,
@@ -277,6 +303,7 @@ var _ = Describe("ValidateConfig", func() {
 
 		It("should throw error - the GardenerAPIKubeconfigPath must be set", func() {
 			config := &types.Config{
+				Version: "v1alpha1",
 				KubeconfigStores: []types.KubeconfigStore{
 					{
 						Kind:   types.StoreKindGardener,
@@ -297,6 +324,7 @@ var _ = Describe("ValidateConfig", func() {
 
 		It("should throw error - the landscape name must not be empty (but can be nil)", func() {
 			config := &types.Config{
+				Version: "v1alpha1",
 				KubeconfigStores: []types.KubeconfigStore{
 					{
 						Kind: types.StoreKindGardener,
@@ -322,6 +350,7 @@ var _ = Describe("ValidateConfig", func() {
 	Context("Hooks", func() {
 		It("should successfully validate hooks", func() {
 			config := &types.Config{
+				Version: "v1alpha1",
 				Hooks: []types.Hook{
 					{
 						Name: "my-hooks",
@@ -337,6 +366,7 @@ var _ = Describe("ValidateConfig", func() {
 
 		It("should throw error - invalid hook type", func() {
 			config := &types.Config{
+				Version: "v1alpha1",
 				Hooks: []types.Hook{
 					{
 						Type: "unknown-type",
@@ -356,6 +386,7 @@ var _ = Describe("ValidateConfig", func() {
 
 		It("should throw error - path to binary is required when specifying hook type executable ", func() {
 			config := &types.Config{
+				Version: "v1alpha1",
 				Hooks: []types.Hook{
 					{
 						Type: types.HookTypeExecutable,
@@ -375,6 +406,7 @@ var _ = Describe("ValidateConfig", func() {
 
 		It("should throw error - arguments are required when specifying hook type inline", func() {
 			config := &types.Config{
+				Version: "v1alpha1",
 				Hooks: []types.Hook{
 					{
 						Type: types.HookTypeInlineCommand,

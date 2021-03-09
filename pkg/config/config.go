@@ -21,6 +21,7 @@ import (
 
 	"gopkg.in/yaml.v2"
 
+	"github.com/danielfoehrkn/kubeswitch/pkg/config/migration"
 	"github.com/danielfoehrkn/kubeswitch/types"
 )
 
@@ -45,8 +46,55 @@ func LoadConfigFromFile(filename string) (*types.Config, error) {
 	}
 
 	err = yaml.Unmarshal(bytes, &config)
-	if err != nil {
+	// if version field is not set, it is an old config
+	// check that kubeconfig stores are not set to avoid migrating a new config
+	if err != nil || (len(config.Version) == 0 && len(config.KubeconfigStores) == 0) {
+		// try with old config
+		oldConfig := &types.ConfigOld{}
+		err = yaml.Unmarshal(bytes, &oldConfig)
+		if err == nil && oldConfig != nil {
+			return MigrateConfig(*oldConfig, filename)
+		}
 		return nil, fmt.Errorf("could not unmarshal config with path '%s': %v", filename, err)
 	}
 	return config, nil
+}
+
+func MigrateConfig(old types.ConfigOld, filename string) (*types.Config, error) {
+	// first, copy the old configuration
+	file, err := os.Create(fmt.Sprintf("%s.old", filename))
+	if err != nil {
+		return nil, fmt.Errorf("failed to migrate SwitchConfig file: %w", err)
+	}
+	defer file.Close()
+
+	output, err := yaml.Marshal(old)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = file.Write(output)
+	if err != nil {
+		return nil, err
+	}
+
+	// then overwrite the configuration with the new format
+	new := migration.ConvertConfiguration(old)
+	fileNew, err := os.Create(filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to migrate SwitchConfig file: %w", err)
+	}
+	defer fileNew.Close()
+
+	output, err = yaml.Marshal(new)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = fileNew.Write(output)
+	if err != nil {
+		return nil, err
+	}
+
+	return &new, nil
 }

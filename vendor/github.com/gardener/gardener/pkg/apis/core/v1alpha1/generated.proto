@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -499,7 +499,7 @@ message ControllerResource {
 // DNS holds information about the provider, the hosted zone id and the domain.
 message DNS {
   // Domain is the external available domain of the Shoot cluster. This domain will be written into the
-  // kubeconfig that is handed out to end-users.
+  // kubeconfig that is handed out to end-users. Once set it is immutable.
   // +optional
   optional string domain = 1;
 
@@ -712,6 +712,26 @@ message HorizontalPodAutoscalerConfig {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration upscaleDelay = 7;
 }
 
+// Ingress configures the Ingress specific settings of the Seed cluster.
+message Ingress {
+  // Domain specifies the IngressDomain of the Seed cluster pointing to the ingress controller endpoint. It will be used
+  // to construct ingress URLs for system applications running in Shoot clusters. Once set this field is immutable.
+  optional string domain = 1;
+
+  // Controller configures a Gardener managed Ingress Controller listening on the ingressDomain
+  optional IngressController controller = 2;
+}
+
+// IngressController enables a Gardener managed Ingress Controller listening on the ingressDomain
+message IngressController {
+  // Kind defines which kind of IngressController to use, for example `nginx`
+  optional string kind = 1;
+
+  // ProviderConfig specifies infrastructure specific configuration for the ingressController
+  // +optional
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
+}
+
 // KubeAPIServerConfig contains configuration settings for the kube-apiserver.
 message KubeAPIServerConfig {
   optional KubernetesConfig kubernetesConfig = 1;
@@ -759,6 +779,23 @@ message KubeAPIServerConfig {
   // cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).
   // +optional
   optional WatchCacheSizes watchCacheSizes = 9;
+
+  // Requests contains configuration for request-specific settings for the kube-apiserver.
+  // +optional
+  optional KubeAPIServerRequests requests = 10;
+}
+
+// KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.
+message KubeAPIServerRequests {
+  // MaxNonMutatingInflight is the maximum number of non-mutating requests in flight at a given time. When the server
+  // exceeds this, it rejects requests.
+  // +optional
+  optional int32 maxNonMutatingInflight = 1;
+
+  // MaxMutatingInflight is the maximum number of mutating requests in flight at a given time. When the server
+  // exceeds this, it rejects requests.
+  // +optional
+  optional int32 maxMutatingInflight = 2;
 }
 
 // KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.
@@ -772,6 +809,10 @@ message KubeControllerManagerConfig {
   // NodeCIDRMaskSize defines the mask size for node cidr in cluster (default is 24)
   // +optional
   optional int32 nodeCIDRMaskSize = 3;
+
+  // PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration podEvictionTimeout = 4;
 }
 
 // KubeProxyConfig contains configuration settings for the kube-proxy.
@@ -874,7 +915,7 @@ message KubeletConfig {
   // KubeReserved is the configuration for resources reserved for kubernetes node components (mainly kubelet and container runtime).
   // When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
   // +optional
-  // Default: cpu=80m,memory=1Gi
+  // Default: cpu=80m,memory=1Gi,pid=20k
   optional KubeletConfigReserved kubeReserved = 14;
 
   // SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald).
@@ -1247,7 +1288,7 @@ message Networking {
 message NginxIngress {
   optional Addon addon = 4;
 
-  // LoadBalancerSourceRanges is list of whitelist IP sources for NginxIngress
+  // LoadBalancerSourceRanges is list of allowed IP sources for NginxIngress
   // +optional
   repeated string loadBalancerSourceRanges = 1;
 
@@ -1640,8 +1681,31 @@ message SeedBackup {
 // SeedDNS contains DNS-relevant information about this seed cluster.
 message SeedDNS {
   // IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used
-  // to construct ingress URLs for system applications running in Shoot clusters.
+  // to construct ingress URLs for system applications running in Shoot clusters. Once set this field is immutable.
+  // This will be removed in the next API version and replaced by spec.ingress.domain.
+  // +optional
   optional string ingressDomain = 1;
+
+  // Provider configures a DNSProvider
+  // +optional
+  optional SeedDNSProvider provider = 2;
+}
+
+// SeedDNSProvider configures a DNSProvider
+message SeedDNSProvider {
+  // Type describes the type of the dns-provider, for example `aws-route53`
+  optional string type = 1;
+
+  // SecretRef is a reference to a Secret object containing cloud provider credentials used for registering external domains.
+  optional k8s.io.api.core.v1.SecretReference secretRef = 2;
+
+  // Domains contains information about which domains shall be included/excluded for this provider.
+  // +optional
+  optional DNSIncludeExclude domains = 3;
+
+  // Zones contains information about which hosted zones shall be included/excluded for this provider.
+  // +optional
+  optional DNSIncludeExclude zones = 4;
 }
 
 // SeedList is a collection of Seeds.
@@ -1798,6 +1862,10 @@ message SeedSpec {
   // Settings contains certain settings for this seed cluster.
   // +optional
   optional SeedSettings settings = 9;
+
+  // Ingress configures Ingress specific settings of the Seed cluster.
+  // +optional
+  optional Ingress ingress = 10;
 }
 
 // SeedStatus is the status of a Seed.
@@ -2264,6 +2332,7 @@ message Worker {
 // WorkerKubernetes contains configuration for Kubernetes components related to this worker pool.
 message WorkerKubernetes {
   // Kubelet contains configuration settings for all kubelets of this worker pool.
+  // If set, all `spec.kubernetes.kubelet` settings will be overwritten for this worker pool (no merge of settings).
   // +optional
   optional KubeletConfig kubelet = 1;
 }
