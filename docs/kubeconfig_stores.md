@@ -30,10 +30,11 @@ Either globally for each store, or per store as seen below.
 $ cat ~/.kube/switch-config.yaml
 kind: SwitchConfig
 kubeconfigName: "*.myconfig"
-kubeconfigPaths:
-  - path: "~/.kube/local-kubeconfigs/"
-    kubeconfigName: "*.myconfig"
-    store: filesystem
+kubeconfigStores:
+- kind: filesystem
+  kubeconfigName: "*.myconfig"
+  paths:
+  - ~/.kube/my-other-kubeconfigs/
 ```
 
 ### Combined search over multiple stores
