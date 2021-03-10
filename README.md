@@ -14,8 +14,9 @@ Designed as a [drop-in replacement](#difference-to-kubectx) for [kubectx](https:
 ## Highlights
 
 - **Configurable Kubeconfig store**
-  - Local filesystem
-  - Hashicorp Vault
+  - [Local filesystem](docs/stores/filesystem/filesystem.md)
+  - [Hashicorp Vault](docs/stores/vault/use_vault_store.md)
+  - [Gardener Kubernetes-as-a-Service](docs/stores/gardener/gardener.md)
 - **Unified search over multiple directories, paths, files and Kubeconfig stores**
   - Search over the Kubeconfigs from multiple Kubeconfig stores and configured paths (e.g, directories on the local filesystem and paths in Vault).
 - **Easy navigation**
@@ -149,7 +150,7 @@ to set up the necessary configuration file.
 
 ## Kubeconfig stores
 
-Two Kubeconfig stores are supported: `filesystem` and `vault`.
+Three Kubeconfig stores are supported: `filesystem`, `vault`, `gardener`.
 The local filesystem is the default store and does not require any additional setup.
 However, if you intend to search for all Kubeconfig context/files in the `~/.kube` directory, 
 please [first consider this](docs/kubeconfig_stores.md#additional-considerations).
