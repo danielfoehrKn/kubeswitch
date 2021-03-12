@@ -90,6 +90,22 @@ kubeconfigStores:
     - "path/in/vault"
 ```
 
+### Not required stores
+
+Optionally mark a store as not required via `required: false` to avoid logging errors when 
+the store is not reachable.
+Useful when configuring a kubeconfig store that is not always available.
+However, when searching on an index and wanting to retrieve the kubeconfig from an unavailable store,
+it will throw an errors nonetheless.
+
+```
+...
+kubeconfigStores:
+- kind: filesystem
+  required: false
+  ...
+```
+
 ## Using both CLI and `SwitchConfig` file
 
 - The flag `--vault-api-address` takes precedence over the config field `vaultAPIAddress`.

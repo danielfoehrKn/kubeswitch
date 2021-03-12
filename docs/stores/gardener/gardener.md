@@ -62,10 +62,9 @@ The preview can be turned off using the flag `--show-preview false`.
 ## Configuration 
 
 You need to configure kubeswitch with a kubeconfig for each Gardener installation.
-It should have permissions to list `Shoots`, `secrets` and `ManagedSeeds` in all namespaces.
-
-Optionally, a `landscapeName` can be configured that replaces the automatically detected 
-`landscape-identity` of each gardener installation.
+It should have 
+- permissions to list `Shoots`, `Secrets` and `ManagedSeeds` (limited to namespaces dependent on the [configured paths](#optional-configuration))
+- the current-context set
 
 ### Example configuration
 
@@ -89,4 +88,30 @@ kubeconfigStores:
   config:
     gardenerAPIKubeconfigPath: "/path/to/live-(virtual)-garden-kubeconfig"
     landscapeName: "live"
+```
+
+### Optional configuration
+
+Optionally, a `landscapeName` can be configured that replaces the automatically detected
+`landscape-identity` of each gardener installation.
+
+Per default, all namespaces are searched for Shoot clusters (equals path "/").
+You can also define the namespaces in the `paths` field. 
+
+Please see the example below.
+
+```
+cat ~/.kube/switch-config.yaml
+
+kind: SwitchConfig
+version: "v1alpha1"
+refreshIndexAfter: 4h
+kubeconfigStores:
+- kind: gardener
+  paths:
+  - "garden-my-shoot-ns"
+  - "garden"
+  config:
+    gardenerAPIKubeconfigPath: "/path/to/dev-(virtual)-garden-kubeconfig"
+    landscapeName: "dev"
 ```

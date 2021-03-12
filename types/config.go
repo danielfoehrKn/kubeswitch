@@ -79,7 +79,14 @@ type KubeconfigStore struct {
 	// RefreshIndexAfter defines how often the index for this kubeconfig store shall be refreshed.
 	// Not setting this field will cause kubeswitch to not use an index
 	// + optional
-	RefreshIndexAfter *time.Duration `yaml:"refreshIndexAfter"`
+	RefreshIndexAfter *time.Duration 		`yaml:"refreshIndexAfter"`
+	// Required defines if errors when initializing this store should be logged
+	// defaults to true
+	// useful when configuring a kubeconfig store that is not always available
+	// However, when searching on an index and wanting to retrieve the kubeconfig from an unavailable store,
+	// it will throw an errors nonetheless
+	// + optional
+	Required *bool 						`yaml:"required"`
 	// Config is store-specific configuration.
 	// Please check the documentation for each backing provider to see what confiuguration is
 	// possible here

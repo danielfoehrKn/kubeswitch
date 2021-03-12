@@ -20,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/ktr0731/go-fuzzyfinder"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
@@ -51,6 +52,10 @@ var (
 	aliasToContext     = make(map[string]string)
 	aliasToContextLock = sync.RWMutex{}
 
+	// aggregated errors that were suppressed during the search
+	// are logged on exit
+	searchError error
+
 	logger = logrus.New()
 )
 
@@ -63,7 +68,9 @@ func Switcher(stores []store.KubeconfigStore, config *types.Config, stateDir str
 	go func(channel chan DiscoveredContext) {
 		for discoveredContext := range channel {
 			if discoveredContext.Error != nil {
-				logger.Warnf("error returned from search: %v", discoveredContext.Error)
+				// aggregate the errors during the search to show after the selection screen
+				logger.Debugf("%v", discoveredContext.Error)
+				searchError = multierror.Append(searchError, discoveredContext.Error)
 				continue
 			}
 
@@ -96,6 +103,8 @@ func Switcher(stores []store.KubeconfigStore, config *types.Config, stateDir str
 	for _, s := range stores {
 		kindToStore[s.GetID()] = s
 	}
+
+	defer logSearchErrors()
 
 	kubeconfigPath, selectedContext, err := showFuzzySearch(kindToStore, showPreview)
 	if err != nil {
@@ -295,4 +304,11 @@ func writeToAliasToContext(key, value string) {
 	aliasToContextLock.Lock()
 	defer aliasToContextLock.Unlock()
 	aliasToContext[key] = value
+}
+
+// logSearchErrors logs errors that were suppressed during the search
+func logSearchErrors() {
+	if searchError != nil {
+		logger.Warnf("Supressed warnings during the search: %v", searchError.Error())
+	}
 }

@@ -108,10 +108,10 @@ func GetShootIdentifier(landscape, project, shoot string) string {
 // ParseIdentifier takes a kubeconfig identifier and
 // returns the
 // 1) the landscape identity or name
-// 1) type of the Gardener resource (shoot/seed)
-// 2) name of the resource
-// 3) optionally the namespace
-// 3) optionally the project name
+// 2) type of the Gardener resource (shoot/seed)
+// 3) name of the resource
+// 4) optionally the namespace
+// 5) optionally the project name
 func ParseIdentifier(path string) (string, GardenerResource, string, string, string, error) {
 	split := strings.Split(path, "--")
 	switch len(split) {
@@ -119,7 +119,16 @@ func ParseIdentifier(path string) (string, GardenerResource, string, string, str
 		if !strings.Contains(path, "shoot") {
 			return "", "", "", "", "", fmt.Errorf("cannot parse kubeconfig path %q", path)
 		}
-		return split[0], GardenerResourceShoot, split[3], fmt.Sprintf("garden-%s", split[2]), split[2], nil
+
+		// TODO something is off here, I should be getting the project name only right??
+		projectName := "garden"
+		namespace := "garden"
+		if split[2] != "garden" { // e.g d060239
+			namespace = fmt.Sprintf("garden-%s", split[2])
+			projectName = split[2]
+		}
+
+		return split[0], GardenerResourceShoot, split[3], namespace, projectName, nil
 	case 3:
 		if !strings.Contains(path, "seed") {
 			return "", "", "", "", "", fmt.Errorf("cannot parse kubeconfig path: %q", path)
@@ -131,41 +140,33 @@ func ParseIdentifier(path string) (string, GardenerResource, string, string, str
 	}
 }
 
-func GetSecretNamespaceNameToSecret(log *logrus.Entry, secretList *corev1.SecretList) map[string]corev1.Secret {
-	shootNameToSecret := make(map[string]corev1.Secret, len(secretList.Items))
-	for _, secret := range secretList.Items {
-		if _, exists := secret.Data[secrets.DataKeyKubeconfig]; !exists {
-			log.Warnf("Secret %s/%s does not contain a kubeconfig. Skipping.", secret.Namespace, secret.Name)
-			continue
-		}
-
-		var shootName string
-		if len(secret.ObjectMeta.OwnerReferences) == 0 || secret.ObjectMeta.OwnerReferences[0].Kind != "Shoot" {
-			if !strings.Contains(secret.Namespace, ".kubeconfig") {
-				log.Warnf("Secret %s/%s could not be associated with any Shoot. Skipping.", secret.Namespace, secret.Name)
+// takes a slice of client.ObjectList and casts each client.ObjectList to corev1.SecretList
+// returns a map[string]corev1.Secret where the key is the secret <namespace>-<name> and the value the secret resource
+func GetSecretNamespaceNameToSecret(log *logrus.Entry, secretSlice []client.ObjectList) map[string]corev1.Secret {
+	shootNameToSecret := make(map[string]corev1.Secret)
+	// we have a list of lists
+	for _, objectList := range secretSlice {
+		list := objectList.(*corev1.SecretList)
+		for _, secret := range list.Items {
+			if _, exists := secret.Data[secrets.DataKeyKubeconfig]; !exists {
+				log.Warnf("Secret %s/%s does not contain a kubeconfig. Skipping.", secret.Namespace, secret.Name)
 				continue
 			}
-			shootName = strings.Split(secret.Namespace, ".kubeconfig")[0]
-		} else {
-			shootName = secret.ObjectMeta.OwnerReferences[0].Name
+
+			var shootName string
+			if len(secret.ObjectMeta.OwnerReferences) == 0 || secret.ObjectMeta.OwnerReferences[0].Kind != "Shoot" {
+				if !strings.Contains(secret.Namespace, ".kubeconfig") {
+					log.Warnf("Secret %s/%s could not be associated with any Shoot. Skipping.", secret.Namespace, secret.Name)
+					continue
+				}
+				shootName = strings.Split(secret.Namespace, ".kubeconfig")[0]
+			} else {
+				shootName = secret.ObjectMeta.OwnerReferences[0].Name
+			}
+			shootNameToSecret[GetSecretIdentifier(secret.Namespace, shootName)] = secret
 		}
-		shootNameToSecret[GetSecretIdentifier(secret.Namespace, shootName)] = secret
 	}
 	return shootNameToSecret
-}
-
-func BuildNamespaceToProjectMap(projects *gardencorev1beta1.ProjectList) map[string]string {
-	namespaceToProjectName := make(map[string]string, len(projects.Items))
-	for _, project := range projects.Items {
-		namespace := project.Spec.Namespace
-		if namespace == nil {
-			continue
-		}
-		if _, ok := namespaceToProjectName[*namespace]; !ok {
-			namespaceToProjectName[*namespace] = project.Name
-		}
-	}
-	return namespaceToProjectName
 }
 
 // isShootedSeed determines if this Shoot is a Shooted seed based on an annotation

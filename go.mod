@@ -5,7 +5,7 @@ go 1.12
 require (
 	github.com/disiqueira/gotree v1.0.0
 	github.com/gardener/gardener v1.18.0
-	github.com/hashicorp/go-multierror v1.0.0
+	github.com/hashicorp/go-multierror v1.1.0
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/jedib0t/go-pretty/v6 v6.1.0
 	github.com/karrick/godirwalk v1.16.1

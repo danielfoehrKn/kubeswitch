@@ -197,7 +197,8 @@ var _ = Describe("ValidateConfig", func() {
 				Version: "v1alpha1",
 				KubeconfigStores: []types.KubeconfigStore{
 					{
-						Kind: types.StoreKindGardener,
+						Kind:  types.StoreKindGardener,
+						Paths: []string{"garden", "garden-0xx1-x--y"},
 						Config: types.StoreConfigGardener{
 							GardenerAPIKubeconfigPath: "my-path-to-gardener-kubeconfig",
 						},
@@ -236,13 +237,13 @@ var _ = Describe("ValidateConfig", func() {
 			Expect(errorList).To(BeEmpty())
 		})
 
-		It("should throw error - providing paths for the Gardener store is not supported", func() {
+		It("should throw error - providing paths that are not gardener or gardener-", func() {
 			config := &types.Config{
 				Version: "v1alpha1",
 				KubeconfigStores: []types.KubeconfigStore{
 					{
 						Kind:  types.StoreKindGardener,
-						Paths: []string{"ab"},
+						Paths: []string{"abc"},
 						Config: types.StoreConfigGardener{
 							GardenerAPIKubeconfigPath: "my-path-to-gardener-kubeconfig",
 						},
@@ -255,7 +256,31 @@ var _ = Describe("ValidateConfig", func() {
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("kubeconfigStores[0].paths"),
+					"Field": Equal("kubeconfigStores[0].paths[0]"),
+				})),
+			))
+		})
+
+		It("should throw error - provided path / in addition to other paths", func() {
+			config := &types.Config{
+				Version: "v1alpha1",
+				KubeconfigStores: []types.KubeconfigStore{
+					{
+						Kind:  types.StoreKindGardener,
+						Paths: []string{"/", "garden"},
+						Config: types.StoreConfigGardener{
+							GardenerAPIKubeconfigPath: "my-path-to-gardener-kubeconfig",
+						},
+					},
+				},
+			}
+
+			errorList := validation.ValidateConfig(config)
+			Expect(errorList).ToNot(BeEmpty())
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("kubeconfigStores[0].paths[0]"),
 				})),
 			))
 		})

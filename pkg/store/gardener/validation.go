@@ -15,10 +15,15 @@
 package gardener
 
 import (
+	"strings"
+
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/danielfoehrkn/kubeswitch/types"
 )
+
+var allowedPaths = sets.NewString("/", "garden")
 
 // ValidateGardenerStoreConfiguration validates the store configuration for Gardener
 // returns the optional landscape name as well as the error list
@@ -28,8 +33,14 @@ func ValidateGardenerStoreConfiguration(path *field.Path, store types.Kubeconfig
 
 	// always find the kubeconfigs of all Shoots on the landscape
 	// in the future it could be restricted via paths to only certain namespaces
-	if len(store.Paths) > 0 {
-		errors = append(errors, field.Forbidden(path.Child("paths"), "specifying a path for the Gardener store is currently not supported"))
+	for i, p := range store.Paths {
+		if !allowedPaths.Has(p) && !strings.HasPrefix(p, "garden-") {
+			errors = append(errors, field.Forbidden(path.Child("paths").Index(i), "Search paths can only equal \"garden\" or have the prefix \"garden-\""))
+		}
+
+		if p == "/" && len(store.Paths) > 1 {
+			errors = append(errors, field.Forbidden(path.Child("paths").Index(i), "The search path \"/\" defines to search over all namespaces. You can either define \"/\" or other namespaces  (\"garden\" or have the prefix \"garden-\""))
+		}
 	}
 
 	configPath := path.Child("config")

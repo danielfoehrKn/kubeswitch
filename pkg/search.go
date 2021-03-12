@@ -15,6 +15,8 @@
 package pkg
 
 import (
+	"fmt"
+	"os"
 	"sync"
 
 	"github.com/danielfoehrkn/kubeswitch/pkg/index"
@@ -41,6 +43,10 @@ type DiscoveredContext struct {
 // DoSearch executes a concurrent search over the given kubeconfig stores
 // returns results from all stores on the return channel
 func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir string) (*chan DiscoveredContext, error) {
+	// Silence STDOUT during search to not interfere with the search selection screen
+	// restore after search is over
+	originalSTDOUT := os.Stdout
+	os.Stdout, _ = os.Open(os.DevNull)
 	// first get defined alias in order to check if found kubecontext names should be display and returned
 	// with a different name
 	alias, err := aliasstate.GetDefaultAlias(stateDir)
@@ -111,8 +117,13 @@ func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir str
 			localContextToPathMapping := make(map[string]string)
 			for channelResult := range storeSearchChannel {
 				if channelResult.Error != nil {
+					// Required defines if errors when initializing this store should be logged
+					if store.GetStoreConfig().Required != nil && *store.GetStoreConfig().Required == false {
+						continue
+					}
+
 					resultChannel <- DiscoveredContext{
-						Error: channelResult.Error,
+						Error: fmt.Errorf("store %q returned an error during the search: %v", store.GetID(), channelResult.Error),
 					}
 					continue
 				}
@@ -153,13 +164,16 @@ func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir str
 			wgResultChannel.Done()
 
 			// write store index file now that the path discovery is complete
-			writeIndex(store, &index, localContextToPathMapping)
+			if len(localContextToPathMapping) > 0 {
+				writeIndex(store, &index, localContextToPathMapping)
+			}
 		}(kubeconfigStore, c, *searchIndex)
 	}
 
 	go func() {
 		defer close(resultChannel)
 		wgResultChannel.Wait()
+		os.Stdout = originalSTDOUT
 	}()
 
 	return &resultChannel, nil
