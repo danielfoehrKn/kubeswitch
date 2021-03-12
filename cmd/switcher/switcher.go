@@ -358,6 +358,9 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 				kubeconfigName,
 				kubeconfigStoreFromConfig)
 			if err != nil {
+				if kubeconfigStoreFromConfig.Required != nil && !*kubeconfigStoreFromConfig.Required {
+					continue
+				}
 				return nil, nil, err
 			}
 			s = vaultStore

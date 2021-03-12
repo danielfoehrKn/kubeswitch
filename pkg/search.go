@@ -67,6 +67,11 @@ func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir str
 		logger := kubeconfigStore.GetLogger()
 
 		if err := kubeconfigStore.VerifyKubeconfigPaths(); err != nil {
+			// Required defines if errors when initializing this store should be logged
+			if kubeconfigStore.GetStoreConfig().Required != nil && !*kubeconfigStore.GetStoreConfig().Required {
+				continue
+			}
+
 			return nil, err
 		}
 
@@ -118,7 +123,7 @@ func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir str
 			for channelResult := range storeSearchChannel {
 				if channelResult.Error != nil {
 					// Required defines if errors when initializing this store should be logged
-					if store.GetStoreConfig().Required != nil && *store.GetStoreConfig().Required == false {
+					if store.GetStoreConfig().Required != nil && !*store.GetStoreConfig().Required {
 						continue
 					}
 
