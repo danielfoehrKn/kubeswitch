@@ -63,9 +63,10 @@ var (
 	buildDate string
 
 	rootCommand = &cobra.Command{
-		Use:   "switch",
-		Short: "Launch the switch binary",
-		Long:  `The kubectx for operators.`,
+		Use:     "switch",
+		Short:   "Launch the switch binary",
+		Long:    `The kubectx for operators.`,
+		Version: version,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			stores, config, err := initialize()
 			if err != nil {
@@ -246,9 +247,10 @@ func init() {
 		"run hooks right away. Do not respect the hooks execution configuration.")
 
 	versionCmd := &cobra.Command{
-		Use:   "version",
-		Short: "Show Switch Version",
-		Long:  "Show the Switch version information, e.g. \"switch version\"",
+		Use:     "version",
+		Short:   "Show Switch Version info",
+		Long:    "Show the Switch version information",
+		Example: "switch version",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Printf(`Switch:
 		version     : %s
