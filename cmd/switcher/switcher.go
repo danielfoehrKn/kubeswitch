@@ -17,6 +17,7 @@ package switcher
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -57,10 +58,15 @@ var (
 	hookName       string
 	runImmediately bool
 
+	// version command
+	version   string
+	buildDate string
+
 	rootCommand = &cobra.Command{
-		Use:   "switch",
-		Short: "Launch the switch binary",
-		Long:  `The kubectx for operators.`,
+		Use:     "switch",
+		Short:   "Launch the switch binary",
+		Long:    `The kubectx for operators.`,
+		Version: version,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			stores, config, err := initialize()
 			if err != nil {
@@ -240,6 +246,23 @@ func init() {
 		true,
 		"run hooks right away. Do not respect the hooks execution configuration.")
 
+	versionCmd := &cobra.Command{
+		Use:     "version",
+		Short:   "Show Switch Version info",
+		Long:    "Show the Switch version information",
+		Example: "switch version",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			fmt.Printf(`Switch:
+		version     : %s
+		build date  : %s
+		go version  : %s
+		go compiler : %s
+		platform    : %s/%s
+`, version, buildDate, runtime.Version(), runtime.Compiler, runtime.GOOS, runtime.GOARCH)
+
+			return nil
+		},
+	}
 	rootCommand.AddCommand(setContextCmd)
 	rootCommand.AddCommand(listContextsCmd)
 	rootCommand.AddCommand(deleteCmd)
@@ -247,6 +270,7 @@ func init() {
 	rootCommand.AddCommand(historyCmd)
 	rootCommand.AddCommand(previousContextCmd)
 	rootCommand.AddCommand(aliasContextCmd)
+	rootCommand.AddCommand(versionCmd)
 
 	setContextCmd.SilenceUsage = true
 	aliasContextCmd.SilenceErrors = true

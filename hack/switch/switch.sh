@@ -73,7 +73,7 @@ Flags:
       --store string               the backing store to be searched for Kubeconfig files. Can be either "filesystem" or "vault" (default "filesystem")
       --vault-api-address string   the API address of the Vault store. Overrides the default "vaultAPIAddress" field in the SwitchConfig. This flag is overridden by the environment variable "VAULT_ADDR".
       -h, --help                   help about any command
-
+      -v, --version version        Show the Switch version information
 Use "switch [command] --help" for more information about a command.
 '
 }
@@ -244,6 +244,14 @@ function switch(){
                      ;;
                   -h)
                      usage $HOOKS $ALIAS
+                     return
+                     ;;
+                  --version)
+                     $(switcher -v)
+                     return
+                     ;;
+                  -v)
+                     $(switcher -v)
                      return
                      ;;
                   *)
