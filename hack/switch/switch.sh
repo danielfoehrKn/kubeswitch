@@ -126,6 +126,7 @@ function switch(){
   ALIAS_ARGUMENTS_ALIAS=''
   UNSET_CURRENT_CONTEXT=''
   DELETE_CONTEXT=''
+  VERSION=''
 
   # Hooks
   HOOKS=''
@@ -246,13 +247,13 @@ function switch(){
                      usage $HOOKS $ALIAS
                      return
                      ;;
-                  --version)
-                     $(switcher -v)
-                     return
+                  version)
+                     VERSION=$1
+                     shift
                      ;;
                   -v)
-                     $(switcher -v)
-                     return
+                     VERSION=$1
+                     shift
                      ;;
                   *)
                      SET_CONTEXT=$1
@@ -292,7 +293,13 @@ function switch(){
      EXECUTABLE_PATH=$DEFAULT_EXECUTABLE_PATH
   fi
 
-    if [ -n "$ALIAS" ]
+  if [ -n "$VERSION" ]
+  then
+    $EXECUTABLE_PATH version
+    return
+  fi
+
+  if [ -n "$ALIAS" ]
   then
      # for switch alias rm <name>
      if [ -n "$ALIAS_ARGUMENTS_ALIAS" ]; then
