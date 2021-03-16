@@ -47,6 +47,10 @@ func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir str
 	// restore after search is over
 	originalSTDOUT := os.Stdout
 	os.Stdout, _ = os.Open(os.DevNull)
+	defer func() {
+		os.Stdout = originalSTDOUT
+	}()
+
 	// first get defined alias in order to check if found kubecontext names should be display and returned
 	// with a different name
 	alias, err := aliasstate.GetDefaultAlias(stateDir)
@@ -178,7 +182,6 @@ func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir str
 	go func() {
 		defer close(resultChannel)
 		wgResultChannel.Wait()
-		os.Stdout = originalSTDOUT
 	}()
 
 	return &resultChannel, nil

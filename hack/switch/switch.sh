@@ -450,7 +450,5 @@ function setKubeconfigEnvironmentVariable() {
     export KUBECONFIG=$1
     currentContext=$(kubectl config current-context)
     echo "switched to context \"$currentContext\"."
-  else
-      echo "failed to set context :("
   fi
 }
