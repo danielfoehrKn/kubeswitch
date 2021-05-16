@@ -38,10 +38,9 @@ import (
 )
 
 const (
-	vaultTokenFileName      = ".vault-token"
-	defaultKubeconfigName   = "config"
-	defaultKubeconfigPath   = "$HOME/.kube/config"
-	defaultSwitchConfigPath = "$HOME/.kube/switch-config.yaml"
+	vaultTokenFileName    = ".vault-token"
+	defaultKubeconfigName = "config"
+	defaultKubeconfigPath = "$HOME/.kube/config"
 )
 
 var (
