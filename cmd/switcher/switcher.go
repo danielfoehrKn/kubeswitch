@@ -22,6 +22,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"k8s.io/utils/pointer"
 
 	"github.com/danielfoehrkn/kubeswitch/pkg"
 	switchconfig "github.com/danielfoehrkn/kubeswitch/pkg/config"
@@ -37,9 +38,10 @@ import (
 )
 
 const (
-	vaultTokenFileName    = ".vault-token"
-	defaultKubeconfigName = "config"
-	defaultKubeconfigPath = "$HOME/.kube/config"
+	vaultTokenFileName      = ".vault-token"
+	defaultKubeconfigName   = "config"
+	defaultKubeconfigPath   = "$HOME/.kube/config"
+	defaultSwitchConfigPath = "$HOME/.kube/switch-config.yaml"
 )
 
 var (
@@ -333,7 +335,7 @@ func setCommonFlags(command *cobra.Command) {
 }
 
 func initialize() ([]store.KubeconfigStore, *types.Config, error) {
-	config, err := switchconfig.LoadConfigFromFile(configPath)
+	config, err := switchconfig.LoadConfigFromFile(expandPath(configPath))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read switch config file: %v", err)
 	}
@@ -352,24 +354,17 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 		}
 	}
 
-	var stores []store.KubeconfigStore
+	storeFromFlags := getStoreFromFlagAndEnv(config)
+	if storeFromFlags != nil {
+		config.KubeconfigStores = append(config.KubeconfigStores, *storeFromFlags)
+	}
 
+	var stores []store.KubeconfigStore
 	for _, kubeconfigStoreFromConfig := range config.KubeconfigStores {
 		var s store.KubeconfigStore
 
 		switch kubeconfigStoreFromConfig.Kind {
 		case types.StoreKindFilesystem:
-			// add kubeconfig path that is set via an environment variable
-			kubeconfigEnv := os.Getenv("KUBECONFIG")
-			if len(kubeconfigEnv) > 0 && !isDuplicatePath(config.KubeconfigStores, kubeconfigEnv) && !strings.HasSuffix(kubeconfigEnv, ".tmp") {
-				kubeconfigStoreFromConfig.Paths = append(kubeconfigStoreFromConfig.Paths, kubeconfigEnv)
-			}
-
-			pathFromFlag := getKubeconfigPathFromFlag()
-			if len(kubeconfigPath) > 0 {
-				kubeconfigStoreFromConfig.Paths = append(kubeconfigStoreFromConfig.Paths, pathFromFlag)
-			}
-
 			s = &store.FilesystemStore{
 				Logger:          logrus.New().WithField("store", types.StoreKindFilesystem),
 				KubeconfigStore: kubeconfigStoreFromConfig,
@@ -405,6 +400,37 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 	return stores, config, nil
 }
 
+// getStoreFromFlagAndEnv translates the kubeconfig flag --kubeconfig-path & environment variable KUBECONFIG into a
+// a dedicated store in addition to the stores configured in the switch-config.yaml.
+// This way, it is "just another store" -> does not need special handling
+func getStoreFromFlagAndEnv(config *types.Config) *types.KubeconfigStore {
+	var paths []string
+
+	pathFromFlag := getKubeconfigPathFromFlag()
+	if len(kubeconfigPath) > 0 {
+		paths = append(paths, pathFromFlag)
+	}
+
+	kubeconfigPathFromEnv := os.Getenv("KUBECONFIG")
+	if len(kubeconfigPathFromEnv) > 0 &&
+		!isDuplicatePath(config.KubeconfigStores, kubeconfigPathFromEnv) &&
+		!strings.HasSuffix(kubeconfigPathFromEnv, ".tmp") {
+		// the KUBECONFIG env sets a unique, non kubeswitch set, env variable to a kubeconfig.
+		paths = append(paths, expandPath(kubeconfigPathFromEnv))
+	}
+
+	if len(paths) == 0 {
+		return nil
+	}
+
+	return &types.KubeconfigStore{
+		ID:             pointer.StringPtr("env-and-flag"),
+		Kind:           types.StoreKind(storageBackend),
+		KubeconfigName: pointer.StringPtr(kubeconfigName),
+		Paths:          paths,
+	}
+}
+
 // getKubeconfigPathFromFlag gets the kubeconfig path configured in the flag --kubeconfig-path
 // does not add the path in case the configured path does not exist
 // this is to not require a kubeconfig file in the default location
@@ -413,18 +439,26 @@ func getKubeconfigPathFromFlag() string {
 		return ""
 	}
 
+	kubeconfigPath = strings.ReplaceAll(kubeconfigPath, "~", "$HOME")
 	if kubeconfigPath == defaultKubeconfigPath {
+		// do not return, if the kubeconfig under the default kubeconfig path does not exist
 		if _, err := os.Stat(os.ExpandEnv(defaultKubeconfigPath)); err != nil {
 			return ""
 		}
+		// the kubeconfig under the default path exists -> return it.
+		return os.ExpandEnv(defaultKubeconfigPath)
 	}
 
-	return os.ExpandEnv(defaultKubeconfigPath)
+	// the flag sets a non-default kubeconfig path
+	return os.ExpandEnv(kubeconfigPath)
 }
 
+// isDuplicatePath searches through all kubeconfig stores in the switch-config.yaml and checks if the
+// given path is already configured in any of these stores
+// returns true if it is already configureed
 func isDuplicatePath(kubeconfigStores []types.KubeconfigStore, newPath string) bool {
-	// expensive operation in case there a lot of kubeconfig stores and paths
-	// but fortunately it is highly unlikely that there are ever that many stores and paths configured
+	// O(n square) operation
+	// but fortunately it is highly unlikely that there are many stores and paths configured
 	for _, store := range kubeconfigStores {
 		for _, path := range store.Paths {
 			if path == newPath {
@@ -433,4 +467,9 @@ func isDuplicatePath(kubeconfigStores []types.KubeconfigStore, newPath string) b
 		}
 	}
 	return false
+}
+
+func expandPath(path string) string {
+	path = strings.ReplaceAll(path, "~", "$HOME")
+	return os.ExpandEnv(path)
 }

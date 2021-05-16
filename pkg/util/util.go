@@ -24,7 +24,7 @@ import (
 	"github.com/danielfoehrkn/kubeswitch/types"
 )
 
-// getContextsForKubeconfigPath takes a kubeconfig path and gets the kubeconfig from the backing store
+// GetContextsForKubeconfigPath takes a kubeconfig path and gets the kubeconfig from the backing store
 // then it parses the kubeconfig to extract the context names
 // returns the kubeconfig as a string as a first argument, and the context names as a second argument
 func GetContextsForKubeconfigPath(kubeconfigBytes []byte, kind types.StoreKind, kubeconfigPath string) (*string, []string, error) {
@@ -74,13 +74,7 @@ func getContextsFromKubeconfig(kind types.StoreKind, path string, kubeconfig *ty
 func getContextNames(config *types.KubeConfig, parentFoldername string) []string {
 	var contextNames []string
 	for _, context := range config.Contexts {
-		split := strings.Split(context.Name, "/")
-		if len(split) > 1 {
-			// already has the directory name in there. override it in case it changed
-			contextNames = append(contextNames, fmt.Sprintf("%s/%s", parentFoldername, split[len(split)-1]))
-		} else {
-			contextNames = append(contextNames, fmt.Sprintf("%s/%s", parentFoldername, context.Name))
-		}
+		contextNames = append(contextNames, fmt.Sprintf("%s/%s", parentFoldername, context.Name))
 	}
 	return contextNames
 }

@@ -136,7 +136,7 @@ func Switcher(stores []store.KubeconfigStore, config *types.Config, stateDir str
 		return fmt.Errorf("failed to write temporary kubeconfig file: %v", err)
 	}
 
-	if err := historyutil.AppendContextToHistory(selectedContext); err != nil {
+	if err := historyutil.AppendContextToHistory(kubeconfigutil.GetContextWithoutFolderPrefix(selectedContext)); err != nil {
 		logger.Warnf("failed to append context to history file: %v", err)
 	}
 

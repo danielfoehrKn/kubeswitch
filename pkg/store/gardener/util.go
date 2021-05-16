@@ -17,6 +17,7 @@ package gardener
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -66,8 +67,11 @@ func GetGardenClient(config *types.StoreConfigGardener) (client.Client, error) {
 	utilruntime.Must(gardencorev1beta1.AddToScheme(scheme))
 	utilruntime.Must(seedmanagementv1alpha1.AddToScheme(scheme))
 
+	gardenerAPIKubeconfigPath := strings.ReplaceAll(config.GardenerAPIKubeconfigPath, "~", "$HOME")
+	gardenerAPIKubeconfigPath = os.ExpandEnv(gardenerAPIKubeconfigPath)
+
 	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		&clientcmd.ClientConfigLoadingRules{ExplicitPath: config.GardenerAPIKubeconfigPath},
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: gardenerAPIKubeconfigPath},
 		&clientcmd.ConfigOverrides{})
 
 	restConfig, err := clientConfig.ClientConfig()

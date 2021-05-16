@@ -29,6 +29,7 @@ Either globally for each store, or per store as seen below.
 ```
 $ cat ~/.kube/switch-config.yaml
 kind: SwitchConfig
+version: v1alpha1
 kubeconfigName: "*.myconfig"
 kubeconfigStores:
 - kind: filesystem
@@ -75,6 +76,7 @@ The Vault store uses the default id _default_ because it is the only Vault store
 $ cat ~/.kube/switch-config.yaml
 
 kind: SwitchConfig
+version: v1alpha1
 refreshIndexAfter: 1h
 kubeconfigStores:
   - kind: filesystem

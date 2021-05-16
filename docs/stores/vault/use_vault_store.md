@@ -35,6 +35,7 @@ Below there is an example configuration for Vault in the `SwitchConfig` file.
 
 ```
 kind: SwitchConfig
+version: v1alpha1
 kubeconfigStores:
 - kind: vault
   paths:

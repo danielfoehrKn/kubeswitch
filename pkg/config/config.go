@@ -26,16 +26,16 @@ import (
 )
 
 // LoadConfigFromFile takes a filename and de-serializes the contents into a Configuration object.
-func LoadConfigFromFile(filename string) (*types.Config, error) {
+func LoadConfigFromFile(filepath string) (*types.Config, error) {
 	// a config file is not required. Its ok if it does not exist.
-	if _, err := os.Stat(filename); err != nil {
+	if _, err := os.Stat(filepath); err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
 		}
 		return nil, err
 	}
 
-	bytes, err := ioutil.ReadFile(filename)
+	bytes, err := ioutil.ReadFile(filepath)
 	if err != nil {
 		return nil, err
 	}
@@ -53,9 +53,9 @@ func LoadConfigFromFile(filename string) (*types.Config, error) {
 		oldConfig := &types.ConfigOld{}
 		err = yaml.Unmarshal(bytes, &oldConfig)
 		if err == nil && oldConfig != nil {
-			return MigrateConfig(*oldConfig, filename)
+			return MigrateConfig(*oldConfig, filepath)
 		}
-		return nil, fmt.Errorf("could not unmarshal config with path '%s': %v", filename, err)
+		return nil, fmt.Errorf("could not unmarshal config with path '%s': %v", filepath, err)
 	}
 	return config, nil
 }

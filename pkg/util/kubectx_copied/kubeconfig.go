@@ -36,7 +36,7 @@ type Kubeconfig struct {
 // GetContextWithoutFolderPrefix returns the real kubeconfig context name
 // selectable kubeconfig context names have the folder prefixed like <parent-folder>/<context-name>
 func GetContextWithoutFolderPrefix(path string) string {
-	split := strings.Split(path, "/")
+	split := strings.SplitAfterN(path, "/", 2)
 	return split[len(split)-1]
 }
 
