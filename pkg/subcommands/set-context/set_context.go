@@ -28,8 +28,8 @@ import (
 
 var logger = logrus.New()
 
-func SetContext(desiredContext string, stores []store.KubeconfigStore, config *types.Config, stateDir string) error {
-	c, err := pkg.DoSearch(stores, config, stateDir)
+func SetContext(desiredContext string, stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) error {
+	c, err := pkg.DoSearch(stores, config, stateDir, noIndex)
 	if err != nil {
 		return err
 	}

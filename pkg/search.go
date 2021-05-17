@@ -43,7 +43,7 @@ type DiscoveredContext struct {
 
 // DoSearch executes a concurrent search over the given kubeconfig stores
 // returns results from all stores on the return channel
-func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir string) (*chan DiscoveredContext, error) {
+func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) (*chan DiscoveredContext, error) {
 	// Silence STDOUT during search to not interfere with the search selection screen
 	// restore after search is over
 	originalSTDOUT := os.Stdout
@@ -85,12 +85,19 @@ func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir str
 			return nil, err
 		}
 
-		shouldReadFromIndex, err := shouldReadFromIndex(searchIndex, kubeconfigStore, config)
-		if err != nil {
-			return nil, err
+		var readFromIndex = false
+
+		// do not use index if explicitly disabled via command line flag --no-index
+		if noIndex {
+			readFromIndex = false
+		} else {
+			readFromIndex, err = shouldReadFromIndex(searchIndex, kubeconfigStore, config)
+			if err != nil {
+				return nil, err
+			}
 		}
 
-		if shouldReadFromIndex {
+		if readFromIndex {
 			logrus.Debugf("Reading from index for store %s with kind %s", kubeconfigStore.GetID(), kubeconfigStore.GetKind())
 
 			go func(store store.KubeconfigStore, index index.SearchIndex) {

@@ -75,6 +75,7 @@ Flags:
       -h, --help                   help about any command
       -v, --version version        show the Switch version information
       --debug                      show debug logs
+      --no-index                   stores do not read from index files. The index is refreshed.
 Use "switch [command] --help" for more information about a command.
 '
 }
@@ -129,6 +130,7 @@ function switch(){
   DELETE_CONTEXT=''
   VERSION=''
   DEBUG=''
+  NO_INDEX=''
 
   # Hooks
   HOOKS=''
@@ -226,6 +228,14 @@ function switch(){
                       STATE_DIRECTORY=$1
                       shift
                       ;;
+                  --debug)
+                     DEBUG=$1
+                     shift
+                     ;;
+                  --no-index)
+                     NO_INDEX=$1
+                     shift
+                     ;;
                   --config-path)
                       shift
                       CONFIG_PATH=$1
@@ -255,10 +265,6 @@ function switch(){
                      ;;
                   -v)
                      VERSION=$1
-                     shift
-                     ;;
-                  --debug)
-                     DEBUG=$1
                      shift
                      ;;
                   *)
@@ -402,6 +408,13 @@ function switch(){
      DEBUG_FLAG=--debug
   fi
 
+  NO_INDEX_FLAG=''
+  if [ -n "$NO_INDEX" ]
+  then
+     NO_INDEX="$NO_INDEX"
+     NO_INDEX_FLAG=--no-index
+  fi
+
   if [ -n "$SET_CONTEXT" ]
   then
      SET_CONTEXT="$SET_CONTEXT"
@@ -416,6 +429,7 @@ function switch(){
      $SHOW_PREVIEW_FLAG=${SHOW_PREVIEW} \
      $VAULT_API_ADDRESS_FLAG ${VAULT_API_ADDRESS} \
      $DEBUG_FLAG ${DEBUG} \
+     $NO_INDEX_FLAG ${NO_INDEX} \
      )
 
      setKubeconfigEnvironmentVariable $NEW_KUBECONFIG
@@ -477,6 +491,7 @@ function switch(){
   $VAULT_API_ADDRESS_FLAG ${VAULT_API_ADDRESS} \
   $STATE_DIRECTORY_FLAG ${STATE_DIRECTORY} \
   $DEBUG_FLAG ${DEBUG} \
+  $NO_INDEX_FLAG ${NO_INDEX} \
   $CONFIG_PATH_FLAG ${CONFIG_PATH})
 
   setKubeconfigEnvironmentVariable $NEW_KUBECONFIG

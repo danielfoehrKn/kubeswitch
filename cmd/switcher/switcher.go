@@ -64,6 +64,7 @@ var (
 	buildDate string
 
 	showDebugLogs bool
+	noIndex       bool
 
 	rootCommand = &cobra.Command{
 		Use:     "switch",
@@ -76,7 +77,7 @@ var (
 				return err
 			}
 
-			return pkg.Switcher(stores, config, stateDirectory, showPreview)
+			return pkg.Switcher(stores, config, stateDirectory, noIndex, showPreview)
 		},
 	}
 )
@@ -96,7 +97,7 @@ func init() {
 				return err
 			}
 
-			return alias.Alias(arguments[0], arguments[1], stores, config, stateDirectory)
+			return alias.Alias(arguments[0], arguments[1], stores, config, stateDirectory, noIndex)
 		},
 	}
 
@@ -138,7 +139,7 @@ func init() {
 				return err
 			}
 
-			return history.SetPreviousContext(stores, config, stateDirectory)
+			return history.SetPreviousContext(stores, config, stateDirectory, noIndex)
 		},
 	}
 
@@ -153,7 +154,7 @@ func init() {
 				return err
 			}
 
-			return history.ListHistory(stores, config, stateDirectory)
+			return history.ListHistory(stores, config, stateDirectory, noIndex)
 		},
 	}
 
@@ -167,7 +168,7 @@ func init() {
 				return err
 			}
 
-			return setcontext.SetContext(args[0], stores, config, stateDirectory)
+			return setcontext.SetContext(args[0], stores, config, stateDirectory, noIndex)
 		},
 	}
 
@@ -181,7 +182,7 @@ func init() {
 				return err
 			}
 
-			return list_contexts.ListContexts(stores, config, stateDirectory)
+			return list_contexts.ListContexts(stores, config, stateDirectory, noIndex)
 		},
 	}
 
@@ -301,6 +302,11 @@ func setCommonFlags(command *cobra.Command) {
 		"debug",
 		false,
 		"show debug logs")
+	command.Flags().BoolVar(
+		&noIndex,
+		"no-index",
+		false,
+		"stores do not read from index files. The index is refreshed.")
 	command.Flags().StringVar(
 		&kubeconfigPath,
 		"kubeconfig-path",

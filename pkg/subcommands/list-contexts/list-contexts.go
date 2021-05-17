@@ -25,8 +25,8 @@ import (
 
 var logger = logrus.New()
 
-func ListContexts(stores []store.KubeconfigStore, config *types.Config, stateDir string) error {
-	c, err := pkg.DoSearch(stores, config, stateDir)
+func ListContexts(stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) error {
+	c, err := pkg.DoSearch(stores, config, stateDir, noIndex)
 	if err != nil {
 		return fmt.Errorf("cannot list contexts: %v", err)
 	}
