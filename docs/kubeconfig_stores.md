@@ -108,6 +108,20 @@ kubeconfigStores:
   ...
 ```
 
+### Disable kubeconfig previews to save API requests
+
+Per default, kubeswitch shows a sanitized preview of the kubeconfig from the store.
+This can however sometimes lead to high request rates & API throttling.
+You can disable previews via the command line flag `--show-preview false` or the `SwitchConfig` file.
+
+```
+$ cat ~/.kube/switch-config.yaml
+
+kind: SwitchConfig
+version: v1alpha1
+showPreview: false
+```
+
 ## Using both CLI and `SwitchConfig` file
 
 - The flag `--vault-api-address` takes precedence over the config field `vaultAPIAddress`.

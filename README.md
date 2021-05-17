@@ -139,6 +139,7 @@ Flags:
       --state-directory string     path to the local directory used for storing internal state. (default "~/.kube/switch-state")
       --store string               the backing store to be searched for Kubeconfig files. Can be either "filesystem" or "vault" (default "filesystem")
       --vault-api-address string   the API address of the Vault store. Overrides the default "vaultAPIAddress" field in the SwitchConfig. This flag is overridden by the environment variable "VAULT_ADDR".
+      --no-index                   stores do not read from index files. The index is refreshed.
       -h, --help                   help about any command
 ```
 

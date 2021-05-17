@@ -21,6 +21,8 @@ Enable the search index in the `SwitchConfig` file (per default located in `~/.k
 or configured via flag `--config-path`.
 The flag has to point to the file, not the directory).
 
+You can disable using a configured search index for the current request by using the flag `--no-index`.
+
 ## Enable index for all stores
 
 The field `refreshIndexAfter` determines the time after which the tool should

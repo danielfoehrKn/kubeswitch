@@ -85,9 +85,8 @@ func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir str
 			return nil, err
 		}
 
-		var readFromIndex = false
-
 		// do not use index if explicitly disabled via command line flag --no-index
+		var readFromIndex bool
 		if noIndex {
 			readFromIndex = false
 		} else {

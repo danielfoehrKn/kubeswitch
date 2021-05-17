@@ -48,6 +48,11 @@ type Config struct {
 	// Can be overridden in the individual kubeconfig store configuration
 	// + optional
 	KubeconfigName                *string            `yaml:"kubeconfigName"`
+	// ShowPreview configures if the selection dialog shows a sanitized preview of the kubeconfig file.
+	// Can be overridden via command line flag --show-preview true/false
+	// default: true
+	// + optional
+	ShowPreview                *bool            `yaml:"showPreview"`
 	// RefreshIndexAfter is the global default for how how often
 	// the index for this kubeconfig store shall be refreshed.
 	// Not setting this field will cause kubeswitch to not use an index

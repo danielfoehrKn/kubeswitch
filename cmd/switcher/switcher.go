@@ -77,6 +77,11 @@ var (
 				return err
 			}
 
+			// config file setting overwrites the command line default (--showPreview true)
+			if showPreview && config.ShowPreview != nil && !*config.ShowPreview {
+				showPreview = false
+			}
+
 			return pkg.Switcher(stores, config, stateDirectory, noIndex, showPreview)
 		},
 	}
