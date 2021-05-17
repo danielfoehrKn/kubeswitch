@@ -171,15 +171,33 @@ func writeIndex(store store.KubeconfigStore, searchIndex *index.SearchIndex, ctx
 }
 
 func showFuzzySearch(storeIDToStore map[string]store.KubeconfigStore, showPreview bool) (string, string, error) {
-	log := logrus.New()
-	// display selection dialog for all the kubeconfig context names
+	// display selection dialog for all kubeconfig context names
 	idx, err := fuzzyfinder.Find(
 		&allKubeconfigContextNames,
 		func(i int) string {
 			return readFromAllKubeconfigContextNames(i)
 		},
-		fuzzyfinder.WithHotReload(),
-		fuzzyfinder.WithPreviewWindow(func(i, w, h int) string {
+		getFuzzyFinderOptions(storeIDToStore, showPreview)...,
+	)
+
+	if err != nil {
+		return "", "", err
+	}
+
+	// map selection back to kubeconfig
+	selectedContext := readFromAllKubeconfigContextNames(idx)
+	kubeconfigPath := readFromContextToPathMapping(selectedContext)
+
+	return kubeconfigPath, selectedContext, nil
+}
+
+// getFuzzyFinderOptions returns a list of fuzzy finder options
+func getFuzzyFinderOptions(storeIDToStore map[string]store.KubeconfigStore, showPreview bool) []fuzzyfinder.Option {
+	options := []fuzzyfinder.Option{fuzzyfinder.WithHotReload()}
+
+	if showPreview {
+		log := logrus.New()
+		withPreviewWindow := fuzzyfinder.WithPreviewWindow(func(i, w, h int) string {
 			if !showPreview || i == -1 {
 				return ""
 			}
@@ -202,26 +220,21 @@ func showFuzzySearch(storeIDToStore map[string]store.KubeconfigStore, showPrevie
 				if err != nil {
 					log.Debugf("failed to get preview for store %s: %v", kubeconfigStore.GetID(), err)
 				} else {
-					seperators := make([]string, 20)
+					separators := make([]string, 20)
 					for i := 0; i < 20; i++ {
-						seperators[i] = "-"
+						separators[i] = "-"
 					}
-					preview = fmt.Sprintf("%s \n %s \n \n %s", preview, strings.Join(seperators, "-"), additionalPreview)
+					preview = fmt.Sprintf("%s \n %s \n \n %s", preview, strings.Join(separators, "-"), additionalPreview)
 				}
 			}
 
 			return preview
-		}))
+		})
 
-	if err != nil {
-		return "", "", err
+		options = append(options, withPreviewWindow)
 	}
 
-	// map selection back to kubeconfig
-	selectedContext := readFromAllKubeconfigContextNames(idx)
-	kubeconfigPath := readFromContextToPathMapping(selectedContext)
-
-	return kubeconfigPath, selectedContext, nil
+	return options
 }
 
 func getSanitizedKubeconfigForKubeconfigPath(kubeconfigStore store.KubeconfigStore, path string) (string, error) {
