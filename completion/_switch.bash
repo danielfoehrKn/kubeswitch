@@ -14,6 +14,7 @@ _kube_contexts()
     --config-path
     --kubeconfig-name
     --kubeconfig-path
+    --no-index
     --store
     --vault-api-address
     --help"
@@ -36,6 +37,7 @@ _kube_contexts()
         arguments="--config-path
     --kubeconfig-name
     --kubeconfig-path
+    --no-index
     --state-directory
     --store
     --vault-api-address
@@ -65,6 +67,8 @@ _kube_contexts()
   alias
   list-contexts
   --kubeconfig-path
+  --no-index
+  --debug
   --store
   --kubeconfig-name
   --show-preview
