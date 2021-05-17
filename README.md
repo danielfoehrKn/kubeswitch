@@ -17,6 +17,7 @@ Designed as a [drop-in replacement](#difference-to-kubectx) for [kubectx](https:
   - [Local filesystem](docs/stores/filesystem/filesystem.md)
   - [Hashicorp Vault](docs/stores/vault/use_vault_store.md)
   - [Gardener Kubernetes-as-a-Service](docs/stores/gardener/gardener.md)
+  - Looking for contributions! Especially to support [Cluster-API](https://github.com/kubernetes-sigs/cluster-api).
 - **Unified search over multiple directories, paths, files and Kubeconfig stores**
   - Search over the Kubeconfigs from multiple Kubeconfig stores and configured paths (e.g, directories on the local filesystem and paths in Vault).
 - **Easy navigation**
@@ -307,7 +308,7 @@ This way, each terminal window works on its own copy of the Kubeconfig file and 
 ### Limitations
 
 Please make sure there are no kubeconfig files that have the same context name within one directory.
-Define [multiple search paths](docs/kubeconfig_stores.md#search-multiple-directories-on-the-local-filesystem) using the switch config.
+Define multiple search paths using the [configuration file](docs/kubeconfig_stores.md).
 
 ### Future Plans
 

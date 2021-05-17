@@ -92,7 +92,7 @@ kubeconfigStores:
     - "path/in/vault"
 ```
 
-### Not required stores
+### Optional stores
 
 Optionally mark a store as not required via `required: false` to avoid logging errors when 
 the store is not reachable.
