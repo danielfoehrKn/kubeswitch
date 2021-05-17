@@ -63,6 +63,8 @@ var (
 	version   string
 	buildDate string
 
+	showDebugLogs bool
+
 	rootCommand = &cobra.Command{
 		Use:     "switch",
 		Short:   "Launch the switch binary",
@@ -249,8 +251,8 @@ func init() {
 
 	versionCmd := &cobra.Command{
 		Use:     "version",
-		Short:   "Show Switch Version info",
-		Long:    "Show the Switch version information",
+		Short:   "show Switch Version info",
+		Long:    "show the Switch version information",
 		Example: "switch version",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Printf(`Switch:
@@ -294,11 +296,16 @@ func init() {
 }
 
 func setCommonFlags(command *cobra.Command) {
+	command.Flags().BoolVar(
+		&showDebugLogs,
+		"debug",
+		false,
+		"show debug logs")
 	command.Flags().StringVar(
 		&kubeconfigPath,
 		"kubeconfig-path",
 		defaultKubeconfigPath,
-		"path to be recursively searched for kubeconfig files.  Can be a file or a directory on the local filesystem or a path in Vault.")
+		"path to be recursively searched for kubeconfigs. Can be a file or a directory on the local filesystem or a path in Vault.")
 	command.Flags().StringVar(
 		&storageBackend,
 		"store",
@@ -334,6 +341,10 @@ func setCommonFlags(command *cobra.Command) {
 }
 
 func initialize() ([]store.KubeconfigStore, *types.Config, error) {
+	if showDebugLogs {
+		logrus.SetLevel(logrus.DebugLevel)
+	}
+
 	config, err := switchconfig.LoadConfigFromFile(expandPath(configPath))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read switch config file: %v", err)
@@ -393,7 +404,7 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 		default:
 			return nil, nil, fmt.Errorf("unknown store %q", kubeconfigStoreFromConfig.Kind)
 		}
-
+		logrus.Debugf("Added store with kind %s and ID %s", s.GetKind(), s.GetID())
 		stores = append(stores, s)
 	}
 	return stores, config, nil
@@ -407,6 +418,7 @@ func getStoreFromFlagAndEnv(config *types.Config) *types.KubeconfigStore {
 
 	pathFromFlag := getKubeconfigPathFromFlag()
 	if len(kubeconfigPath) > 0 {
+		logrus.Debugf("Using kubeconfig path from flag %s", pathFromFlag)
 		paths = append(paths, pathFromFlag)
 	}
 
@@ -416,6 +428,7 @@ func getStoreFromFlagAndEnv(config *types.Config) *types.KubeconfigStore {
 		!strings.HasSuffix(kubeconfigPathFromEnv, ".tmp") {
 		// the KUBECONFIG env sets a unique, non kubeswitch set, env variable to a kubeconfig.
 		paths = append(paths, expandPath(kubeconfigPathFromEnv))
+		logrus.Debugf("Using kubeconfig path from KUBECONFIG env %s", kubeconfigPathFromEnv)
 	}
 
 	if len(paths) == 0 {

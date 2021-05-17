@@ -73,7 +73,8 @@ Flags:
       --store string               the backing store to be searched for Kubeconfig files. Can be either "filesystem" or "vault" (default "filesystem")
       --vault-api-address string   the API address of the Vault store. Overrides the default "vaultAPIAddress" field in the SwitchConfig. This flag is overridden by the environment variable "VAULT_ADDR".
       -h, --help                   help about any command
-      -v, --version version        Show the Switch version information
+      -v, --version version        show the Switch version information
+      --debug                      show debug logs
 Use "switch [command] --help" for more information about a command.
 '
 }
@@ -127,6 +128,7 @@ function switch(){
   UNSET_CURRENT_CONTEXT=''
   DELETE_CONTEXT=''
   VERSION=''
+  DEBUG=''
 
   # Hooks
   HOOKS=''
@@ -255,6 +257,10 @@ function switch(){
                      VERSION=$1
                      shift
                      ;;
+                  --debug)
+                     DEBUG=$1
+                     shift
+                     ;;
                   *)
                      SET_CONTEXT=$1
                      shift
@@ -326,13 +332,6 @@ function switch(){
      return
   fi
 
-  if [ -n "$HISTORY" ]
-  then
-     NEW_KUBECONFIG=$($EXECUTABLE_PATH history)
-     setKubeconfigEnvironmentVariable $NEW_KUBECONFIG
-     return
-  fi
-
   if [ -n "$PREV_HISTORY" ]
   then
      NEW_KUBECONFIG=$($EXECUTABLE_PATH -)
@@ -396,9 +395,31 @@ function switch(){
      CONFIG_PATH_FLAG=--config-path
   fi
 
+  DEBUG_FLAG=''
+  if [ -n "$DEBUG" ]
+  then
+     DEBUG="$DEBUG"
+     DEBUG_FLAG=--debug
+  fi
+
   if [ -n "$SET_CONTEXT" ]
   then
      SET_CONTEXT="$SET_CONTEXT"
+  fi
+
+  if [ -n "$HISTORY" ]
+  then
+     NEW_KUBECONFIG=$($EXECUTABLE_PATH history \
+     $KUBECONFIG_PATH_FLAG ${KUBECONFIG_PATH} \
+     $STORE_FLAG ${STORE} \
+     $KUBECONFIG_NAME_FLAG ${KUBECONFIG_NAME} \
+     $SHOW_PREVIEW_FLAG=${SHOW_PREVIEW} \
+     $VAULT_API_ADDRESS_FLAG ${VAULT_API_ADDRESS} \
+     $DEBUG_FLAG ${DEBUG} \
+     )
+
+     setKubeconfigEnvironmentVariable $NEW_KUBECONFIG
+     return
   fi
 
   if [ -n "$HOOKS" ]
@@ -455,6 +476,7 @@ function switch(){
   $SHOW_PREVIEW_FLAG=${SHOW_PREVIEW} \
   $VAULT_API_ADDRESS_FLAG ${VAULT_API_ADDRESS} \
   $STATE_DIRECTORY_FLAG ${STATE_DIRECTORY} \
+  $DEBUG_FLAG ${DEBUG} \
   $CONFIG_PATH_FLAG ${CONFIG_PATH})
 
   setKubeconfigEnvironmentVariable $NEW_KUBECONFIG

@@ -25,6 +25,7 @@ import (
 	aliasutil "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/alias/util"
 	"github.com/danielfoehrkn/kubeswitch/pkg/util"
 	"github.com/danielfoehrkn/kubeswitch/types"
+	"github.com/sirupsen/logrus"
 )
 
 type DiscoveredContext struct {
@@ -90,6 +91,8 @@ func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir str
 		}
 
 		if shouldReadFromIndex {
+			logrus.Debugf("Reading from index for store %s with kind %s", kubeconfigStore.GetID(), kubeconfigStore.GetKind())
+
 			go func(store store.KubeconfigStore, index index.SearchIndex) {
 				// reading from this store is finished, decrease wait counter
 				defer wgResultChannel.Done()
@@ -188,6 +191,11 @@ func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir str
 }
 
 func shouldReadFromIndex(searchIndex *index.SearchIndex, kubeconfigStore store.KubeconfigStore, config *types.Config) (bool, error) {
+	// never write an index for the store from env variables and --kubeconfig-path command line falg
+	if kubeconfigStore.GetID() == fmt.Sprintf("%s.%s", types.StoreKindFilesystem, "env-and-flag") {
+		return false, nil
+	}
+
 	if searchIndex.HasContent() && searchIndex.HasKind(kubeconfigStore.GetKind()) {
 		// found an index for the correct Store kind
 		// check if should use existing index or not
