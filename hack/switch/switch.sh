@@ -311,6 +311,13 @@ function switch(){
     return
   fi
 
+  DEBUG_FLAG=''
+  if [ -n "$DEBUG" ]
+  then
+     DEBUG="$DEBUG"
+     DEBUG_FLAG=--debug
+  fi
+
   if [ -n "$ALIAS" ]
   then
      # for switch alias rm <name>
@@ -323,11 +330,13 @@ function switch(){
      if [[ "$ALIAS_ARGUMENTS" == *=. ]]; then
         lastCharRemoved=${ALIAS_ARGUMENTS: : -1}
         currentContextAlias=$lastCharRemoved$(kubectl config current-context)
-        $EXECUTABLE_PATH alias "$currentContextAlias"
+        $EXECUTABLE_PATH alias "$currentContextAlias" \
+        $DEBUG_FLAG ${DEBUG}
         return
      fi
 
-     $EXECUTABLE_PATH alias "$ALIAS_ARGUMENTS"
+     $EXECUTABLE_PATH alias "$ALIAS_ARGUMENTS" \
+     $DEBUG_FLAG ${DEBUG}
      return
   fi
 
@@ -399,13 +408,6 @@ function switch(){
   then
      CONFIG_PATH="$CONFIG_PATH"
      CONFIG_PATH_FLAG=--config-path
-  fi
-
-  DEBUG_FLAG=''
-  if [ -n "$DEBUG" ]
-  then
-     DEBUG="$DEBUG"
-     DEBUG_FLAG=--debug
   fi
 
   NO_INDEX_FLAG=''

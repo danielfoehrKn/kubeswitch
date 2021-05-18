@@ -28,6 +28,23 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func NewFilesystemStore(kubeconfigName string, kubeconfigStore types.KubeconfigStore) (*FilesystemStore, error) {
+	return &FilesystemStore{
+		Logger:          logrus.New().WithField("store", types.StoreKindFilesystem),
+		KubeconfigStore: kubeconfigStore,
+		KubeconfigName:  kubeconfigName,
+	}, nil
+}
+
+func (s *FilesystemStore) GetContextPrefix(path string) string {
+	if s.GetStoreConfig().ShowPrefix != nil && !*s.GetStoreConfig().ShowPrefix {
+		return ""
+	}
+
+	// return the name of the parent directory
+	return filepath.Base(filepath.Dir(path))
+}
+
 func (s *FilesystemStore) GetID() string {
 	id := "default"
 	if s.KubeconfigStore.ID != nil {

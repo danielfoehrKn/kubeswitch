@@ -106,6 +106,15 @@ func (s *VaultStore) GetID() string {
 	return fmt.Sprintf("%s.%s", types.StoreKindVault, id)
 }
 
+func (s *VaultStore) GetContextPrefix(path string) string {
+	if s.GetStoreConfig().ShowPrefix != nil && !*s.GetStoreConfig().ShowPrefix {
+		return ""
+	}
+
+	// for vault, the secret name itself contains the semantic information (not the key of the kv-pair of the vault secret)
+	return filepath.Base(path)
+}
+
 func (s *VaultStore) GetKind() types.StoreKind {
 	return types.StoreKindVault
 }

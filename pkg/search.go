@@ -155,8 +155,9 @@ func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir str
 				}
 
 				// get the context names from the parsed kubeconfig
-				kubeconfigString, contexts, err := util.GetContextsForKubeconfigPath(bytes, store.GetKind(), channelResult.KubeconfigPath)
+				kubeconfigString, contexts, err := util.GetContextsNamesFromKubeconfig(bytes, store.GetContextPrefix(channelResult.KubeconfigPath))
 				if err != nil {
+					store.GetLogger().Debugf("failed to get kubeconfig context names for kubeconfig with path %q: %v", channelResult.KubeconfigPath, err)
 					// do not throw Error, try to parse the other files
 					continue
 				}

@@ -16,6 +16,7 @@ package setcontext
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/danielfoehrkn/kubeswitch/pkg"
 	"github.com/danielfoehrkn/kubeswitch/pkg/store"
@@ -49,9 +50,13 @@ func SetContext(desiredContext string, stores []store.KubeconfigStore, config *t
 		}
 
 		kubeconfigStore := *discoveredContext.Store
-		contextWithoutFolderPrefix := kubeconfigutil.GetContextWithoutFolderPrefix(discoveredContext.Name)
 
-		if desiredContext == discoveredContext.Name || desiredContext == contextWithoutFolderPrefix || desiredContext == discoveredContext.Alias {
+		var contextWithoutPrefix string
+		if len(kubeconfigStore.GetContextPrefix(discoveredContext.Path)) > 0 && strings.HasPrefix(discoveredContext.Name, kubeconfigStore.GetContextPrefix(discoveredContext.Path)) {
+			contextWithoutPrefix = strings.TrimPrefix(discoveredContext.Name, fmt.Sprintf("%s/", kubeconfigStore.GetContextPrefix(discoveredContext.Path)))
+		}
+
+		if desiredContext == discoveredContext.Name || desiredContext == contextWithoutPrefix || desiredContext == discoveredContext.Alias {
 			kubeconfigData, err := kubeconfigStore.GetKubeconfigForPath(discoveredContext.Path)
 			if err != nil {
 				return err
@@ -64,10 +69,10 @@ func SetContext(desiredContext string, stores []store.KubeconfigStore, config *t
 
 			originalContextBeforeAlias := ""
 			if len(discoveredContext.Alias) > 0 {
-				originalContextBeforeAlias = contextWithoutFolderPrefix
+				originalContextBeforeAlias = contextWithoutPrefix
 			}
 
-			if err := kubeconfig.SetContext(desiredContext, originalContextBeforeAlias); err != nil {
+			if err := kubeconfig.SetContext(desiredContext, originalContextBeforeAlias, kubeconfigStore.GetContextPrefix(discoveredContext.Path)); err != nil {
 				return err
 			}
 

@@ -16,35 +16,32 @@ package util
 
 import (
 	"fmt"
-	"path/filepath"
-	"strings"
 
 	"gopkg.in/yaml.v3"
 
 	"github.com/danielfoehrkn/kubeswitch/types"
 )
 
-// GetContextsForKubeconfigPath takes a kubeconfig path and gets the kubeconfig from the backing store
-// then it parses the kubeconfig to extract the context names
+// GetContextsNamesFromKubeconfig takes kubeconfig bytes and parses the kubeconfig to extract the context names.
 // returns the kubeconfig as a string as a first argument, and the context names as a second argument
-func GetContextsForKubeconfigPath(kubeconfigBytes []byte, kind types.StoreKind, kubeconfigPath string) (*string, []string, error) {
+func GetContextsNamesFromKubeconfig(kubeconfigBytes []byte, contextPrefix string) (*string, []string, error) {
 	// parse into struct that does not contain the credentials
 	config, err := ParseSanitizedKubeconfig(kubeconfigBytes)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not parse Kubeconfig with path '%s': %v", kubeconfigPath, err)
+		return nil, nil, fmt.Errorf("could not parse Kubeconfig: %v", err)
 	}
 
 	kubeconfigData, err := yaml.Marshal(config)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not marshal kubeconfig with path '%s': %v", kubeconfigPath, err)
+		return nil, nil, fmt.Errorf("could not marshal kubeconfig: %v", err)
 	}
 
 	data := string(kubeconfigData)
-	contextsFromKubeconfig, err := getContextsFromKubeconfig(kind, kubeconfigPath, config)
+	contextsFromKubeconfig := getContextNames(config, contextPrefix)
 	return &data, contextsFromKubeconfig, err
 }
 
-// parseSanitizedKubeconfig parses the kubeconfig bytes into a kubeconfig struct without credentials
+// ParseSanitizedKubeconfig parses the kubeconfig bytes into a kubeconfig struct without credentials
 func ParseSanitizedKubeconfig(data []byte) (*types.KubeConfig, error) {
 	config := types.KubeConfig{}
 
@@ -56,25 +53,18 @@ func ParseSanitizedKubeconfig(data []byte) (*types.KubeConfig, error) {
 	return &config, nil
 }
 
-// getContextsFromKubeconfig gets all the context names from the kubeconfig file
-func getContextsFromKubeconfig(kind types.StoreKind, path string, kubeconfig *types.KubeConfig) ([]string, error) {
-	parentFoldername := filepath.Base(filepath.Dir(path))
-	if kind == types.StoreKindVault {
-		// for vault, the secret name itself contains the semantic information (not the key of the kv-pair of the vault secret)
-		parentFoldername = filepath.Base(path)
-	} else if kind == types.StoreKindGardener {
-		// the Gardener store encodes the path with semantic information
-		// <landscape-name>--shoot-<project-name>--<shoot-name>
-		parentFoldername = strings.ReplaceAll(path, "--", "-")
-	}
-	return getContextNames(kubeconfig, parentFoldername), nil
-}
-
-// sets the parent folder name to each context in the kubeconfig file
-func getContextNames(config *types.KubeConfig, parentFoldername string) []string {
+// getContextNames gets all the context names from the kubeconfig file
+// and sets the parent folder name to each context in the kubeconfig file
+func getContextNames(config *types.KubeConfig, prefix string) []string {
 	var contextNames []string
+
+	// add a trailing slash if prefix is set (for path-like formatting)
+	if len(prefix) != 0 {
+		prefix = fmt.Sprintf("%s/", prefix)
+	}
+
 	for _, context := range config.Contexts {
-		contextNames = append(contextNames, fmt.Sprintf("%s/%s", parentFoldername, context.Name))
+		contextNames = append(contextNames, fmt.Sprintf("%s%s", prefix, context.Name))
 	}
 	return contextNames
 }

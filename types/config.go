@@ -92,8 +92,11 @@ type KubeconfigStore struct {
 	// it will throw an errors nonetheless
 	// + optional
 	Required *bool 						`yaml:"required"`
+	// ShowPrefix configures if the search result should include store specific prefix (e.g for the filesystem store the parent directory name)
+	// default: true
+	ShowPrefix *bool `yaml:"showPrefix"`
 	// Config is store-specific configuration.
-	// Please check the documentation for each backing provider to see what confiuguration is
+	// Please check the documentation for each backing provider to see what configuration is
 	// possible here
 	Config              interface{} 		`yaml:"config"`
 }

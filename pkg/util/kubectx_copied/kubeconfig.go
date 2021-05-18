@@ -61,22 +61,28 @@ func ParseTemporaryKubeconfig(kubeconfigData []byte) (*Kubeconfig, error) {
 // if the given context is an alias, then it also modifies the kubeconfig so that both the current-context
 // as well as the contexts.context name are set to the alias (otherwise the current-context
 // would point to a non-existing context name)
-func (k *Kubeconfig) SetContext(context, originalContextBeforeAlias string) error {
+func (k *Kubeconfig) SetContext(currentContext, originalContextBeforeAlias string, prefix string) error {
 	if len(originalContextBeforeAlias) > 0 {
-		// context has an alias
-		// original context is always saved with the folder name in the alias state
-		// remove the folder name to find and replace it in the kubeconfig with the alias
-		originalContext := GetContextWithoutFolderPrefix(originalContextBeforeAlias)
-		if err := k.ModifyContextName(originalContext, context); err != nil {
-			return fmt.Errorf("failed to set alias context on selected kubeconfig: %v", err)
+		// currentContext variable already has an alias
+		// get the original currentContext name to find and replace it with the alias
+
+		// TODO: why not just handing over the original context name that now has to be replaced
+		// by the alias ?? that is what I want to do
+
+		// TODO: also check for set-currentContext()
+		// can originalContextBeforeAlias  still contain the prefix?
+		//  - yes if this store is configured with prefix (FIX: then need to remove prefix!)
+		//  - no if store disabled prefix (works today)
+		if len(prefix) > 0 && strings.HasPrefix(originalContextBeforeAlias, prefix) {
+			originalContextBeforeAlias = strings.TrimPrefix(originalContextBeforeAlias, fmt.Sprintf("%s/", prefix))
 		}
-	} else {
-		// if selected context is not an alias, it does contain the folder name as
-		// prefix which has to be removed
-		context = GetContextWithoutFolderPrefix(context)
+
+		if err := k.ModifyContextName(originalContextBeforeAlias, currentContext); err != nil {
+			return fmt.Errorf("failed to set currentContext on selected kubeconfig: %v", err)
+		}
 	}
 
-	if err := k.ModifyCurrentContext(context); err != nil {
+	if err := k.ModifyCurrentContext(currentContext); err != nil {
 		return fmt.Errorf("failed to set current context on selected kubeconfig: %v", err)
 	}
 	return nil

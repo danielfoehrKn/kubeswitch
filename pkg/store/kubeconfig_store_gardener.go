@@ -152,6 +152,17 @@ func (s *GardenerStore) StartSearch(channel chan SearchResult) {
 	s.sendKubeconfigPaths(channel, shootResult, managedSeeds)
 }
 
+func (s *GardenerStore) GetContextPrefix(path string) string {
+	if s.GetStoreConfig().ShowPrefix != nil && !*s.GetStoreConfig().ShowPrefix {
+		return ""
+	}
+
+	// the Gardener store encodes the path with semantic information
+	// <landscape-name>--shoot-<project-name>--<shoot-name>
+	// just use this semantic information as a prefix & remove the double dashes
+	return strings.ReplaceAll(path, "--", "-")
+}
+
 // getListForPaths takes a context an object list (e.g secretsList)
 // returns an object list for each configured paths (namespaces)
 func (s *GardenerStore) getListForPaths(ctx context.Context, list client.ObjectList, selector *labels.Selector) ([]client.ObjectList, error) {
@@ -423,9 +434,9 @@ func (s *GardenerStore) createGardenKubeconfigAlias(gardenKubeconfigPath string)
 	}
 
 	// get context name from the virtual garden kubeconfig
-	_, contexts, err := util.GetContextsForKubeconfigPath(bytes, types.StoreKindGardener, gardenKubeconfigPath)
+	_, contexts, err := util.GetContextsNamesFromKubeconfig(bytes, s.GetContextPrefix(gardenKubeconfigPath))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get kubeconfig context names for path %q: %v", gardenKubeconfigPath, err)
 	}
 
 	if len(contexts) == 0 {

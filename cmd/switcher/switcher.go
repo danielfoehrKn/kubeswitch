@@ -386,11 +386,14 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 
 		switch kubeconfigStoreFromConfig.Kind {
 		case types.StoreKindFilesystem:
-			s = &store.FilesystemStore{
-				Logger:          logrus.New().WithField("store", types.StoreKindFilesystem),
-				KubeconfigStore: kubeconfigStoreFromConfig,
-				KubeconfigName:  kubeconfigName,
+			filesystemStore, err := store.NewFilesystemStore(kubeconfigName, kubeconfigStoreFromConfig)
+			if err != nil {
+				if kubeconfigStoreFromConfig.Required != nil && !*kubeconfigStoreFromConfig.Required {
+					continue
+				}
+				return nil, nil, err
 			}
+			s = filesystemStore
 
 		case types.StoreKindVault:
 			vaultStore, err := store.NewVaultStore(vaultAPIAddressFromFlag,
@@ -451,6 +454,7 @@ func getStoreFromFlagAndEnv(config *types.Config) *types.KubeconfigStore {
 		Kind:           types.StoreKind(storageBackend),
 		KubeconfigName: pointer.StringPtr(kubeconfigName),
 		Paths:          paths,
+		ShowPrefix:     pointer.BoolPtr(false),
 	}
 }
 

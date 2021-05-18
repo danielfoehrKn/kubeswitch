@@ -34,6 +34,9 @@ import (
 	"github.com/danielfoehrkn/kubeswitch/types"
 )
 
+// TODO: how can I remove the prefix form the search
+// what other issues to tackle?
+
 var (
 	// need mutex for all maps because multiple stores with multiple go routines write to the map simultaneously
 	// in addition the fuzzy search reads from the maps during hot reload
@@ -115,8 +118,13 @@ func Switcher(stores []store.KubeconfigStore, config *types.Config, stateDir str
 		return nil
 	}
 
-	storeKind := readFromPathToStoreID(kubeconfigPath)
-	store := kindToStore[storeKind]
+	// map back kubeconfig path to the store kind
+	storeID := readFromPathToStoreID(kubeconfigPath)
+
+	// get the store for the store ID
+	store := kindToStore[storeID]
+
+	// use the store to get the kubeconfig for the selected kubeconfig path
 	kubeconfigData, err := store.GetKubeconfigForPath(kubeconfigPath)
 	if err != nil {
 		return err
@@ -127,16 +135,26 @@ func Switcher(stores []store.KubeconfigStore, config *types.Config, stateDir str
 		return fmt.Errorf("failed to parse selected kubeconfig. Please check if this file is a valid kubeconfig: %v", err)
 	}
 
-	if err := kubeconfig.SetContext(selectedContext, aliasutil.GetContextForAlias(selectedContext, aliasToContext)); err != nil {
+	// save the original selected context for the history
+	contextForHistory := selectedContext
+
+	if len(store.GetContextPrefix(kubeconfigPath)) > 0 && strings.HasPrefix(selectedContext, store.GetContextPrefix(kubeconfigPath)) {
+		// we need to remove an existing prefix from the selected context
+		// because otherwise the kubeconfig contains an invalid current-context
+		selectedContext = strings.TrimPrefix(selectedContext, fmt.Sprintf("%s/", store.GetContextPrefix(kubeconfigPath)))
+	}
+
+	if err := kubeconfig.SetContext(selectedContext, aliasutil.GetContextForAlias(selectedContext, aliasToContext), store.GetContextPrefix(kubeconfigPath)); err != nil {
 		return err
 	}
 
+	// write a temporary kubeconfig file and return the path
 	tempKubeconfigPath, err := kubeconfig.WriteTemporaryKubeconfigFile()
 	if err != nil {
 		return fmt.Errorf("failed to write temporary kubeconfig file: %v", err)
 	}
 
-	if err := historyutil.AppendContextToHistory(kubeconfigutil.GetContextWithoutFolderPrefix(selectedContext)); err != nil {
+	if err := historyutil.AppendContextToHistory(contextForHistory); err != nil {
 		logger.Warnf("failed to append context to history file: %v", err)
 	}
 

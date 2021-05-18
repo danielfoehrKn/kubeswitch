@@ -17,11 +17,11 @@ package alias
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/danielfoehrkn/kubeswitch/pkg"
 	"github.com/danielfoehrkn/kubeswitch/pkg/store"
 	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/alias/state"
-	kubeconfigutil "github.com/danielfoehrkn/kubeswitch/pkg/util/kubectx_copied"
 	"github.com/danielfoehrkn/kubeswitch/types"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/sirupsen/logrus"
@@ -112,7 +112,10 @@ func Alias(aliasName, ctxNameToBeAliased string, stores []store.KubeconfigStore,
 		}
 	}
 
-	a, err := state.GetDefaultAlias(stateDir)
+	log := logrus.New().WithField("alias", aliasName)
+	log.Debugf("Writing alias %s for context name %s", aliasName, ctxNameToBeAliased)
+
+	aliasStore, err := state.GetDefaultAlias(stateDir)
 	if err != nil {
 		return err
 	}
@@ -128,10 +131,36 @@ func Alias(aliasName, ctxNameToBeAliased string, stores []store.KubeconfigStore,
 			continue
 		}
 
-		contextWithoutFolderPrefix := kubeconfigutil.GetContextWithoutFolderPrefix(discoveredContext.Name)
-		if discoveredContext.Name == ctxNameToBeAliased || contextWithoutFolderPrefix == ctxNameToBeAliased {
-			// write the context with the folder name
-			if err := a.WriteAlias(aliasName, discoveredContext.Name); err != nil {
+		if discoveredContext.Store == nil {
+			// this should not happen
+			logger.Debugf("store returned from search is nil. This should not happen")
+			continue
+		}
+		kubeconfigStore := *discoveredContext.Store
+
+		var contextWithoutPrefix string
+		if len(kubeconfigStore.GetContextPrefix(discoveredContext.Path)) > 0 && strings.HasPrefix(discoveredContext.Name, kubeconfigStore.GetContextPrefix(discoveredContext.Path)) {
+			// we need to remove an existing prefix from the selected context
+			// because otherwise the kubeconfig contains an invalid current-context
+			contextWithoutPrefix = strings.TrimPrefix(discoveredContext.Name, fmt.Sprintf("%s/", kubeconfigStore.GetContextPrefix(discoveredContext.Path)))
+		}
+
+		// TODO: selecting a context that has been aliased WITH prefix cannot be selcted any more
+		//   - context name stored with prefix (is also configured for the store) but then cannot be found - wired
+		// Somehow still works if it is for a contex that is WITHOUT prefix
+		//  -- stored without the prefix as designed - works
+
+		// +---------------------------------+-----------------------------------------------------------------+
+		// | ALIAS                           | CONTEXT                                                         |
+		// +---------------------------------+-----------------------------------------------------------------+
+		// | sap-landscape-ns2-live-garden   | sap-landscape-ns2-live-garden/virtual-garden                    |
+		// | sap-landscape-dev-garden        | virtual-garden                                                  |
+		// | canary-shoot                    | canary-shoot-c-f/shoot--c--f                                    |
+		// | media                           | gke_mediathekviewmobile-real_europe-west1-c_mediathekviewmobile |
+
+		if ctxNameToBeAliased == discoveredContext.Name || ctxNameToBeAliased == contextWithoutPrefix {
+			// write the context like returned from the store (with or without prefix)
+			if err := aliasStore.WriteAlias(aliasName, discoveredContext.Name); err != nil {
 				return err
 			}
 
@@ -143,5 +172,5 @@ func Alias(aliasName, ctxNameToBeAliased string, stores []store.KubeconfigStore,
 		}
 	}
 
-	return fmt.Errorf("cannot set alias %q: context %q not found", aliasName, ctxNameToBeAliased)
+	return fmt.Errorf("cannot set aliasStore %q: context %q not found", aliasName, ctxNameToBeAliased)
 }

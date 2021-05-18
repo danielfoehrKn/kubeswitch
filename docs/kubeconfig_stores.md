@@ -16,14 +16,16 @@ Please check the documentation for each kubeconfig store on how to use it
 Please note that, to search over **multiple** directories and kubeconfig stores,
 you need to use the `SwitchConfig` file.
 
-## Additional Configurations
+## General Store configuration
 
-### Specify the Kubeconfig name to search for
+These store configurations exists for each store.
 
-The name or pattern to use when searching for kubeconfig files 
-within a store is specified via the command line flag `--kubeconfig-name`.  
+### Specify the Kubeconfig name pattern to search for
 
-This can also be defined in the configuration file. 
+The name or pattern to use when searching for kubeconfig files
+within a store is specified via the command line flag `--kubeconfig-name`.
+
+This can also be defined in the configuration file.
 Either globally for each store, or per store as seen below.
 
 ```
@@ -37,6 +39,60 @@ kubeconfigStores:
   paths:
   - ~/.kube/my-other-kubeconfigs/
 ```
+
+### Disable kubeconfig previews
+
+Per default, kubeswitch shows a sanitized preview of the kubeconfig from the store.
+This can however sometimes lead to high request rates & API throttling.
+You can disable previews via the command line flag `--show-preview false` or the `SwitchConfig` file.
+
+```
+$ cat ~/.kube/switch-config.yaml
+
+kind: SwitchConfig
+version: v1alpha1
+showPreview: false
+```
+
+### Optional stores
+
+Optionally mark a store as not required via `required: false` to avoid logging errors when
+the store is not reachable.
+Useful when configuring a kubeconfig store that is not always available.
+However, when searching on an index and wanting to retrieve the kubeconfig from an unavailable store,
+it will throw an errors nonetheless.
+
+```
+kind: SwitchConfig
+version: v1alpha1
+kubeconfigStores:
+- kind: filesystem
+  required: false
+  ...
+```
+
+### Disable prefixes for kubeconfig context names
+
+Per default, each store prefixes discovered kubeconfig context names with a store-specific prefix.
+This prefix usually contains semantic information (e.g., for the filesystem store the parent directory name or for the gardener store on which Seed the Shoot is placed).
+
+However, you can choose to turn off the prefix.
+This could make sense if you only got one kubeconfig file in `.kube/config`, hence a prefix of `.kube` is not necessary.
+
+```
+kind: SwitchConfig
+version: "v1alpha1"
+kubeconfigStores:
+- kind: filesystem
+  showPrefix: false
+  paths:
+  - "~/.kube/static-kubeconfigs/"
+```
+
+Please also note, that the kubeconfig files added with the CLI flag `--kubeconfig-path` as well as via Environment variable
+`KUBECONFIG` never have a prefix.
+
+## Advanced  Configurations
 
 ### Combined search over multiple stores
 
@@ -92,36 +148,6 @@ kubeconfigStores:
     - "path/in/vault"
 ```
 
-### Optional stores
-
-Optionally mark a store as not required via `required: false` to avoid logging errors when 
-the store is not reachable.
-Useful when configuring a kubeconfig store that is not always available.
-However, when searching on an index and wanting to retrieve the kubeconfig from an unavailable store,
-it will throw an errors nonetheless.
-
-```
-...
-kubeconfigStores:
-- kind: filesystem
-  required: false
-  ...
-```
-
-### Disable kubeconfig previews to save API requests
-
-Per default, kubeswitch shows a sanitized preview of the kubeconfig from the store.
-This can however sometimes lead to high request rates & API throttling.
-You can disable previews via the command line flag `--show-preview false` or the `SwitchConfig` file.
-
-```
-$ cat ~/.kube/switch-config.yaml
-
-kind: SwitchConfig
-version: v1alpha1
-showPreview: false
-```
-
 ## Using both CLI and `SwitchConfig` file
 
 - The flag `--vault-api-address` takes precedence over the config field `vaultAPIAddress`.
@@ -131,7 +157,7 @@ showPreview: false
 # Additional considerations
 
 To speed up the fuzzy search on the local filesystem,
-I would recommend putting all the Kubeconfig files into a single directory containing only Kubeconfig files.
+it is recommended to put all the Kubeconfig files into a single directory containing only Kubeconfig files.
 This is because the default `~/.kube` directory contains a bunch of other files
 that have to be filtered out and thus slowing down the search.
 

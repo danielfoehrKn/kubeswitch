@@ -40,6 +40,10 @@ type KubeconfigStore interface {
 	// GetKind returns the store kind (e.g., filesystem)
 	GetKind() types.StoreKind
 
+	// GetContextPrefix returns the prefix for the kubeconfig context names displayed in the search result
+	// includes the path to the kubeconfig in the backing store because some stores compute the prefix based on that
+	GetContextPrefix(path string) string
+
 	// VerifyKubeconfigPaths verifies that the configured search paths are valid
 	// can also include additional preprocessing
 	VerifyKubeconfigPaths() error
