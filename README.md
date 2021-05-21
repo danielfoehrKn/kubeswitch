@@ -91,15 +91,14 @@ and source the switch script from `/hack/switch/switch.sh`.
 
 Download the switch script and the switcher binary.
 ```
-# grab pre-compiled switcher binary for your OS / architecture
-OS=linux # darwin
-wget https://github.com/danielfoehrKn/kubeswitch/releases/download/0.3.0/switcher_${OS}_amd64
-mv switcher_${OS}_amd64 /usr/local/bin/switcher
-chmod +x /usr/local/bin/switcher
+OS=linux                        # Pick the right os: linux, darwin (intel only)
+VERSION=0.4.4                   # Pick the current version.
 
-# grab switch script
-wget https://github.com/danielfoehrKn/kubeswitch/releases/download/0.3.0/switch.sh
-mv switch.sh /usr/local/bin/switch.sh
+curl -L -o /usr/local/bin/switcher https://github.com/danielfoehrKn/kubeswitch/releases/download/${VERSION}/switcher_${OS}_amd64
+chmod +x /usr/local/bin/switcher 
+
+curl -L -o  /usr/local/bin/switch.sh https://github.com/danielfoehrKn/kubeswitch/releases/download/${VERSION}/switch.sh
+chmod +x /usr/local/bin/switch.sh
 ```
 
 Source `switch.sh` in `.bashrc`/`.zsh` via:
