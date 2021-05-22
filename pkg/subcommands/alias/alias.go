@@ -145,26 +145,19 @@ func Alias(aliasName, ctxNameToBeAliased string, stores []store.KubeconfigStore,
 			contextWithoutPrefix = strings.TrimPrefix(discoveredContext.Name, fmt.Sprintf("%s/", kubeconfigStore.GetContextPrefix(discoveredContext.Path)))
 		}
 
-		// TODO: selecting a context that has been aliased WITH prefix cannot be selcted any more
-		//   - context name stored with prefix (is also configured for the store) but then cannot be found - wired
-		// Somehow still works if it is for a contex that is WITHOUT prefix
-		//  -- stored without the prefix as designed - works
-
-		// +---------------------------------+-----------------------------------------------------------------+
-		// | ALIAS                           | CONTEXT                                                         |
-		// +---------------------------------+-----------------------------------------------------------------+
-		// | sap-landscape-ns2-live-garden   | sap-landscape-ns2-live-garden/virtual-garden                    |
-		// | sap-landscape-dev-garden        | virtual-garden                                                  |
-		// | canary-shoot                    | canary-shoot-c-f/shoot--c--f                                    |
-		// | media                           | gke_mediathekviewmobile-real_europe-west1-c_mediathekviewmobile |
-
 		if ctxNameToBeAliased == discoveredContext.Name || ctxNameToBeAliased == contextWithoutPrefix {
 			// write the context like returned from the store (with or without prefix)
-			if err := aliasStore.WriteAlias(aliasName, discoveredContext.Name); err != nil {
+			replacedContextName, err := aliasStore.WriteAlias(aliasName, discoveredContext.Name)
+			if err != nil {
 				return err
 			}
 
-			if _, err = fmt.Printf("Set alias %q for context %q", aliasName, discoveredContext.Name); err != nil {
+			var replacedContext string
+			if replacedContextName != nil {
+				replacedContext = fmt.Sprintf(" replacing existing alias for context with name %q", *replacedContextName)
+			}
+
+			if _, err = fmt.Printf("Set alias %q for context %q%s.\n", aliasName, discoveredContext.Name, replacedContext); err != nil {
 				return err
 			}
 

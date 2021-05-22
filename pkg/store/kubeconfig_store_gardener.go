@@ -453,7 +453,7 @@ func (s *GardenerStore) createGardenKubeconfigAlias(gardenKubeconfigPath string)
 	// alias sap-landscape-dev-garden/virtual-garden with sap-landscape-dev-garden
 	// in order to get to the garden API by just 'switch sap-landscape-dev-garden'
 	// which can be extracted from the cluster-identity cm in the Shoot
-	if err := a.WriteAlias(gardenKubeconfigPath, gardenContextName); err != nil {
+	if _, err := a.WriteAlias(gardenKubeconfigPath, gardenContextName); err != nil {
 		return err
 	}
 	return nil

@@ -74,16 +74,38 @@ func (a *Alias) loadFromFile() error {
 	return nil
 }
 
-// WriteAlias overwrites the alias state file with new Content
-func (a *Alias) WriteAlias(aliasName, contextName string) error {
+// WriteAlias write the alias state file with new Content
+// returns the name of the overwritten context name in case there already exited a mapping context -> alias
+// or returns nil
+func (a *Alias) WriteAlias(aliasName, contextName string) (*string, error) {
 	if a.Content.ContextToAliasMapping == nil {
 		a.Content.ContextToAliasMapping = make(map[string]string, 1)
 	}
+
+	contextAlreadyMappedToAlias := a.ContainsAlias(aliasName)
+	if contextAlreadyMappedToAlias != nil {
+		// Remove contextAlreadyMappedToAlias that is already mapped to the alias form the map
+		delete(a.Content.ContextToAliasMapping, *contextAlreadyMappedToAlias)
+	}
+
+	// add new context -> alias mapping
 	a.Content.ContextToAliasMapping[contextName] = aliasName
-	return a.WriteAllAliases()
+
+	return contextAlreadyMappedToAlias, a.WriteAllAliases()
 }
 
-// WriteAlias overwrites the alias state file with new Content
+// ContainsAlias checks if the given alias already exists
+// if yes, returns the context name that is currently mapped to the alias
+func (a *Alias) ContainsAlias(alias string) *string {
+	for context, a := range a.Content.ContextToAliasMapping {
+		if alias == a {
+			return &context
+		}
+	}
+	return nil
+}
+
+// WriteAllAliases overwrites the alias state file with new Content
 func (a *Alias) WriteAllAliases() error {
 	// overwrite the existing state file (only state is last execution anyways atm.)
 	file, err := os.Create(a.aliasFilepath)

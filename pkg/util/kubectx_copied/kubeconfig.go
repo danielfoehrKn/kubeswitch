@@ -66,10 +66,6 @@ func (k *Kubeconfig) SetContext(currentContext, originalContextBeforeAlias strin
 		// currentContext variable already has an alias
 		// get the original currentContext name to find and replace it with the alias
 
-		// TODO: why not just handing over the original context name that now has to be replaced
-		// by the alias ?? that is what I want to do
-
-		// TODO: also check for set-currentContext()
 		// can originalContextBeforeAlias  still contain the prefix?
 		//  - yes if this store is configured with prefix (FIX: then need to remove prefix!)
 		//  - no if store disabled prefix (works today)
