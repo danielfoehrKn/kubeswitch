@@ -61,8 +61,8 @@ func ValidateConfig(config *types.Config) field.ErrorList {
 		}
 
 		if len(kubeconfigStore.Paths) == 0 &&
-			kubeconfigStore.Kind == types.StoreKindFilesystem ||
-			kubeconfigStore.Kind == types.StoreKindVault {
+			(kubeconfigStore.Kind == types.StoreKindFilesystem ||
+				kubeconfigStore.Kind == types.StoreKindVault) {
 			errors = append(errors, field.Invalid(indexFieldPath.Child("paths"), "", "Must provide at least one path for the kubeconfig store."))
 		}
 
