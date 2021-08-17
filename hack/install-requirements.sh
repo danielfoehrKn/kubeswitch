@@ -7,9 +7,9 @@ cd "$DIRNAME/.."
 export GO111MODULE=on
 echo "Installing requirements"
 
-curl -sfL "https://install.goreleaser.com/github.com/golangci/golangci-lint.sh" | sh -s -- -b $(go env GOPATH)/bin v1.37.1
+curl -sfL "https://install.goreleaser.com/github.com/golangci/golangci-lint.sh" | sh -s -- -b $(go env GOPATH)/bin v1.42.0
 
 go get golang.org/x/tools/cmd/goimports
 
 # license header
-go get -u github.com/google/addlicense
+# go get -u github.com/google/addlicense

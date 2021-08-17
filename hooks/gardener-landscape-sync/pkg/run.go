@@ -187,7 +187,7 @@ func RunHook(log *logrus.Entry, kubeconfigStore hookstore.KubeconfigStore, clean
 		}
 
 		var (
-			secret      = corev1.Secret{}
+			secret      corev1.Secret
 			secretFound bool
 		)
 		secret, secretFound = shootNameToSecret[getSecretIdentifier(shoot.Namespace, shoot.Name)]

@@ -25,8 +25,6 @@ import (
 	"google.golang.org/api/container/v1"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	apiv1 "k8s.io/client-go/tools/clientcmd/api/v1"
@@ -36,14 +34,11 @@ import (
 )
 
 var (
-	scheme               = runtime.NewScheme()
-	codecs               = serializer.NewCodecFactory(scheme)
-	kubeconfigSerializer *json.Serializer
+	scheme = runtime.NewScheme()
 )
 
 func init() {
 	utilruntime.Must(apiv1.AddToScheme(scheme))
-	kubeconfigSerializer = json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
 }
 
 // NewGKEStore creates a new GKE store
