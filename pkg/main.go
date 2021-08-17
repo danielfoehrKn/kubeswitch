@@ -1,4 +1,4 @@
-// Copyright 2021 Daniel Foehr
+// Copyright 2021 The Kubeswitch authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/danielfoehrkn/kubeswitch/vendor/github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-multierror"
 	"github.com/ktr0731/go-fuzzyfinder"
 	"github.com/sirupsen/logrus"
@@ -33,9 +34,6 @@ import (
 	kubeconfigutil "github.com/danielfoehrkn/kubeswitch/pkg/util/kubectx_copied"
 	"github.com/danielfoehrkn/kubeswitch/types"
 )
-
-// TODO: how can I remove the prefix form the search
-// what other issues to tackle?
 
 var (
 	// need mutex for all maps because multiple stores with multiple go routines write to the map simultaneously

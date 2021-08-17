@@ -1,4 +1,4 @@
-// Copyright 2021 Daniel Foehr
+// Copyright 2021 The Kubeswitch authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -158,6 +158,9 @@ func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir str
 				kubeconfigString, contexts, err := util.GetContextsNamesFromKubeconfig(bytes, store.GetContextPrefix(channelResult.KubeconfigPath))
 				if err != nil {
 					store.GetLogger().Debugf("failed to get kubeconfig context names for kubeconfig with path %q: %v", channelResult.KubeconfigPath, err)
+					resultChannel <- DiscoveredContext{
+						Error: fmt.Errorf("failed to get kubeconfig context names for kubeconfig with path %q: %v", channelResult.KubeconfigPath, err),
+					}
 					// do not throw Error, try to parse the other files
 					continue
 				}

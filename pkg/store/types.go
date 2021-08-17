@@ -1,4 +1,4 @@
-// Copyright 2021 Daniel Foehr
+// Copyright 2021 The Kubeswitch authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ import (
 	"github.com/danielfoehrkn/kubeswitch/types"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
+	gkev1 "google.golang.org/api/container/v1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -97,4 +98,20 @@ type GardenerStore struct {
 	// all the discovered secrets.
 	// This way we can save some requests against the API when getting the kubeconfig later
 	SecretNamespaceNameToSecret map[string]corev1.Secret
+}
+
+type GKEStore struct {
+	Logger          *logrus.Entry
+	KubeconfigStore types.KubeconfigStore
+	GkeClient       *gkev1.Service
+	Config          *types.StoreConfigGKE
+	// DiscoveredClusters maps the kubeconfig path (gke--project-name--clusterName) -> cluster
+	// This is a cache for the clusters discovered during the initial search for kubeconfig paths
+	// when not using a search index
+	DiscoveredClusters map[string]*gkev1.Cluster
+	// ProjectNameToID contains a mapping projectName -> project ID
+	// used to construct the kubeconfig path containing the project name instead of a technical project id
+	ProjectNameToID map[string]string
+	LandscapeName   string
+	StateDirectory  string
 }

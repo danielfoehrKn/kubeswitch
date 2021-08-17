@@ -1,4 +1,4 @@
-// Copyright 2021 Daniel Foehr
+// Copyright 2021 The Kubeswitch authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	gardenerstore "github.com/danielfoehrkn/kubeswitch/pkg/store/gardener"
+	gkestore "github.com/danielfoehrkn/kubeswitch/pkg/store/gke"
 	"github.com/danielfoehrkn/kubeswitch/types"
 )
 
@@ -59,7 +60,9 @@ func ValidateConfig(config *types.Config) field.ErrorList {
 			errors = append(errors, field.Invalid(indexFieldPath.Child("kind"), kubeconfigStore.Kind, fmt.Sprintf("kind %q of kubeconfig store is unknown. Valid kinds are %q", kubeconfigStore.Kind, types.ValidStoreKinds)))
 		}
 
-		if len(kubeconfigStore.Paths) == 0 && kubeconfigStore.Kind != types.StoreKindGardener {
+		if len(kubeconfigStore.Paths) == 0 &&
+			kubeconfigStore.Kind == types.StoreKindFilesystem ||
+			kubeconfigStore.Kind == types.StoreKindVault {
 			errors = append(errors, field.Invalid(indexFieldPath.Child("paths"), "", "Must provide at least one path for the kubeconfig store."))
 		}
 
@@ -68,6 +71,16 @@ func ValidateConfig(config *types.Config) field.ErrorList {
 			errors = append(errors, errorList...)
 
 			// the Gardener landscape name is the default ID of the store
+			if landscapeName != nil && len(*landscapeName) > 0 && kubeconfigStore.ID == nil {
+				id = landscapeName
+			}
+		}
+
+		if kubeconfigStore.Kind == types.StoreKindGKE {
+			landscapeName, errorList := gkestore.ValidateGKEStoreConfiguration(indexFieldPath, kubeconfigStore)
+			errors = append(errors, errorList...)
+
+			// the GKE landscape name is the default ID of the store
 			if landscapeName != nil && len(*landscapeName) > 0 && kubeconfigStore.ID == nil {
 				id = landscapeName
 			}

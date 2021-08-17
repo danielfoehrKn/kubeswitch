@@ -1,4 +1,4 @@
-// Copyright 2021 Daniel Foehr
+// Copyright 2021 The Kubeswitch authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -166,7 +166,7 @@ func init() {
 	setContextCmd := &cobra.Command{
 		Use:   "set-context",
 		Short: "Switch to context name provided as first argument",
-		Long:  `Switch to context name provided as first argument. Context name has to exist in any of the found Kubeconfig files.`,
+		Long:  `Switch to context name provided as first argument. KubeContext name has to exist in any of the found Kubeconfig files.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			stores, config, err := initialize()
 			if err != nil {
@@ -415,6 +415,12 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 			}
 			s = gardenerStore
 
+		case types.StoreKindGKE:
+			gkeStore, err := store.NewGKEStore(kubeconfigStoreFromConfig, stateDirectory)
+			if err != nil {
+				return nil, nil, fmt.Errorf("unable to create GKE store: %w", err)
+			}
+			s = gkeStore
 		default:
 			return nil, nil, fmt.Errorf("unknown store %q", kubeconfigStoreFromConfig.Kind)
 		}
