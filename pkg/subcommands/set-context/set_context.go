@@ -29,7 +29,7 @@ import (
 
 var logger = logrus.New()
 
-func SetContext(desiredContext string, stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) error {
+func SetContext(desiredContext string, stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool, appendToHistory bool) error {
 	c, err := pkg.DoSearch(stores, config, stateDir, noIndex)
 	if err != nil {
 		return err
@@ -81,8 +81,10 @@ func SetContext(desiredContext string, stores []store.KubeconfigStore, config *t
 				return fmt.Errorf("failed to write temporary kubeconfig file: %v", err)
 			}
 
-			if err := util.AppendContextToHistory(desiredContext); err != nil {
-				logger.Warnf("failed to append context to history file: %v", err)
+			if appendToHistory {
+				if err := util.AppendContextToHistory(desiredContext); err != nil {
+					logger.Warnf("failed to append context to history file: %v", err)
+				}
 			}
 
 			// print kubeconfig path to std.out -> captured by calling bash script to set KUBECONFIG environment Variable

@@ -60,6 +60,7 @@ Available Commands:
   list-contexts   List all available contexts without fuzzy search
   clean           Cleans all temporary kubeconfig files
   -               Switch to the previous context from the history
+  .               Switch to the last used context from the history
   -d <NAME>       Delete context <NAME> ('.' for current-context) from the local kubeconfig file.
   -c, --current   Show the current context name
   -u, --unset     Unset the current context from the local kubeconfig file
@@ -121,6 +122,7 @@ function switch(){
   SET_CONTEXT=''
   HISTORY=''
   PREV_HISTORY=''
+  LAST_HISTORY=''
   LIST_CONTEXTS=''
   CURRENT_CONTEXT=''
   ALIAS=''
@@ -193,6 +195,10 @@ function switch(){
                       ;;
                   -)
                       PREV_HISTORY=$1
+                      shift
+                      ;;
+                  .)
+                      LAST_HISTORY=$1
                       shift
                       ;;
                   -u)
@@ -350,6 +356,13 @@ function switch(){
   if [ -n "$PREV_HISTORY" ]
   then
      NEW_KUBECONFIG=$($EXECUTABLE_PATH -)
+     setKubeconfigEnvironmentVariable $NEW_KUBECONFIG
+     return
+  fi
+
+  if [ -n "$LAST_HISTORY" ]
+  then
+     NEW_KUBECONFIG=$($EXECUTABLE_PATH .)
      setKubeconfigEnvironmentVariable $NEW_KUBECONFIG
      return
   fi

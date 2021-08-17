@@ -148,6 +148,19 @@ func init() {
 		},
 	}
 
+	lastContextCmd := &cobra.Command{
+		Use:   "set-last-context",
+		Short: "Switch to the last used context from the history",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			stores, config, err := initialize()
+			if err != nil {
+				return err
+			}
+
+			return history.SetLastContext(stores, config, stateDirectory, noIndex)
+		},
+	}
+
 	historyCmd := &cobra.Command{
 		Use:     "history",
 		Aliases: []string{"h"},
@@ -159,7 +172,7 @@ func init() {
 				return err
 			}
 
-			return history.ListHistory(stores, config, stateDirectory, noIndex)
+			return history.SwitchToHistory(stores, config, stateDirectory, noIndex)
 		},
 	}
 
@@ -173,7 +186,7 @@ func init() {
 				return err
 			}
 
-			return setcontext.SetContext(args[0], stores, config, stateDirectory, noIndex)
+			return setcontext.SetContext(args[0], stores, config, stateDirectory, noIndex, true)
 		},
 	}
 
@@ -278,6 +291,7 @@ func init() {
 	rootCommand.AddCommand(hookCmd)
 	rootCommand.AddCommand(historyCmd)
 	rootCommand.AddCommand(previousContextCmd)
+	rootCommand.AddCommand(lastContextCmd)
 	rootCommand.AddCommand(aliasContextCmd)
 	rootCommand.AddCommand(versionCmd)
 
@@ -289,6 +303,7 @@ func init() {
 	setCommonFlags(listContextsCmd)
 	setCommonFlags(historyCmd)
 	setCommonFlags(previousContextCmd)
+	setCommonFlags(lastContextCmd)
 	setCommonFlags(aliasContextCmd)
 }
 

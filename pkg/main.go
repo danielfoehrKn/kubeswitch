@@ -20,7 +20,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/danielfoehrkn/kubeswitch/vendor/github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-multierror"
 	"github.com/ktr0731/go-fuzzyfinder"
 	"github.com/sirupsen/logrus"

@@ -83,6 +83,7 @@ _kube_contexts()
   -u
   --unset
   -
+  .
   -v
   version
   $contexts " -- $curr_arg ) );

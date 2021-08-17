@@ -38,6 +38,11 @@ func main() {
 			args := append([]string{"set-previous-context"}, os.Args[1:]...)
 			rootCommand.SetArgs(args)
 		}
+
+		if os.Args[1] == "." {
+			args := append([]string{"set-last-context"}, os.Args[1:]...)
+			rootCommand.SetArgs(args)
+		}
 	}
 
 	if err := rootCommand.Execute(); err != nil {

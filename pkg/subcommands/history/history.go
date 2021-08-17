@@ -24,7 +24,7 @@ import (
 	"github.com/ktr0731/go-fuzzyfinder"
 )
 
-func ListHistory(stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) error {
+func SwitchToHistory(stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) error {
 	history, err := util.ReadHistory()
 	if err != nil {
 		return err
@@ -40,9 +40,11 @@ func ListHistory(stores []store.KubeconfigStore, config *types.Config, stateDir 
 		return err
 	}
 
-	return setcontext.SetContext(history[idx], stores, config, stateDir, noIndex)
+	return setcontext.SetContext(history[idx], stores, config, stateDir, noIndex, true)
 }
 
+// SetPreviousContext sets the previously used context from the history (position 1)
+// does not add a history entry
 func SetPreviousContext(stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) error {
 	history, err := util.ReadHistory()
 	if err != nil {
@@ -60,5 +62,20 @@ func SetPreviousContext(stores []store.KubeconfigStore, config *types.Config, st
 		position = 1
 	}
 
-	return setcontext.SetContext(history[position], stores, config, stateDir, noIndex)
+	return setcontext.SetContext(history[position], stores, config, stateDir, noIndex, false)
+}
+
+// SetLastContext sets the last used context from the history (position 0)
+// does not add a history entry
+func SetLastContext(stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) error {
+	history, err := util.ReadHistory()
+	if err != nil {
+		return err
+	}
+
+	if len(history) == 0 {
+		return nil
+	}
+
+	return setcontext.SetContext(history[0], stores, config, stateDir, noIndex, false)
 }
