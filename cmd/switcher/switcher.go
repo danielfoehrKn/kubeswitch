@@ -395,6 +395,10 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 		config.KubeconfigStores = append(config.KubeconfigStores, *storeFromFlags)
 	}
 
+	if len(config.KubeconfigStores) == 0 {
+		return nil, nil, fmt.Errorf("you need to point kubeswitch to a kubeconfig file. This can be done by setting the environment variable KUBECONFIG, setting the flag --kubeconfig-path, having a default kubeconfig file at ~/.kube/config or providing a switch configuration file")
+	}
+
 	var stores []store.KubeconfigStore
 	for _, kubeconfigStoreFromConfig := range config.KubeconfigStores {
 		var s store.KubeconfigStore
@@ -446,13 +450,13 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 }
 
 // getStoreFromFlagAndEnv translates the kubeconfig flag --kubeconfig-path & environment variable KUBECONFIG into a
-// a dedicated store in addition to the stores configured in the switch-config.yaml.
+// dedicated store in addition to the stores configured in the switch-config.yaml.
 // This way, it is "just another store" -> does not need special handling
 func getStoreFromFlagAndEnv(config *types.Config) *types.KubeconfigStore {
 	var paths []string
 
 	pathFromFlag := getKubeconfigPathFromFlag()
-	if len(kubeconfigPath) > 0 {
+	if len(pathFromFlag) > 0 {
 		logrus.Debugf("Using kubeconfig path from flag %s", pathFromFlag)
 		paths = append(paths, pathFromFlag)
 	}
