@@ -23,7 +23,7 @@ import (
 // ValidateGKEStoreConfiguration validates the store configuration for GKE
 // returns the optional landscape name as well as the error list
 // is being tested as part of the validation test suite
-func ValidateGKEStoreConfiguration(path *field.Path, store types.KubeconfigStore) (*string, field.ErrorList) {
+func ValidateGKEStoreConfiguration(path *field.Path, store types.KubeconfigStore) field.ErrorList {
 	var errors = field.ErrorList{}
 
 	if len(store.Paths) > 0 {
@@ -34,13 +34,13 @@ func ValidateGKEStoreConfiguration(path *field.Path, store types.KubeconfigStore
 	// if there is no special store configuration, use default authentication
 	// assumes it can find application default credentials created via gcloud auth login
 	if store.Config == nil {
-		return nil, errors
+		return errors
 	}
 
 	config, err := GetStoreConfig(store)
 	if err != nil {
 		errors = append(errors, field.Invalid(configPath, store.Config, err.Error()))
-		return nil, errors
+		return errors
 	}
 
 	if config.GKEAuthentication != nil &&
@@ -66,9 +66,5 @@ func ValidateGKEStoreConfiguration(path *field.Path, store types.KubeconfigStore
 		errors = append(errors, field.Invalid(configPath.Child("gkeAuthentication").Child("serviceAccountFilePath"), config.GCPAccount, "The filepath to the file containing thr GCP service account must be specified"))
 	}
 
-	if config.LandscapeName != nil && len(*config.LandscapeName) == 0 {
-		errors = append(errors, field.Invalid(configPath.Child("landscapeName"), *config.LandscapeName, "The optional GKE landscape name must not be empty"))
-	}
-
-	return config.LandscapeName, errors
+	return errors
 }

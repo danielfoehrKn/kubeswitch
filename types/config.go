@@ -121,7 +121,7 @@ type StoreConfigGardener struct {
 
 type StoreConfigGKE struct {
 	// GKEAuthentication contains authentication configuration for GCP
-	GKEAuthentication *GKEAuthentication `yaml:"gkeAuthentication"`
+	GKEAuthentication *GKEAuthentication `yaml:"Authentication"`
 	// GCPAccount is the name of the gcp account kubeswitch shall discover GKE clusters from
 	// Only used when relying on gcloud authentication.
 	// Used to verify that gcloud currently has the correct account activated
@@ -132,11 +132,6 @@ type StoreConfigGKE struct {
 	// ProjectID contains an optional list of projects that will be considered in the search for existing GKE clusters.
 	// If no projects are given, will discover clusters from every found project.
 	ProjectIDs  []string `yaml:"projectIDs"`
-	// LandscapeName is a custom name for the GKE landscape
-	// this name will be used during the search prefixing the cluster name to help distinguish
-	// between GKE clusters from different GCP accounts
-	// + optional
-	LandscapeName  				*string 	`yaml:"landscapeName"`
 }
 
 // GCPAuthenticationType

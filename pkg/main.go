@@ -261,12 +261,12 @@ func getSanitizedKubeconfigForKubeconfigPath(kubeconfigStore store.KubeconfigSto
 
 	data, err := kubeconfigStore.GetKubeconfigForPath(path)
 	if err != nil {
-		return "", fmt.Errorf("could not read file with path '%s': %v", path, err)
+		return "", fmt.Errorf("could not read kubeconfig with path '%s': %v", path, err)
 	}
 
 	config, err := util.ParseSanitizedKubeconfig(data)
 	if err != nil {
-		return "", fmt.Errorf("could not parse Kubeconfig with path '%s': %v", path, err)
+		return "", fmt.Errorf("could not parse kubeconfig with path '%s': %v", path, err)
 	}
 
 	kubeconfigData, err := yaml.Marshal(config)

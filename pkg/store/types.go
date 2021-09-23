@@ -112,6 +112,5 @@ type GKEStore struct {
 	// ProjectNameToID contains a mapping projectName -> project ID
 	// used to construct the kubeconfig path containing the project name instead of a technical project id
 	ProjectNameToID map[string]string
-	LandscapeName   string
 	StateDirectory  string
 }

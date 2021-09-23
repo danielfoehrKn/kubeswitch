@@ -77,13 +77,8 @@ func ValidateConfig(config *types.Config) field.ErrorList {
 		}
 
 		if kubeconfigStore.Kind == types.StoreKindGKE {
-			landscapeName, errorList := gkestore.ValidateGKEStoreConfiguration(indexFieldPath, kubeconfigStore)
+			errorList := gkestore.ValidateGKEStoreConfiguration(indexFieldPath, kubeconfigStore)
 			errors = append(errors, errorList...)
-
-			// the GKE landscape name is the default ID of the store
-			if landscapeName != nil && len(*landscapeName) > 0 && kubeconfigStore.ID == nil {
-				id = landscapeName
-			}
 		}
 
 		// if the kubeconfig store uses an index, we need to specify a unique ID for the kubeconfigStore to write a unique index file name

@@ -34,7 +34,8 @@ import (
 )
 
 var (
-	scheme = runtime.NewScheme()
+	scheme           = runtime.NewScheme()
+	gcloudBinaryPath = ""
 )
 
 func init() {
@@ -56,7 +57,11 @@ func NewGKEStore(store types.KubeconfigStore, stateDir string) (*GKEStore, error
 		}
 	}
 
-	// TODO: if using gcloud authentication: Check that gcloud is installed e.g via which gcloud
+	binaryPath, err := getGcloudBinaryPath()
+	if err != nil {
+		return nil, fmt.Errorf("gcloud must be installaed when useing the GKE store: %v", err)
+	}
+	gcloudBinaryPath = binaryPath
 
 	// TODO: If using gcloud with config specifying the gcp account
 	// validate by invoking gcloud auth list --format json that the correct account is ACTIVE
@@ -77,47 +82,50 @@ func NewGKEStore(store types.KubeconfigStore, stateDir string) (*GKEStore, error
 func (s *GKEStore) InitializeGKEStore() error {
 	ctx := context.Background()
 
-	// TODO: how to get the account info to validate the account
-	// gcloud config config-helper
-	// configuration:
-	//  active_configuration: default
-	//  properties:
-	//    compute:
-	//      region: europe-west1
-	//      zone: europe-west1-b
-	//    core:
-	//      account: daniel.fit95gke@gmail.com
-	//      disable_usage_reporting: 'True'
-	//      project: sap-se-gcp-scp-k8s-dev
-
-	// TODO: IF use service accounts:
-	// Here set the GOOGLE_APPLICATION_CREDENTIALS env variable
-	// otherwise default credentials will not be found
-
-	// TODO: detect gcloud installation path
-	// or default to "/usr/local/bin/gcloud" if not otherwise specified in configuration file
-
-	// TODO when using gcloud: check if file exists $HOME/.config/gcloud/application_default_credentials.json
-	// also check if access token is expired/ If yes: execute gcloud auth application-default login automatically
-	// prerequisite: need to know the binary path of gcloud
-
 	// Create GKE client
 	// Google Application Default Credentials are used for authentication.
 	// When using gcloud  'gcloud auth application-default login' so that
 	// the library can find a valid access token provided via gcloud's oauth flow at the default location
 	// cat $HOME/.config/gcloud/application_default_credentials.json
-
 	// Later, also support API keys provided with the store configuration
 	// please see: https://pkg.go.dev/google.golang.org/api/container/v1
 	// and: https://cloud.google.com/docs/authentication/production#automatically
 	client, err := container.NewService(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to create GKE client: %w", err)
+		if len(gcloudBinaryPath) == 0 {
+			return fmt.Errorf("failed to create GKE client. Most likely a permission problem. Error from GCP: %w", err)
+		}
+
+		// gcloud auth application-default login
+		_, err_exec := exec.Command(gcloudBinaryPath, "auth", "application-default", "login").Output()
+		if err_exec != nil {
+			return fmt.Errorf("failed to acquire missing credentials via gcloud: %w: Failed to create client: %w", err_exec, err)
+		}
+
+		s.Logger.Infof("Sucessfully obtained application default credentials.")
+
+		// try again with obtained credentials
+		client, err = container.NewService(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to create GKE client: %w", err)
+		}
 	}
+
+	if s.Config.GCPAccount != nil {
+		isActive, err := isAccountActive(*s.Config.GCPAccount)
+		if err != nil {
+			return fmt.Errorf("failed to check if GCP account %q is active: %w", *s.Config.GCPAccount, err)
+		}
+
+		if !isActive {
+			return fmt.Errorf("GCP account %q is not active. Please use `gcloud config set account %s` to activate the account", *s.Config.GCPAccount, *s.Config.GCPAccount)
+		}
+	}
+
 	s.GkeClient = client
 
 	// Discover projects in this account
-	projects := sets.NewString(s.Config.ProjectIDs...)
+	allowedProjectIDs := sets.NewString(s.Config.ProjectIDs...)
 
 	cloudResourceManagerService, err := cloudresourcemanager.NewService(ctx)
 	if err != nil {
@@ -127,7 +135,7 @@ func (s *GKEStore) InitializeGKEStore() error {
 	req := cloudResourceManagerService.Projects.List()
 	if err := req.Pages(ctx, func(page *cloudresourcemanager.ListProjectsResponse) error {
 		for _, project := range page.Projects {
-			if projects.Len() > 0 && !projects.Has(project.ProjectId) {
+			if allowedProjectIDs.Len() > 0 && !allowedProjectIDs.Has(project.ProjectId) {
 				continue
 			}
 			// remember project name -> project ID
@@ -138,6 +146,10 @@ func (s *GKEStore) InitializeGKEStore() error {
 		return err
 	}
 
+	if len(s.ProjectNameToID) == 0 {
+		return fmt.Errorf("no projects found in GCP. Unable to discover GKE clusters")
+	}
+
 	return nil
 }
 
@@ -146,7 +158,7 @@ func (s *GKEStore) StartSearch(channel chan SearchResult) {
 	defer cancel()
 
 	if err := s.InitializeGKEStore(); err != nil {
-		err := fmt.Errorf("failed to initialize store. Make sure you provided valid credentials or run `gcloud auth application-default login` when using authentication via gcloud: %v", err)
+		err := fmt.Errorf("failed to initialize store: %w", err)
 		channel <- SearchResult{
 			Error: err,
 		}
@@ -159,18 +171,15 @@ func (s *GKEStore) StartSearch(channel chan SearchResult) {
 			channel <- SearchResult{
 				Error: fmt.Errorf("failed to list GKE clusters for project with ID %q: %w", projectId, err),
 			}
-			return
+			continue
 		}
 
 		// for every GKE cluster in the project
 		for _, f := range resp.Clusters {
-			var landscapeName string
-			if len(s.LandscapeName) > 0 {
-				landscapeName = fmt.Sprintf("%s--", s.LandscapeName)
-			}
-
 			// kubeconfig path used to uniquely identify this cluster
-			kubeconfigPath := fmt.Sprintf("%s%s--%s", landscapeName, projectName, f.Name)
+			// gke_<project-name>--<zone>--<gke-cluster-name>
+
+			kubeconfigPath := fmt.Sprintf("gke_%s--%s--%s", projectName, f.Location, f.Name)
 
 			// cache for when getting the kubeconfig for the unique path later
 			s.DiscoveredClusters[kubeconfigPath] = f
@@ -179,7 +188,6 @@ func (s *GKEStore) StartSearch(channel chan SearchResult) {
 				KubeconfigPath: kubeconfigPath,
 				Error:          nil,
 			}
-
 		}
 	}
 }
@@ -190,14 +198,14 @@ func (s *GKEStore) GetContextPrefix(path string) string {
 	}
 
 	// the GKE store encodes the path with semantic information
-	// <optionalLandscapeName>-<project-name>--<cluster-name>
+	// <project-name>--<location>--<cluster-name>
 	// just use this semantic information as a prefix & remove the double dashes
 	return strings.ReplaceAll(path, "--", "-")
 }
 
 // IsInitialized checks if the store has been initialized already
 func (s *GKEStore) IsInitialized() bool {
-	return s.GkeClient != nil && s.Config != nil && len(s.Config.ProjectIDs) > 0
+	return s.GkeClient != nil && s.Config != nil
 }
 
 func (s *GKEStore) GetID() string {
@@ -231,30 +239,30 @@ func (s *GKEStore) GetKubeconfigForPath(path string) ([]byte, error) {
 			return nil, fmt.Errorf("failed to initialize GKE store: %w", err)
 		}
 	}
-	_, projectName, clusterName, err := parseIdentifier(path)
+	projectName, location, clusterName, err := parseIdentifier(path)
 	if err != nil {
 		return nil, err
 	}
 
-	projectID := s.ProjectNameToID[projectName]
+	projectID := s.ProjectNameToID[strings.TrimPrefix(projectName, "gke_")]
 
 	cluster := s.DiscoveredClusters[path]
 
 	// cluster has not been discovered from the GCP API yet
 	// this is the case when a search index is used
 	if cluster == nil {
-		// get the cluster from the GCP API
-		// TODO: does not work. I need the exact zone here :(
-		// how do I remember the zone. Shall I put it in the path? :D
-		resp, err := s.GkeClient.Projects.Zones.Clusters.Get(projectID, "-", clusterName).Context(ctx).Do()
+		// The name (project, location, cluster) of the cluster to retrieve.
+		// Specified in the format 'projects/*/locations/*/clusters/*'.
+		name := fmt.Sprintf("projects/%s/locations/%s/clusters/%s", projectID, location, clusterName)
+		resp, err := s.GkeClient.Projects.Locations.Clusters.Get(name).Context(ctx).Do()
 		if err != nil {
 			return nil, fmt.Errorf("failed to get GKE cluster with name %q for project with ID %q: %w", clusterName, projectID, err)
 		}
 		cluster = resp
 	}
 
-	// build context name from cluster information
-	contextName := fmt.Sprintf("gke_%s_%s_%s", projectID, cluster.Zone, cluster.Name)
+	// context name does not include the location or the account as this information is already included in the path (different to gcloud)
+	contextName := fmt.Sprintf("gke_%s", cluster.Name)
 
 	if cluster.MasterAuth == nil {
 		return nil, fmt.Errorf("no authentication information found for GKE cluster with name %q in project with ID %q", clusterName, projectID)
@@ -269,16 +277,11 @@ func (s *GKEStore) GetKubeconfigForPath(path string) ([]byte, error) {
 
 	// supply authentication information based on the configured auth option
 	if s.Config.GKEAuthentication == nil || *s.Config.GKEAuthentication.AuthenticationType == types.GcloudAuthentication {
-		gcloudBinaryPath, err := getGcloudBinaryPath()
-		if err != nil {
-			return nil, err
-		}
-
 		// construct an AuthInfo that contains the same information if I would have uses `gcloud container clusters get-credentials`
 		authPluginConfig = map[string]string{
 			// "access-token": token.AccessToken,
 			// "expiry": token.Expiry.Format(time.RFC3339), // make sure has proper format
-			"cmd-path": gcloudBinaryPath,                     // TODO: if does not work, I need to detect the gcloud install directory
+			"cmd-path": gcloudBinaryPath,
 			"cmd-args": "config config-helper --format=json", // get the credentials
 			// "expiry-key": token.Expiry.Format(time.RFC3339),
 			"expiry-key": "{.credential.token_expiry}",
@@ -354,17 +357,56 @@ func (s *GKEStore) VerifyKubeconfigPaths() error {
 
 // ParseIdentifier takes a kubeconfig identifier and
 // returns the
-// 1) the optional landscape name
-// 2) the GCP project name
-// 3) name of the GKE cluster
-func parseIdentifier(path string) (*string, string, string, error) {
+// 1) the GCP project name
+// 2) the location (zone or region if regional cluster) of the GKE cluster
+// 3) the name of the GKE cluster
+func parseIdentifier(path string) (string, string, string, error) {
 	split := strings.Split(path, "--")
 	switch len(split) {
-	case 2:
-		return nil, split[0], split[1], nil
 	case 3:
-		return &split[0], split[1], split[2], nil
+		return split[0], split[1], split[2], nil
 	default:
-		return nil, "", "", fmt.Errorf("unable to parse kubeconfig path: %q", path)
+		return "", "", "", fmt.Errorf("unable to parse kubeconfig path: %q", path)
 	}
+}
+
+// isAccountActive checks if the given GCP account is active
+func isAccountActive(targetAccount string) (bool, error) {
+	// gcloud auth application-default login
+	result, err := exec.Command(gcloudBinaryPath, "auth", "list", "--format", " json").Output()
+	if err != nil {
+		return false, fmt.Errorf("failed to shell out to gcloud: %w", err)
+	}
+
+	accounts := []gcloudAccount{}
+	err = yaml.Unmarshal(result, &accounts)
+	if err != nil {
+		return false, err
+	}
+
+	if len(accounts) == 0 {
+		return false, fmt.Errorf("no accounts configured for GCP. This can be verified by executing `gcloud auth list`")
+	}
+
+	accountFound := false
+	for _, account := range accounts {
+		if account.Account != targetAccount {
+			continue
+		}
+		accountFound = true
+		if account.Status == "ACTIVE" {
+			return true, nil
+		}
+	}
+
+	if !accountFound {
+		return false, fmt.Errorf("GCP account %q not found. This can be verified by executing `gcloud auth list`", targetAccount)
+	}
+
+	return false, nil
+}
+
+type gcloudAccount struct {
+	Account string `json:"account"`
+	Status  string `json:"status"`
 }

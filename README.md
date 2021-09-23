@@ -13,11 +13,12 @@ Designed as a [drop-in replacement](#difference-to-kubectx) for [kubectx](https:
 
 ## Highlights
 
-- **Configurable Kubeconfig store**
+- **Access all of your clusters kubeconfigs from a single pane of glass**
   - [Local filesystem](docs/stores/filesystem/filesystem.md)
+  - [Google Kubernetes Engine](docs/stores/gke/gke.md)
   - [Hashicorp Vault](docs/stores/vault/use_vault_store.md)
-  - [Gardener Kubernetes-as-a-Service](docs/stores/gardener/gardener.md)
-  - Looking for contributions! Especially to support [Cluster-API](https://github.com/kubernetes-sigs/cluster-api).
+  - [Gardener](docs/stores/gardener/gardener.md)
+  - Looking for contributions! Especially to support [Cluster-API](https://github.com/kubernetes-sigs/cluster-api) and more Cloud Providers.
 - **Unified search over multiple directories, paths, files and Kubeconfig stores**
   - Search over the Kubeconfigs from multiple Kubeconfig stores and configured paths (e.g, directories on the local filesystem and paths in Vault).
 - **Easy navigation**
