@@ -99,7 +99,7 @@ func (s *GKEStore) InitializeGKEStore() error {
 		// gcloud auth application-default login
 		_, err_exec := exec.Command(gcloudBinaryPath, "auth", "application-default", "login").Output()
 		if err_exec != nil {
-			return fmt.Errorf("failed to acquire missing credentials via gcloud: %w: Failed to create client: %w", err_exec, err)
+			return fmt.Errorf("failed to acquire missing credentials via gcloud: %v: Failed to create client: %v", err_exec, err)
 		}
 
 		s.Logger.Infof("Sucessfully obtained application default credentials.")
