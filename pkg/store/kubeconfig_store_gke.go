@@ -92,8 +92,10 @@ func (s *GKEStore) InitializeGKEStore() error {
 	// and: https://cloud.google.com/docs/authentication/production#automatically
 	client, err := container.NewService(ctx)
 	if err != nil {
+		// this can happen when there are no application-default credentials available on the local disk
+		// try to re-authenticate using local gcloud installation
 		if len(gcloudBinaryPath) == 0 {
-			return fmt.Errorf("failed to create GKE client. Most likely a permission problem. Error from GCP: %w", err)
+			return fmt.Errorf("failed to create Google Kubernetes Engine client. Please check that the `gcloud` CLI is installed and `gcloud auth application-default login` has run: %w", err)
 		}
 
 		// gcloud auth application-default login
@@ -107,18 +109,18 @@ func (s *GKEStore) InitializeGKEStore() error {
 		// try again with obtained credentials
 		client, err = container.NewService(ctx)
 		if err != nil {
-			return fmt.Errorf("failed to create GKE client: %w", err)
+			return fmt.Errorf("failed to create Google Kubernetes Engine client: %w", err)
 		}
 	}
 
 	if s.Config.GCPAccount != nil {
 		isActive, err := isAccountActive(*s.Config.GCPAccount)
 		if err != nil {
-			return fmt.Errorf("failed to check if GCP account %q is active: %w", *s.Config.GCPAccount, err)
+			return fmt.Errorf("failed to check if Google Cloud account %q is active: %w", *s.Config.GCPAccount, err)
 		}
 
 		if !isActive {
-			return fmt.Errorf("GCP account %q is not active. Please use `gcloud config set account %s` to activate the account", *s.Config.GCPAccount, *s.Config.GCPAccount)
+			return fmt.Errorf("google cloud account %q is not active. Please use `gcloud config set account %s` to activate the account", *s.Config.GCPAccount, *s.Config.GCPAccount)
 		}
 	}
 
@@ -143,11 +145,24 @@ func (s *GKEStore) InitializeGKEStore() error {
 		}
 		return nil
 	}); err != nil {
-		return err
+		// this might happen when the JWT token (id token) from Googles OIDC provider has expired
+		// so the actual request against the API returns 401
+		// Try to re-authenticate using gcloud!
+		if len(gcloudBinaryPath) == 0 {
+			return fmt.Errorf("failed to list Google cloud projects. This indicates either connectivity issues or invalid credentials. Make sure you are connected to the internet and that the `gcloud` CLI is installed for  authentication. (Try running: `gcloud auth application-default login`): %w", err)
+		}
+
+		// gcloud auth application-default login
+		_, errExec := exec.Command(gcloudBinaryPath, "auth", "application-default", "login").Output()
+		if errExec != nil {
+			return fmt.Errorf("failed to list Google Cloud projects probably due to permission issues. Also failed to acquire application-default credentials via gcloud OIDC authentication flow: %v: %v", errExec, err)
+		}
+
+		s.Logger.Infof("Sucessfully obtained application default credentials.")
 	}
 
 	if len(s.ProjectNameToID) == 0 {
-		return fmt.Errorf("no projects found in GCP. Unable to discover GKE clusters")
+		return fmt.Errorf("no projects found in Google Cloud. Unable to discover GKE clusters")
 	}
 
 	return nil

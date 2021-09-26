@@ -80,7 +80,7 @@ $ source /opt/local/libexec/kubeswitch/switch.sh
 #### From Source
 
 ```
-$ go get github.com/danielfoehrKn/kubeswitch
+$ go get github.com/danielfoehrkn/kubeswitch
 ```
 
 From the repository root run `make build-switcher`.
@@ -144,7 +144,7 @@ Flags:
       -h, --help                   help about any command
 ```
 
-Just type `kubeswitch` to search over the context names defined in the default Kubeconfig file `~/.kube/config`
+Just type `switch` to search over the context names defined in the default Kubeconfig file `~/.kube/config`
 or from the environment variable `KUBECONFIG`.
 
 To recursively **search over multiple directories, files and Kubeconfig stores**, please see the [documentation](docs/kubeconfig_stores.md) 
