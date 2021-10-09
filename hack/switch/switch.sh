@@ -514,6 +514,15 @@ function switch(){
 
 function setKubeconfigEnvironmentVariable() {
   if [[ "$?" = "0" ]]; then
+    # first, cleanup old temporary kubeconfig file
+    if [ ! -z "$KUBECONFIG" ]
+     then
+        switchTmpDirectory="$HOME/.kube/.switch_tmp/config"
+        if [[ $KUBECONFIG == *"$switchTmpDirectory"* ]]; then
+          rm $KUBECONFIG
+        fi
+     fi
+
     export KUBECONFIG=$1
     currentContext=$(kubectl config current-context)
     echo "switched to context \"$currentContext\"."
