@@ -7,46 +7,41 @@
 
 
 The `kubectx` for operators.
-`kubeswitch` (lazy: `switch`) takes Kubeconfig context switching to the next level,
-catering to operators of large scale Kubernetes installations.
+
+`kubeswitch` (lazy: `switch`) is the single pane of glass for all of your kubeconfig files.  
+Caters to operators of large scale Kubernetes installations.
 Designed as a [drop-in replacement](#difference-to-kubectx) for [kubectx](https://github.com/ahmetb/kubectx).
 
 ## Highlights
 
-- **Access all of your clusters kubeconfigs from a single pane of glass**
+- **Unified search over multiple providers**
   - [Local filesystem](docs/stores/filesystem/filesystem.md)
   - [Google Kubernetes Engine](docs/stores/gke/gke.md)
   - [Hashicorp Vault](docs/stores/vault/use_vault_store.md)
   - [Gardener](docs/stores/gardener/gardener.md)
-  - Looking for contributions! Especially to support [Cluster-API](https://github.com/kubernetes-sigs/cluster-api) and more Cloud Providers.
-- **Unified search over multiple directories, paths, files and Kubeconfig stores**
-  - Search over the Kubeconfigs from multiple Kubeconfig stores and configured paths (e.g, directories on the local filesystem and paths in Vault).
-- **Easy navigation**
+  - Your favorite Cloud Provider or Managed Kubernetes Platforms is not supported yet? Looking for contributions!
+- **Terminal Window Isolation**
+  - Each terminal window can target a different cluster (does not overwrite the current-context in a shared Kubeconfig)
+  - Each terminal window can target the same cluster and set a [different namespace preference](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#setting-the-namespace-preference)
+- **Easy Navigation**
   - Define alias names for contexts without changing the underlying Kubeconfig
   - Switch to any previously used context from the history
-- **Efficient search**
-  - Stores a pre-computed index of kube-context names to speed up future searches
-  - Recursive directory search
-  - Hot reload capability (adds Kubeconfigs to the search on the fly - especially useful when initially searching large directories)
-- **Improved search experience** when dealing with many Kubeconfigs
+- **Advanced Search Capabilities**
+  - Efficient: Stores pre-computed index of kube-context names to speed up future searches
   - Fuzzy search
-  - Live preview of the Kubeconfig file (**sanitized from credentials**)
-  - Easier identify clusters with [cryptic context names](#search-cryptic-context-names) 
-- **Terminal Window isolation**
-  - Each terminal window can target a different cluster (does not override the current-context in a shared Kubeconfig)
-  - Each terminal window can target the same cluster and set a [different namespace preference](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#setting-the-namespace-preference)
-    e.g., using the tool [kubens](https://github.com/ahmetb/kubectx)
+  - Recursive search (on the local filesystem or in Vault)
+  - Hot reload capability (adds Kubeconfigs to the search on the fly - especially useful when searching large directories)
+  - Live preview of the selected Kubeconfig file (**sanitized from credentials**)
+  - Easily find clusters with [cryptic context names](#search-cryptic-context-names)
 - **Extensibility** 
   - Integrate custom functionality using [Hooks](./hooks/README.md) (comparable with Git pre-commit hooks).
-  - Build your own integration e.g., sync Kubeconfig files of clusters from Git or remote systems like [Gardener](https://gardener.cloud/).
+  - Build your own integration e.g., synchronise Kubeconfig files of clusters from Git or remote systems.
 
 ![demo GIF](resources/gifs/switch-demo-large.gif)
 
 ## Non-goals
 
-- Anything else but efficient searching and switching of Kubeconfig contexts. Designed to do [one thing well](https://homepage.cs.uri.edu/~thenry/resources/unix_art/ch01s06.html).
-  This excludes the ability to change Kubernetes namespaces (use [kubens](https://github.com/ahmetb/kubectx/blob/master/kubens) instead) 
-  or provide a customized shell prompt (use [kube-ps1](https://github.com/jonmosco/kube-ps1)).
+- To provide a customized shell prompt. Use [kube-ps1](https://github.com/jonmosco/kube-ps1).
 
 ## Installation
 
@@ -320,6 +315,5 @@ Define multiple search paths using the [configuration file](docs/kubeconfig_stor
 
 ### Future Plans
 
-- Cleanup temporary kubeconfig files after the terminal session ended (instead of using `switch clean`)
-- Act as a credential helper for kubeconfig files to inject the credentials from the backing store
-- Support more storage backends (e.g local password managers)
+- Support more Cloud Providers (Azure, AWS, EKS) and Managed Kubernetes Platforms (Rancher, ...)
+- Add advanced namespace switching (history, default namespaces, namespace alias)
