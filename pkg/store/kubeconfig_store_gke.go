@@ -149,7 +149,7 @@ func (s *GKEStore) InitializeGKEStore() error {
 		// so the actual request against the API returns 401
 		// Try to re-authenticate using gcloud!
 		if len(gcloudBinaryPath) == 0 {
-			return fmt.Errorf("failed to list Google cloud projects. This indicates either connectivity issues or invalid credentials. Make sure you are connected to the internet and that the `gcloud` CLI is installed for  authentication. (Try running: `gcloud auth application-default login`): %w", err)
+			return fmt.Errorf("failed to list Google cloud projects. This indicates either connectivity issues or invalid credentials. Make sure you are connected to the internet and that the `gcloud` CLI is installed for authentication. (Try running: `gcloud auth application-default login`): %w", err)
 		}
 
 		// gcloud auth application-default login
