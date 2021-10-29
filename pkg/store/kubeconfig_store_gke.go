@@ -342,7 +342,7 @@ func (s *GKEStore) GetKubeconfigForPath(path string) ([]byte, error) {
 				Name: contextName,
 				User: types.User{
 
-					AuthProvider: types.AuthProvider{
+					AuthProvider: &types.AuthProvider{
 						Name:   "gcp",
 						Config: authPluginConfig,
 					},
