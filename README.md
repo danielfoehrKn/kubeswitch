@@ -19,7 +19,7 @@ Designed as a [drop-in replacement](#difference-to-kubectx) for [kubectx](https:
   - [Google Kubernetes Engine](docs/stores/gke/gke.md)
   - [Hashicorp Vault](docs/stores/vault/use_vault_store.md)
   - [Gardener](docs/stores/gardener/gardener.md)
-  - Your favorite Cloud Provider or Managed Kubernetes Platforms is not supported yet? Looking for contributions!
+  - Your favorite Cloud Provider or Managed Kubernetes Platform is not supported yet? Looking for contributions!
 - **Terminal Window Isolation**
   - Each terminal window can target a different cluster (does not overwrite the current-context in a shared Kubeconfig)
   - Each terminal window can target the same cluster and set a [different namespace preference](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#setting-the-namespace-preference)
