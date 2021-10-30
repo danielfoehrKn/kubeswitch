@@ -38,9 +38,10 @@ import (
 )
 
 const (
-	vaultTokenFileName    = ".vault-token"
-	defaultKubeconfigName = "config"
-	defaultKubeconfigPath = "$HOME/.kube/config"
+	vaultTokenFileName          = ".vault-token"
+	defaultKubeconfigName       = "config"
+	defaultKubeconfigPath       = "$HOME/.kube/config"
+	linuxEnvKubeconfigSeperator = ":"
 )
 
 var (
@@ -462,12 +463,15 @@ func getStoreFromFlagAndEnv(config *types.Config) *types.KubeconfigStore {
 	}
 
 	kubeconfigPathFromEnv := os.Getenv("KUBECONFIG")
-	if len(kubeconfigPathFromEnv) > 0 &&
-		!isDuplicatePath(config.KubeconfigStores, kubeconfigPathFromEnv) &&
-		!strings.HasSuffix(kubeconfigPathFromEnv, ".tmp") {
-		// the KUBECONFIG env sets a unique, non kubeswitch set, env variable to a kubeconfig.
-		paths = append(paths, expandPath(kubeconfigPathFromEnv))
-		logrus.Debugf("Using kubeconfig path from KUBECONFIG env %s", kubeconfigPathFromEnv)
+
+	pathsFromEnv := strings.Split(kubeconfigPathFromEnv, linuxEnvKubeconfigSeperator)
+
+	for _, path := range pathsFromEnv {
+		if !isDuplicatePath(config.KubeconfigStores, path) && !strings.HasSuffix(path, ".tmp") {
+			// the KUBECONFIG env sets a unique, non kubeswitch set, env variable to a kubeconfig.
+			paths = append(paths, expandPath(path))
+			logrus.Debugf("Adding kubeconfig path from KUBECONFIG env %s", kubeconfigPathFromEnv)
+		}
 	}
 
 	if len(paths) == 0 {
