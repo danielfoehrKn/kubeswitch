@@ -467,7 +467,7 @@ func getStoreFromFlagAndEnv(config *types.Config) *types.KubeconfigStore {
 	pathsFromEnv := strings.Split(kubeconfigPathFromEnv, linuxEnvKubeconfigSeperator)
 
 	for _, path := range pathsFromEnv {
-		if !isDuplicatePath(config.KubeconfigStores, path) && !strings.HasSuffix(path, ".tmp") {
+		if !isDuplicatePath(config.KubeconfigStores, path) && !strings.HasSuffix(path, ".tmp") && path != "" {
 			// the KUBECONFIG env sets a unique, non kubeswitch set, env variable to a kubeconfig.
 			paths = append(paths, expandPath(path))
 			logrus.Debugf("Adding kubeconfig path from KUBECONFIG env %s", kubeconfigPathFromEnv)
