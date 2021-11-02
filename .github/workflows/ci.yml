@@ -25,6 +25,7 @@ jobs:
     - name: Run make check
       run: |
         export PATH=${PATH}:`go env GOPATH`/bin
+        go version
         make install-requirements
         make check
     - name: Run unit tests
