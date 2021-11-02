@@ -24,7 +24,7 @@ import (
 type StoreKind string
 
 // ValidStoreKinds contains all valid store kinds
-var ValidStoreKinds = sets.NewString(string(StoreKindVault), string(StoreKindFilesystem), string(StoreKindGardener), string(StoreKindGKE))
+var ValidStoreKinds = sets.NewString(string(StoreKindVault), string(StoreKindFilesystem), string(StoreKindGardener), string(StoreKindGKE), string(StoreKindAzure))
 // ValidConfigVersions contains all valid config versions
 var ValidConfigVersions = sets.NewString("v1alpha1")
 
@@ -37,6 +37,8 @@ const (
 	StoreKindGardener   StoreKind = "gardener"
 	// StoreKindGKE is an identifier for the GKE store
 	StoreKindGKE   StoreKind = "gke"
+	// StoreKindAzure is an identifier for the Azure store
+	StoreKindAzure   StoreKind = "azure"
 )
 
 type Config struct {
@@ -132,6 +134,24 @@ type StoreConfigGKE struct {
 	// ProjectID contains an optional list of projects that will be considered in the search for existing GKE clusters.
 	// If no projects are given, will discover clusters from every found project.
 	ProjectIDs  []string `yaml:"projectIDs"`
+}
+
+type StoreConfigAzure struct {
+	// SubscriptionID is the name of the Azure Subscription kubeswitch shall discover Azure clusters from
+	// Please create on store per subscription
+	// + optional
+	SubscriptionID *string `yaml:"subscriptionID"`
+	// Endpoint is the base URL for Azure.
+	// Defaults to the public cloud endpoint "https://management.azure.com/"
+	// Example Alternatives:
+	// - Azure Germany: https://management.microsoftazure.de/
+	// - Azure US Gov: https://management.usgovcloudapi.net/
+	// - Azure China: https://management.chinacloudapi.cn/
+	// + optional
+	Endpoint *string `yaml:"endpoint"`
+	// ResourceGroups limits the search to clusters within the given resource groups
+	// + optional
+	ResourceGroups []string `yaml:"resourceGroups"`
 }
 
 // GCPAuthenticationType

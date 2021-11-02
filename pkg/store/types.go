@@ -15,6 +15,7 @@
 package store
 
 import (
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice"
 	"github.com/danielfoehrkn/kubeswitch/types"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
@@ -113,4 +114,16 @@ type GKEStore struct {
 	// used to construct the kubeconfig path containing the project name instead of a technical project id
 	ProjectNameToID map[string]string
 	StateDirectory  string
+}
+
+type AzureStore struct {
+	Logger          *logrus.Entry
+	KubeconfigStore types.KubeconfigStore
+	AksClient       *armcontainerservice.ManagedClustersClient
+	Config          *types.StoreConfigAzure
+	// DiscoveredClusters maps the kubeconfig path (az_<resource-group>--<cluster-name>) -> cluster
+	// This is a cache for the clusters discovered during the initial search for kubeconfig paths
+	// when not using a search index
+	DiscoveredClusters map[string]*armcontainerservice.ManagedCluster
+	StateDirectory     string
 }
