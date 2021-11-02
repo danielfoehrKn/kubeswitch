@@ -1,10 +1,12 @@
 package fuzzyfinder
 
 type opt struct {
-	mode        mode
-	previewFunc func(i, width, height int) string
-	multi       bool
-	hotReload   bool
+	mode         mode
+	previewFunc  func(i, width, height int) string
+	multi        bool
+	hotReload    bool
+	promptString string
+	header       string
 }
 
 type mode int
@@ -19,6 +21,10 @@ const (
 	// ModeCaseInsensitive enables a case-insensitive matching.
 	ModeCaseInsensitive
 )
+
+var defaultOption = opt{
+	promptString: "> ",
+}
 
 // Option represents available fuzzy-finding options.
 type Option func(*opt)
@@ -52,9 +58,23 @@ func WithHotReload() Option {
 	}
 }
 
+// WithPromptString changes the prompt string. The default value is "> ".
+func WithPromptString(s string) Option {
+	return func(o *opt) {
+		o.promptString = s
+	}
+}
+
 // withMulti enables to select multiple items by tab key.
 func withMulti() Option {
 	return func(o *opt) {
 		o.multi = true
+	}
+}
+
+// WithHeader enables to set the header.
+func WithHeader(s string) Option {
+	return func(o *opt) {
+		o.header = s
 	}
 }

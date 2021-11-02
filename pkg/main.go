@@ -213,9 +213,7 @@ func getFuzzyFinderOptions(storeIDToStore map[string]store.KubeconfigStore, show
 	if showPreview {
 		log := logrus.New()
 		withPreviewWindow := fuzzyfinder.WithPreviewWindow(func(i, w, h int) string {
-			// do not show preview when not enabled and for index 0 to not delay showing the fuzzy search
-			// -> otherwise user needs to wait until the store got initialized if using an index (can be couple seconds)
-			if !showPreview || i <= 0 {
+			if !showPreview || i == -1 {
 				return ""
 			}
 

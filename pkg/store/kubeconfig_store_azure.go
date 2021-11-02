@@ -298,9 +298,13 @@ func (s *AzureStore) GetSearchPreview(path string) (string, error) {
 	defer cancel()
 
 	if !s.IsInitialized() {
-		if err := s.InitializeAzureStore(); err != nil {
-			return "", fmt.Errorf("failed to initialize Gardener store: %w", err)
-		}
+		// this takes too long, initialize concurrently
+		go func() {
+			if err := s.InitializeAzureStore(); err != nil {
+				s.Logger.Debugf("failed to initialize store: %w", err)
+			}
+		}()
+		return "", nil
 	}
 
 	resourceGroup, clusterName, err := parseAzureIdentifier(path)

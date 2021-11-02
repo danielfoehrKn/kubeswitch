@@ -55,6 +55,9 @@ func FindAll(in string, slice []string, opts ...Option) []Matched {
 	}
 	m := match(in, slice, opt)
 	sort.Slice(m, func(i, j int) bool {
+		if m[i].score == m[j].score {
+			return m[i].Idx > m[j].Idx
+		}
 		return m[i].score > m[j].score
 	})
 	return m
@@ -80,7 +83,7 @@ func match(input string, slice []string, opt opt) (res []Matched) {
 			s = strings.ToLower(s)
 		}
 	LINE_MATCHING:
-		for _, r := range []rune(s) {
+		for _, r := range []rune(s) { //nolint:staticcheck
 			if r == in[idx] {
 				idx++
 				if idx == len(in) {
@@ -95,5 +98,5 @@ func match(input string, slice []string, opt opt) (res []Matched) {
 			}
 		}
 	}
-	return
+	return res
 }

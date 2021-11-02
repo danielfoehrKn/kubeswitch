@@ -13,12 +13,12 @@ require (
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/jedib0t/go-pretty/v6 v6.1.0
 	github.com/karrick/godirwalk v1.16.1
-	github.com/ktr0731/go-fuzzyfinder v0.2.0
+	github.com/ktr0731/go-fuzzyfinder v0.5.0
 	github.com/onsi/ginkgo v1.14.1
 	github.com/onsi/gomega v1.10.5
 	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.6.0
-	github.com/spf13/cobra v1.0.0
+	github.com/sirupsen/logrus v1.8.1
+	github.com/spf13/cobra v1.2.1
 	golang.org/x/net v0.0.0-20211101193420-4a448f8816b3 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/api v0.57.0
