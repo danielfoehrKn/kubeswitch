@@ -101,6 +101,7 @@ type GardenerStore struct {
 	SecretNamespaceNameToSecret map[string]corev1.Secret
 }
 
+// TODO: implement previewer interface
 type GKEStore struct {
 	Logger          *logrus.Entry
 	KubeconfigStore types.KubeconfigStore

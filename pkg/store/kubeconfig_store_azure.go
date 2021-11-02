@@ -293,10 +293,6 @@ func parseAzureIdentifier(path string) (string, string, error) {
 }
 
 func (s *AzureStore) GetSearchPreview(path string) (string, error) {
-	// low timeout to not pile up many requests, but timeout fast
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
 	if !s.IsInitialized() {
 		// this takes too long, initialize concurrently
 		go func() {
@@ -304,8 +300,12 @@ func (s *AzureStore) GetSearchPreview(path string) (string, error) {
 				s.Logger.Debugf("failed to initialize store: %w", err)
 			}
 		}()
-		return "", nil
+		return "", fmt.Errorf("azure store is not initalized yet")
 	}
+
+	// low timeout to not pile up many requests, but timeout fast
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
 
 	resourceGroup, clusterName, err := parseAzureIdentifier(path)
 	if err != nil {
@@ -314,18 +314,18 @@ func (s *AzureStore) GetSearchPreview(path string) (string, error) {
 
 	// the cluster should be in the cache, but do not fail if it is not
 	cluster := s.DiscoveredClusters[path]
+
+	// cluster has not been discovered from the AKS API yet
+	// this is the case when a search index is used
 	if cluster == nil {
-		// cluster has not been discovered from the AKS API yet
-		// this is the case when a search index is used
-		if cluster == nil {
-			// The name (resource_group, cluster) of the cluster to retrieve.
-			resp, err := s.AksClient.Get(ctx, resourceGroup, clusterName, nil)
-			if err != nil {
-				return "", fmt.Errorf("failed to get Azure cluster with name %q : %w", clusterName, err)
-			}
-			cluster = &resp.ManagedCluster
-			s.DiscoveredClusters[path] = cluster
+		// The name (resource_group, cluster) of the cluster to retrieve.
+		// we can safely use the client, as we know the store has been previously initialized
+		resp, err := s.AksClient.Get(ctx, resourceGroup, clusterName, nil)
+		if err != nil {
+			return "", fmt.Errorf("failed to get Azure cluster with name %q : %w", clusterName, err)
 		}
+		cluster = &resp.ManagedCluster
+		s.DiscoveredClusters[path] = cluster
 	}
 
 	asciTree := gotree.New(fmt.Sprintf("%s", clusterName))

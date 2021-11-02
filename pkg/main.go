@@ -222,25 +222,30 @@ func getFuzzyFinderOptions(storeIDToStore map[string]store.KubeconfigStore, show
 			path := readFromContextToPathMapping(currentContextName)
 			storeID := readFromPathToStoreID(path)
 			kubeconfigStore := storeIDToStore[storeID]
-			kubeconfig, err := getSanitizedKubeconfigForKubeconfigPath(kubeconfigStore, path)
+
+			var storeSpecificPreview *string
+			previewer, ok := kubeconfigStore.(store.Previewer)
+			if ok {
+				pr, err := previewer.GetSearchPreview(path)
+				if err != nil {
+					log.Debugf("failed to get preview for store %s: %v", kubeconfigStore.GetID(), err)
+					return ""
+				}
+				storeSpecificPreview = &pr
+			}
+
+			preview, err := getSanitizedKubeconfigForKubeconfigPath(kubeconfigStore, path)
 			if err != nil {
-				log.Debugf("failed to show preview: %v", err)
+				log.Debugf("failed to get kubeconfig preview: %v", err)
 				return ""
 			}
 
-			preview := kubeconfig
-			previewer, ok := kubeconfigStore.(store.Previewer)
-			if ok {
-				additionalPreview, err := previewer.GetSearchPreview(path)
-				if err != nil {
-					log.Debugf("failed to get preview for store %s: %v", kubeconfigStore.GetID(), err)
-				} else {
-					separators := make([]string, 20)
-					for i := 0; i < 20; i++ {
-						separators[i] = "-"
-					}
-					preview = fmt.Sprintf("%s \n %s \n \n %s", preview, strings.Join(separators, "-"), additionalPreview)
+			if storeSpecificPreview != nil {
+				separators := make([]string, 20)
+				for i := 0; i < 20; i++ {
+					separators[i] = "-"
 				}
+				preview = fmt.Sprintf("%s \n %s \n \n %s", preview, strings.Join(separators, "-"), *storeSpecificPreview)
 			}
 
 			return preview

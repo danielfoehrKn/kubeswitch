@@ -291,10 +291,14 @@ func (s *GardenerStore) GetKubeconfigForPath(path string) ([]byte, error) {
 }
 
 func (s *GardenerStore) GetSearchPreview(path string) (string, error) {
+	// To improve UX, we return an error immediately and load the store in the background
 	if !s.IsInitialized() {
-		if err := s.InitializeGardenerStore(); err != nil {
-			return "", fmt.Errorf("failed to initialize Gardener store: %w", err)
-		}
+		go func() {
+			if err := s.InitializeGardenerStore(); err != nil {
+				s.Logger.Debugf("failed to initialize Gardener store: %v", err)
+			}
+		}()
+		return "", fmt.Errorf("gardener store is not initalized yet")
 	}
 
 	landscapeName := fmt.Sprintf("%s: %s", "Gardener landscape", s.LandscapeIdentity)
