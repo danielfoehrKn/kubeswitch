@@ -106,9 +106,7 @@ func (s *AzureStore) StartSearch(channel chan SearchResult) {
 	if len(s.Config.ResourceGroups) > 0 {
 		// TODO: optimize using goroutines to hide I/O latency
 		for _, resourceGroup := range s.Config.ResourceGroups {
-			var pager *armcontainerservice.ManagedClustersListByResourceGroupPager
-
-			pager = s.AksClient.ListByResourceGroup(resourceGroup, nil)
+			pager := s.AksClient.ListByResourceGroup(resourceGroup, nil)
 			if pager.Err() != nil {
 				handleAzureError(channel, pager.Err())
 				return
@@ -297,7 +295,7 @@ func (s *AzureStore) GetSearchPreview(path string) (string, error) {
 		// this takes too long, initialize concurrently
 		go func() {
 			if err := s.InitializeAzureStore(); err != nil {
-				s.Logger.Debugf("failed to initialize store: %w", err)
+				s.Logger.Debugf("failed to initialize store: %v", err)
 			}
 		}()
 		return "", fmt.Errorf("azure store is not initalized yet")
@@ -328,7 +326,7 @@ func (s *AzureStore) GetSearchPreview(path string) (string, error) {
 		s.DiscoveredClusters[path] = cluster
 	}
 
-	asciTree := gotree.New(fmt.Sprintf("%s", clusterName))
+	asciTree := gotree.New(clusterName)
 
 	if cluster.Properties.KubernetesVersion != nil {
 		asciTree.Add(fmt.Sprintf("Kubernetes Version: %s", *cluster.Properties.KubernetesVersion))
