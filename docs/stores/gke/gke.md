@@ -1,6 +1,6 @@
 # GKE store
 
-Kubeswitch can discover Google Kubernetes Engine (GKE) clusters wit the help of a locally installed `gcloud` tool.
+Kubeswitch can discover Google Kubernetes Engine (GKE) clusters with the help of a locally installed `gcloud` tool.
 `gcloud` takes care of the authentication and authorization flow.
 
 ## Setup
@@ -42,7 +42,7 @@ switched to context "gke_landscaper".
 
 ## Search for GKE Clusters
 
-Kubeconfig contexts names are fuzzy-searchable using the following semantics.
+Kubeconfig context names are fuzzy-searchable using the following semantics.
 
 In General: 
 - `gke_<account-name>-<region/zone>-<cluster-name>/gke_<cluster-name>`

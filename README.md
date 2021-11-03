@@ -16,9 +16,10 @@ Designed as a [drop-in replacement](#difference-to-kubectx) for [kubectx](https:
 
 - **Unified search over multiple providers**
   - [Local filesystem](docs/stores/filesystem/filesystem.md)
-  - [Google Kubernetes Engine](docs/stores/gke/gke.md)
   - [Hashicorp Vault](docs/stores/vault/use_vault_store.md)
   - [Gardener](docs/stores/gardener/gardener.md)
+  - [Google Kubernetes Engine](docs/stores/gke/gke.md)
+  - [Azure Kubernetes Service](docs/stores/azure/azure.md)
   - Your favorite Cloud Provider or Managed Kubernetes Platform is not supported yet? Looking for contributions!
 - **Terminal Window Isolation**
   - Each terminal window can target a different cluster (does not overwrite the current-context in a shared Kubeconfig)
