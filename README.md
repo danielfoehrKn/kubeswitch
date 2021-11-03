@@ -89,7 +89,7 @@ and source the switch script from `/hack/switch/switch.sh`.
 Download the switch script and the switcher binary.
 ```
 OS=linux                        # Pick the right os: linux, darwin (intel only)
-VERSION=0.4.7                   # Pick the current version.
+VERSION=0.5.0                   # Pick the current version.
 
 curl -L -o /usr/local/bin/switcher https://github.com/danielfoehrKn/kubeswitch/releases/download/${VERSION}/switcher_${OS}_amd64
 chmod +x /usr/local/bin/switcher 
@@ -156,7 +156,7 @@ to set up the necessary configuration file.
 
 ## Kubeconfig stores
 
-Three Kubeconfig stores are supported: `filesystem`, `vault`, `gardener`.
+Multiple Kubeconfig stores are supported.
 The local filesystem is the default store and does not require any additional setup.
 However, if you intend to search for all Kubeconfig context/files in the `~/.kube` directory, 
 please [first consider this](docs/kubeconfig_stores.md#additional-considerations).
