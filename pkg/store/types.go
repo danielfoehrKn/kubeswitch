@@ -15,6 +15,8 @@
 package store
 
 import (
+	"sync"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice"
 	"github.com/danielfoehrkn/kubeswitch/types"
 	vaultapi "github.com/hashicorp/vault/api"
@@ -101,7 +103,6 @@ type GardenerStore struct {
 	SecretNamespaceNameToSecret map[string]corev1.Secret
 }
 
-// TODO: implement previewer interface
 type GKEStore struct {
 	Logger          *logrus.Entry
 	KubeconfigStore types.KubeconfigStore
@@ -118,10 +119,14 @@ type GKEStore struct {
 }
 
 type AzureStore struct {
-	Logger          *logrus.Entry
-	KubeconfigStore types.KubeconfigStore
-	AksClient       *armcontainerservice.ManagedClustersClient
-	Config          *types.StoreConfigAzure
+	Logger *logrus.Entry
+	// DiscoveredClustersMutex is a mutex allow many reads, one write mutex to synchronize writes
+	// to the DiscoveredClusters map.
+	// This can happen when a goroutine still discovers clusters while another goroutine computes the preview for a missing cluster.
+	DiscoveredClustersMutex sync.RWMutex
+	KubeconfigStore         types.KubeconfigStore
+	AksClient               *armcontainerservice.ManagedClustersClient
+	Config                  *types.StoreConfigAzure
 	// DiscoveredClusters maps the kubeconfig path (az_<resource-group>--<cluster-name>) -> cluster
 	// This is a cache for the clusters discovered during the initial search for kubeconfig paths
 	// when not using a search index

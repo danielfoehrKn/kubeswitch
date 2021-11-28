@@ -129,7 +129,7 @@ func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir str
 		}(kubeconfigStore, c)
 
 		go func(store store.KubeconfigStore, storeSearchChannel chan store.SearchResult, index index.SearchIndex) {
-			// remember the context to kubeconfig path mapping for this this store
+			// remember the context to kubeconfig path mapping for this store
 			// to write it to the index. Do not use the global "ContextToPathMapping"
 			// as this contains contexts names from all stores combined
 			localContextToPathMapping := make(map[string]string)

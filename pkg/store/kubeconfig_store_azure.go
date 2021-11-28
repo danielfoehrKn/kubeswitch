@@ -190,7 +190,7 @@ func (s *AzureStore) returnSearchResultsForClusters(channel chan SearchResult, m
 		}
 
 		kubeconfigPath := getAzureKubeconfigPath(*resourceGroup, *cluster.Name)
-		s.DiscoveredClusters[kubeconfigPath] = cluster
+		s.insertIntoClusterCache(kubeconfigPath, cluster)
 
 		channel <- SearchResult{
 			KubeconfigPath: kubeconfigPath,
@@ -311,7 +311,7 @@ func (s *AzureStore) GetSearchPreview(path string) (string, error) {
 	}
 
 	// the cluster should be in the cache, but do not fail if it is not
-	cluster := s.DiscoveredClusters[path]
+	cluster := s.readFromClusterCache(path)
 
 	// cluster has not been discovered from the AKS API yet
 	// this is the case when a search index is used
@@ -323,7 +323,7 @@ func (s *AzureStore) GetSearchPreview(path string) (string, error) {
 			return "", fmt.Errorf("failed to get Azure cluster with name %q : %w", clusterName, err)
 		}
 		cluster = &resp.ManagedCluster
-		s.DiscoveredClusters[path] = cluster
+		s.insertIntoClusterCache(path, cluster)
 	}
 
 	asciTree := gotree.New(clusterName)
@@ -345,4 +345,16 @@ func (s *AzureStore) GetSearchPreview(path string) (string, error) {
 	asciTree.Add(fmt.Sprintf("Subscription ID: %s", *s.Config.SubscriptionID))
 
 	return asciTree.Print(), nil
+}
+
+func (s *AzureStore) readFromClusterCache(key string) *armcontainerservice.ManagedCluster {
+	s.DiscoveredClustersMutex.RLock()
+	defer s.DiscoveredClustersMutex.RUnlock()
+	return s.DiscoveredClusters[key]
+}
+
+func (s *AzureStore) insertIntoClusterCache(key string, value *armcontainerservice.ManagedCluster) {
+	s.DiscoveredClustersMutex.Lock()
+	defer s.DiscoveredClustersMutex.Unlock()
+	s.DiscoveredClusters[key] = value
 }
