@@ -404,6 +404,10 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 	for _, kubeconfigStoreFromConfig := range config.KubeconfigStores {
 		var s store.KubeconfigStore
 
+		if kubeconfigStoreFromConfig.KubeconfigName != nil && *kubeconfigStoreFromConfig.KubeconfigName != "" {
+			kubeconfigName = *kubeconfigStoreFromConfig.KubeconfigName
+		}
+
 		switch kubeconfigStoreFromConfig.Kind {
 		case types.StoreKindFilesystem:
 			filesystemStore, err := store.NewFilesystemStore(kubeconfigName, kubeconfigStoreFromConfig)
