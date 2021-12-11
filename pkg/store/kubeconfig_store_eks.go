@@ -175,7 +175,7 @@ func (s *EKSStore) StartSearch(channel chan SearchResult) {
 		for _, clusterName := range resp.Clusters {
 			// kubeconfig path used to uniquely identify this cluster
 			// eks_<profile>--<region>--<eks-cluster-name>
-			kubeconfigPath := fmt.Sprintf("eks_%s--%s--%s", s.Config.Profile, s.Config.Region, clusterName)
+			kubeconfigPath := fmt.Sprintf("eks_%s--%s--%s", s.Config.Profile, *s.Config.Region, clusterName)
 
 			channel <- SearchResult{
 				KubeconfigPath: kubeconfigPath,
