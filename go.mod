@@ -7,6 +7,10 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v0.11.0
 	// v0.1.0 is incompatible with azidentity v0.11.0. Wait for azidentity to be updated.
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice v0.1.0
+	github.com/aws/aws-sdk-go-v2 v1.10.0
+	github.com/aws/aws-sdk-go-v2/config v1.9.0
+	github.com/aws/aws-sdk-go-v2/service/eks v1.11.0
+	github.com/aws/smithy-go v1.8.1
 	github.com/disiqueira/gotree v1.0.0
 	github.com/gardener/gardener v1.18.0
 	github.com/hashicorp/go-multierror v1.1.0

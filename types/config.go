@@ -24,7 +24,8 @@ import (
 type StoreKind string
 
 // ValidStoreKinds contains all valid store kinds
-var ValidStoreKinds = sets.NewString(string(StoreKindVault), string(StoreKindFilesystem), string(StoreKindGardener), string(StoreKindGKE), string(StoreKindAzure))
+var ValidStoreKinds = sets.NewString(string(StoreKindVault), string(StoreKindFilesystem), string(StoreKindGardener), string(StoreKindGKE), string(StoreKindAzure), string(StoreKindEKS))
+
 // ValidConfigVersions contains all valid config versions
 var ValidConfigVersions = sets.NewString("v1alpha1")
 
@@ -32,31 +33,33 @@ const (
 	// StoreKindFilesystem is an identifier for the filesystem store
 	StoreKindFilesystem StoreKind = "filesystem"
 	// StoreKindVault is an identifier for the vault store
-	StoreKindVault      StoreKind = "vault"
+	StoreKindVault StoreKind = "vault"
 	// StoreKindGardener is an identifier for the gardener store
-	StoreKindGardener   StoreKind = "gardener"
+	StoreKindGardener StoreKind = "gardener"
 	// StoreKindGKE is an identifier for the GKE store
-	StoreKindGKE   StoreKind = "gke"
+	StoreKindGKE StoreKind = "gke"
 	// StoreKindAzure is an identifier for the Azure store
-	StoreKindAzure   StoreKind = "azure"
+	StoreKindAzure StoreKind = "azure"
+	// StoreKindEKS is an identifier for the EKS store
+	StoreKindEKS StoreKind = "eks"
 )
 
 type Config struct {
 	// Kind is the type of the config. Expects "SwitchConfig"
-	Kind                          string            `yaml:"kind"`
+	Kind string `yaml:"kind"`
 	// Version is the version of the config file.
 	// Possible values: "v1alpha1"
-	Version                        string          `yaml:"version"`
+	Version string `yaml:"version"`
 	// KubeconfigName is the global default for how the kubeconfig is
 	// identified in the backing store.
 	// Can be overridden in the individual kubeconfig store configuration
 	// + optional
-	KubeconfigName                *string            `yaml:"kubeconfigName"`
+	KubeconfigName *string `yaml:"kubeconfigName"`
 	// ShowPreview configures if the selection dialog shows a sanitized preview of the kubeconfig file.
 	// Can be overridden via command line flag --show-preview true/false
 	// default: true
 	// + optional
-	ShowPreview                *bool            `yaml:"showPreview"`
+	ShowPreview *bool `yaml:"showPreview"`
 	// RefreshIndexAfter is the global default for how how often
 	// the index for this kubeconfig store shall be refreshed.
 	// Not setting this field will cause kubeswitch to not use an index
@@ -64,9 +67,9 @@ type Config struct {
 	// + optional
 	RefreshIndexAfter *time.Duration `yaml:"refreshIndexAfter"`
 	// Hooks defines configurations for commands that shall be executed prior to the search
-	Hooks                         []Hook            `yaml:"hooks"`
+	Hooks []Hook `yaml:"hooks"`
 	// KubeconfigStores contains the configuration for kubeconfig stores
-	KubeconfigStores              []KubeconfigStore `yaml:"kubeconfigStores"`
+	KubeconfigStores []KubeconfigStore `yaml:"kubeconfigStores"`
 }
 
 type KubeconfigStore struct {
@@ -74,51 +77,51 @@ type KubeconfigStore struct {
 	// Used to write distinct index files for each store
 	// Not required if only one store of a store kind is configured
 	// + optional
-	ID 					*string 			`yaml:"id"`
+	ID *string `yaml:"id"`
 	// Kind identifies a supported store kind - filesystem, vault, Gardener.
-	Kind                StoreKind        	`yaml:"kind"`
+	Kind StoreKind `yaml:"kind"`
 	// KubeconfigName defines how the kubeconfig is identified in the backing store
 	// For the Filesystem store, this is the name of the file that contains the kubeconfig
 	// For the Vault store, this is the secret key
 	// For the Gardener store this field is not used
 	// + optional
-	KubeconfigName      *string           	`yaml:"kubeconfigName"`
+	KubeconfigName *string `yaml:"kubeconfigName"`
 	// Paths contains the paths to search for in the backing store
-	Paths               []string         	`yaml:"paths"`
+	Paths []string `yaml:"paths"`
 	// RefreshIndexAfter defines how often the index for this kubeconfig store shall be refreshed.
 	// Not setting this field will cause kubeswitch to not use an index
 	// + optional
-	RefreshIndexAfter *time.Duration 		`yaml:"refreshIndexAfter"`
+	RefreshIndexAfter *time.Duration `yaml:"refreshIndexAfter"`
 	// Required defines if errors when initializing this store should be logged
 	// defaults to true
 	// useful when configuring a kubeconfig store that is not always available
 	// However, when searching on an index and wanting to retrieve the kubeconfig from an unavailable store,
 	// it will throw an errors nonetheless
 	// + optional
-	Required *bool 						`yaml:"required"`
+	Required *bool `yaml:"required"`
 	// ShowPrefix configures if the search result should include store specific prefix (e.g for the filesystem store the parent directory name)
 	// default: true
 	ShowPrefix *bool `yaml:"showPrefix"`
 	// Config is store-specific configuration.
 	// Please check the documentation for each backing provider to see what configuration is
 	// possible here
-	Config              interface{} 		`yaml:"config"`
+	Config interface{} `yaml:"config"`
 }
 
 type StoreConfigVault struct {
 	// VaultAPIAddress is the URL of the Vault API
-	VaultAPIAddress  string `yaml:"vaultAPIAddress"`
+	VaultAPIAddress string `yaml:"vaultAPIAddress"`
 }
 
 type StoreConfigGardener struct {
 	// GardenerAPIKubeconfigPath is the path on the local filesystem pointing to the kubeconfig
 	// for the Gardener API server
-	GardenerAPIKubeconfigPath  	string 	`yaml:"gardenerAPIKubeconfigPath"`
+	GardenerAPIKubeconfigPath string `yaml:"gardenerAPIKubeconfigPath"`
 	// LandscapeName is a custom name for the Gardener landscape
 	// uses this name instead of the default ID from the Gardener API ConfigMap "cluster-identity"
 	// also used as the store ID if the kubeconfig store ID is not specified
 	// + optional
-	LandscapeName  				*string 	`yaml:"landscapeName"`
+	LandscapeName *string `yaml:"landscapeName"`
 }
 
 type StoreConfigGKE struct {
@@ -133,7 +136,7 @@ type StoreConfigGKE struct {
 	GCPAccount *string `yaml:"gcpAccount"`
 	// ProjectID contains an optional list of projects that will be considered in the search for existing GKE clusters.
 	// If no projects are given, will discover clusters from every found project.
-	ProjectIDs  []string `yaml:"projectIDs"`
+	ProjectIDs []string `yaml:"projectIDs"`
 }
 
 type StoreConfigAzure struct {
@@ -152,6 +155,13 @@ type StoreConfigAzure struct {
 	// ResourceGroups limits the search to clusters within the given resource groups
 	// + optional
 	ResourceGroups []string `yaml:"resourceGroups"`
+}
+
+type StoreConfigEKS struct {
+	// Region is the AWS region to search for clusters https://docs.aws.amazon.com/general/latest/gr/rande.html
+	Region *string `yaml:"region"`
+	// Profile is the named profile to authenticate with https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html
+	Profile string `yaml:"profile"`
 }
 
 // GCPAuthenticationType
@@ -188,9 +198,9 @@ type GKEAuthentication struct {
 	// APIKeyFilePath is the path on the local filesystem to the file that contains
 	// an API key used to authenticate against the Google Kubernetes Engine API
 	// + optional
-	APIKeyFilePath  *string `yaml:"apiKeyFilePath"`
+	APIKeyFilePath *string `yaml:"apiKeyFilePath"`
 	// ServiceAccountFilePath is the path on the local filesystem to the file that contains
 	// the GCP service account used to authenticate against the Google Kubernetes Engine API
 	// + optional
-	ServiceAccountFilePath  *string `yaml:"serviceAccountFilePath"`
+	ServiceAccountFilePath *string `yaml:"serviceAccountFilePath"`
 }
