@@ -6,7 +6,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 
-The `kubectx` for operators.
+Steroids for your Kubernetes terminal.
 
 `kubeswitch` (lazy: `switch`) is the single pane of glass for all of your kubeconfig files.  
 Caters to operators of large scale Kubernetes installations.
@@ -35,7 +35,6 @@ Designed as a [drop-in replacement](#difference-to-kubectx) for [kubectx](https:
   - Easily find clusters with [cryptic context names](#search-cryptic-context-names)
 - **Easy Navigation**
   - Define alias names for contexts without changing the underlying Kubeconfig
-  - Switch to any previously used context from the history
 - **Extensibility** 
   - Integrate custom functionality using [Hooks](./hooks/README.md) (comparable with Git pre-commit hooks).
   - Build your own integration e.g., synchronise Kubeconfig files of clusters from Git or remote systems.
