@@ -15,11 +15,12 @@ Designed as a [drop-in replacement](#difference-to-kubectx) for [kubectx](https:
 ## Highlights
 
 - **Unified search over multiple providers**
-  - [Local filesystem](docs/stores/filesystem/filesystem.md)
-  - [Hashicorp Vault](docs/stores/vault/use_vault_store.md)
+  - [Amazon Elastic Kubernetes Service (EKS)](docs/stores/eks/eks.md)
+  - [Azure Kubernetes Service (AKS)](docs/stores/azure/azure.md)
   - [Gardener](docs/stores/gardener/gardener.md)
-  - [Google Kubernetes Engine](docs/stores/gke/gke.md)
-  - [Azure Kubernetes Service](docs/stores/azure/azure.md)
+  - [Google Kubernetes Engine (GKE)](docs/stores/gke/gke.md)
+  - [Hashicorp Vault](docs/stores/vault/use_vault_store.md)
+  - [Local filesystem](docs/stores/filesystem/filesystem.md)
   - Your favorite Cloud Provider or Managed Kubernetes Platform is not supported yet? Looking for contributions!
 - **Change the namespace**
 - **Change to any context and namespace from the history**
