@@ -20,11 +20,13 @@ import (
 
 	"k8s.io/client-go/rest"
 	baseconfig "k8s.io/component-base/config"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Config carries options for new ClientSets.
 type Config struct {
+	newRuntimeCache cache.NewCacheFunc
 	clientOptions   client.Options
 	restConfig      *rest.Config
 	cacheResync     *time.Duration
@@ -83,8 +85,8 @@ func WithCacheResyncPeriod(resync time.Duration) ConfigFunc {
 	}
 }
 
-// WithDisabledCachedClient disables the cache in the controller-runtime client, so Client() will be equivalent to
-// DirectClient().
+// WithDisabledCachedClient disables the cache in the controller-runtime client, so Client() will talk directly to the
+// API server.
 func WithDisabledCachedClient() ConfigFunc {
 	return func(config *Config) error {
 		config.disableCache = true
@@ -96,6 +98,14 @@ func WithDisabledCachedClient() ConfigFunc {
 func WithUncached(objs ...client.Object) ConfigFunc {
 	return func(config *Config) error {
 		config.uncachedObjects = append(config.uncachedObjects, objs...)
+		return nil
+	}
+}
+
+// WithNewCacheFunc allows to set the function which is used to create a new cache.
+func WithNewCacheFunc(fn cache.NewCacheFunc) ConfigFunc {
+	return func(config *Config) error {
+		config.newRuntimeCache = fn
 		return nil
 	}
 }

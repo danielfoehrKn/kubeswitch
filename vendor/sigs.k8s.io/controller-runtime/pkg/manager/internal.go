@@ -29,7 +29,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
-	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
@@ -37,6 +37,8 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
+	"sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	intrec "sigs.k8s.io/controller-runtime/pkg/internal/recorder"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
@@ -45,7 +47,7 @@ import (
 )
 
 const (
-	// Values taken from: https://github.com/kubernetes/apiserver/blob/master/pkg/apis/config/v1alpha1/defaults.go
+	// Values taken from: https://github.com/kubernetes/component-base/blob/master/config/v1alpha1/defaults.go
 	defaultLeaseDuration          = 15 * time.Second
 	defaultRenewDeadline          = 10 * time.Second
 	defaultRetryPeriod            = 2 * time.Second
@@ -59,32 +61,16 @@ const (
 var _ Runnable = &controllerManager{}
 
 type controllerManager struct {
-	// config is the rest.config used to talk to the apiserver.  Required.
-	config *rest.Config
-
-	// scheme is the scheme injected into Controllers, EventHandlers, Sources and Predicates.  Defaults
-	// to scheme.scheme.
-	scheme *runtime.Scheme
+	// cluster holds a variety of methods to interact with a cluster. Required.
+	cluster cluster.Cluster
 
 	// leaderElectionRunnables is the set of Controllers that the controllerManager injects deps into and Starts.
 	// These Runnables are managed by lead election.
 	leaderElectionRunnables []Runnable
+
 	// nonLeaderElectionRunnables is the set of webhook servers that the controllerManager injects deps into and Starts.
 	// These Runnables will not be blocked by lead election.
 	nonLeaderElectionRunnables []Runnable
-
-	cache cache.Cache
-
-	// TODO(directxman12): Provide an escape hatch to get individual indexers
-	// client is the client injected into Controllers (and EventHandlers, Sources and Predicates).
-	client client.Client
-
-	// apiReader is the reader that will make requests to the api server and not the cache.
-	apiReader client.Reader
-
-	// fieldIndexes knows how to add field indexes over the Cache used by this controller,
-	// which can later be consumed via field selectors from the injected client.
-	fieldIndexes client.FieldIndexer
 
 	// recorderProvider is used to generate event recorders that will be injected into Controllers
 	// (and EventHandlers, Sources and Predicates).
@@ -96,9 +82,6 @@ type controllerManager struct {
 	// leaderElectionReleaseOnCancel defines if the manager should step back from the leader lease
 	// on shutdown
 	leaderElectionReleaseOnCancel bool
-
-	// mapper is used to map resources to kind, and map kind and version.
-	mapper meta.RESTMapper
 
 	// metricsListener is used to serve prometheus metrics
 	metricsListener net.Listener
@@ -127,6 +110,9 @@ type controllerManager struct {
 	healthzStarted bool
 	errChan        chan error
 
+	// controllerOptions are the global controller options.
+	controllerOptions v1alpha1.ControllerConfigurationSpec
+
 	// Logger is the logger that should be used by this manager.
 	// If none is set, it defaults to log.Log global logger.
 	logger logr.Logger
@@ -136,6 +122,10 @@ type controllerManager struct {
 	// it must be deferred until after gracefulShutdown is done.
 	leaderElectionCancel context.CancelFunc
 
+	// leaderElectionStopped is an internal channel used to signal the stopping procedure that the
+	// LeaderElection.Run(...) function has returned and the shutdown can proceed.
+	leaderElectionStopped chan struct{}
+
 	// stop procedure engaged. In other words, we should not add anything else to the manager
 	stopProcedureEngaged bool
 
@@ -144,7 +134,7 @@ type controllerManager struct {
 	// election was configured.
 	elected chan struct{}
 
-	startCache func(ctx context.Context) error
+	caches []hasCache
 
 	// port is the port that the webhook server serves at.
 	port int
@@ -156,6 +146,9 @@ type controllerManager struct {
 	certDir string
 
 	webhookServer *webhook.Server
+	// webhookServerOnce will be called in GetWebhookServer() to optionally initialize
+	// webhookServer if unset, and Add() it to controllerManager.
+	webhookServerOnce sync.Once
 
 	// leaseDuration is the duration that non-leader candidates will
 	// wait to force acquire leadership.
@@ -192,6 +185,11 @@ type controllerManager struct {
 	internalProceduresStop chan struct{}
 }
 
+type hasCache interface {
+	Runnable
+	GetCache() cache.Cache
+}
+
 // Add sets dependencies on i, and adds it to the list of Runnables to start.
 func (cm *controllerManager) Add(r Runnable) error {
 	cm.mu.Lock()
@@ -211,6 +209,8 @@ func (cm *controllerManager) Add(r Runnable) error {
 	if leRunnable, ok := r.(LeaderElectionRunnable); ok && !leRunnable.NeedLeaderElection() {
 		shouldStart = cm.started
 		cm.nonLeaderElectionRunnables = append(cm.nonLeaderElectionRunnables, r)
+	} else if hasCache, ok := r.(hasCache); ok {
+		cm.caches = append(cm.caches, hasCache)
 	} else {
 		shouldStart = cm.startedLeader
 		cm.leaderElectionRunnables = append(cm.leaderElectionRunnables, r)
@@ -224,20 +224,9 @@ func (cm *controllerManager) Add(r Runnable) error {
 	return nil
 }
 
+// Deprecated: use the equivalent Options field to set a field. This method will be removed in v0.10.
 func (cm *controllerManager) SetFields(i interface{}) error {
-	if _, err := inject.ConfigInto(cm.config, i); err != nil {
-		return err
-	}
-	if _, err := inject.ClientInto(cm.client, i); err != nil {
-		return err
-	}
-	if _, err := inject.APIReaderInto(cm.apiReader, i); err != nil {
-		return err
-	}
-	if _, err := inject.SchemeInto(cm.scheme, i); err != nil {
-		return err
-	}
-	if _, err := inject.CacheInto(cm.cache, i); err != nil {
+	if err := cm.cluster.SetFields(i); err != nil {
 		return err
 	}
 	if _, err := inject.InjectorInto(cm.SetFields, i); err != nil {
@@ -246,12 +235,10 @@ func (cm *controllerManager) SetFields(i interface{}) error {
 	if _, err := inject.StopChannelInto(cm.internalProceduresStop, i); err != nil {
 		return err
 	}
-	if _, err := inject.MapperInto(cm.mapper, i); err != nil {
-		return err
-	}
 	if _, err := inject.LoggerInto(cm.logger, i); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -264,8 +251,7 @@ func (cm *controllerManager) AddMetricsExtraHandler(path string, handler http.Ha
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
-	_, found := cm.metricsExtraHandlers[path]
-	if found {
+	if _, found := cm.metricsExtraHandlers[path]; found {
 		return fmt.Errorf("can't register extra handler by duplicate path %q on metrics http server", path)
 	}
 
@@ -274,7 +260,7 @@ func (cm *controllerManager) AddMetricsExtraHandler(path string, handler http.Ha
 	return nil
 }
 
-// AddHealthzCheck allows you to add Healthz checker
+// AddHealthzCheck allows you to add Healthz checker.
 func (cm *controllerManager) AddHealthzCheck(name string, check healthz.Checker) error {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
@@ -295,7 +281,7 @@ func (cm *controllerManager) AddHealthzCheck(name string, check healthz.Checker)
 	return nil
 }
 
-// AddReadyzCheck allows you to add Readyz checker
+// AddReadyzCheck allows you to add Readyz checker.
 func (cm *controllerManager) AddReadyzCheck(name string, check healthz.Checker) error {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
@@ -317,68 +303,59 @@ func (cm *controllerManager) AddReadyzCheck(name string, check healthz.Checker) 
 }
 
 func (cm *controllerManager) GetConfig() *rest.Config {
-	return cm.config
+	return cm.cluster.GetConfig()
 }
 
 func (cm *controllerManager) GetClient() client.Client {
-	return cm.client
+	return cm.cluster.GetClient()
 }
 
 func (cm *controllerManager) GetScheme() *runtime.Scheme {
-	return cm.scheme
+	return cm.cluster.GetScheme()
 }
 
 func (cm *controllerManager) GetFieldIndexer() client.FieldIndexer {
-	return cm.fieldIndexes
+	return cm.cluster.GetFieldIndexer()
 }
 
 func (cm *controllerManager) GetCache() cache.Cache {
-	return cm.cache
+	return cm.cluster.GetCache()
 }
 
 func (cm *controllerManager) GetEventRecorderFor(name string) record.EventRecorder {
-	return cm.recorderProvider.GetEventRecorderFor(name)
+	return cm.cluster.GetEventRecorderFor(name)
 }
 
 func (cm *controllerManager) GetRESTMapper() meta.RESTMapper {
-	return cm.mapper
+	return cm.cluster.GetRESTMapper()
 }
 
 func (cm *controllerManager) GetAPIReader() client.Reader {
-	return cm.apiReader
+	return cm.cluster.GetAPIReader()
 }
 
 func (cm *controllerManager) GetWebhookServer() *webhook.Server {
-	server, wasNew := func() (*webhook.Server, bool) {
-		cm.mu.Lock()
-		defer cm.mu.Unlock()
-
-		if cm.webhookServer != nil {
-			return cm.webhookServer, false
+	cm.webhookServerOnce.Do(func() {
+		if cm.webhookServer == nil {
+			cm.webhookServer = &webhook.Server{
+				Port:    cm.port,
+				Host:    cm.host,
+				CertDir: cm.certDir,
+			}
 		}
-
-		cm.webhookServer = &webhook.Server{
-			Port:    cm.port,
-			Host:    cm.host,
-			CertDir: cm.certDir,
-		}
-		return cm.webhookServer, true
-	}()
-
-	// only add the server if *we ourselves* just registered it.
-	// Add has its own lock, so just do this separately -- there shouldn't
-	// be a "race" in this lock gap because the condition is the population
-	// of cm.webhookServer, not anything to do with Add.
-	if wasNew {
-		if err := cm.Add(server); err != nil {
+		if err := cm.Add(cm.webhookServer); err != nil {
 			panic("unable to add webhook server to the controller manager")
 		}
-	}
-	return server
+	})
+	return cm.webhookServer
 }
 
 func (cm *controllerManager) GetLogger() logr.Logger {
 	return cm.logger
+}
+
+func (cm *controllerManager) GetControllerOptions() v1alpha1.ControllerConfigurationSpec {
+	return cm.controllerOptions
 }
 
 func (cm *controllerManager) serveMetrics() {
@@ -418,34 +395,35 @@ func (cm *controllerManager) serveMetrics() {
 }
 
 func (cm *controllerManager) serveHealthProbes() {
-	// TODO(hypnoglow): refactor locking to use anonymous func in the similar way
-	// it's done in serveMetrics.
-	cm.mu.Lock()
 	mux := http.NewServeMux()
-
-	if cm.readyzHandler != nil {
-		mux.Handle(cm.readinessEndpointName, http.StripPrefix(cm.readinessEndpointName, cm.readyzHandler))
-		// Append '/' suffix to handle subpaths
-		mux.Handle(cm.readinessEndpointName+"/", http.StripPrefix(cm.readinessEndpointName, cm.readyzHandler))
-	}
-	if cm.healthzHandler != nil {
-		mux.Handle(cm.livenessEndpointName, http.StripPrefix(cm.livenessEndpointName, cm.healthzHandler))
-		// Append '/' suffix to handle subpaths
-		mux.Handle(cm.livenessEndpointName+"/", http.StripPrefix(cm.livenessEndpointName, cm.healthzHandler))
-	}
-
 	server := http.Server{
 		Handler: mux,
 	}
-	// Run server
-	cm.startRunnable(RunnableFunc(func(_ context.Context) error {
-		if err := server.Serve(cm.healthProbeListener); err != nil && err != http.ErrServerClosed {
-			return err
+
+	func() {
+		cm.mu.Lock()
+		defer cm.mu.Unlock()
+
+		if cm.readyzHandler != nil {
+			mux.Handle(cm.readinessEndpointName, http.StripPrefix(cm.readinessEndpointName, cm.readyzHandler))
+			// Append '/' suffix to handle subpaths
+			mux.Handle(cm.readinessEndpointName+"/", http.StripPrefix(cm.readinessEndpointName, cm.readyzHandler))
 		}
-		return nil
-	}))
-	cm.healthzStarted = true
-	cm.mu.Unlock()
+		if cm.healthzHandler != nil {
+			mux.Handle(cm.livenessEndpointName, http.StripPrefix(cm.livenessEndpointName, cm.healthzHandler))
+			// Append '/' suffix to handle subpaths
+			mux.Handle(cm.livenessEndpointName+"/", http.StripPrefix(cm.livenessEndpointName, cm.healthzHandler))
+		}
+
+		// Run server
+		cm.startRunnable(RunnableFunc(func(_ context.Context) error {
+			if err := server.Serve(cm.healthProbeListener); err != nil && err != http.ErrServerClosed {
+				return err
+			}
+			return nil
+		}))
+		cm.healthzStarted = true
+	}()
 
 	// Shutdown the server when stop is closed
 	<-cm.internalProceduresStop
@@ -455,6 +433,9 @@ func (cm *controllerManager) serveHealthProbes() {
 }
 
 func (cm *controllerManager) Start(ctx context.Context) (err error) {
+	if err := cm.Add(cm.cluster); err != nil {
+		return fmt.Errorf("failed to add cluster to runnables: %w", err)
+	}
 	cm.internalCtx, cm.internalCancel = context.WithCancel(ctx)
 
 	// This chan indicates that stop is complete, in other words all runnables have returned or timeout on stop request
@@ -469,7 +450,7 @@ func (cm *controllerManager) Start(ctx context.Context) (err error) {
 				// Utilerrors.Aggregate allows to use errors.Is for all contained errors
 				// whereas fmt.Errorf allows wrapping at most one error which means the
 				// other one can not be found anymore.
-				err = utilerrors.NewAggregate([]error{err, stopErr})
+				err = kerrors.NewAggregate([]error{err, stopErr})
 			} else {
 				err = stopErr
 			}
@@ -505,8 +486,8 @@ func (cm *controllerManager) Start(ctx context.Context) (err error) {
 			}
 		} else {
 			// Treat not having leader election enabled the same as being elected.
+			cm.startLeaderElectionRunnables()
 			close(cm.elected)
-			go cm.startLeaderElectionRunnables()
 		}
 	}()
 
@@ -567,11 +548,16 @@ func (cm *controllerManager) engageStopProcedure(stopComplete <-chan struct{}) e
 
 // waitForRunnableToEnd blocks until all runnables ended or the
 // tearDownTimeout was reached. In the latter case, an error is returned.
-func (cm *controllerManager) waitForRunnableToEnd(shutdownCancel context.CancelFunc) error {
+func (cm *controllerManager) waitForRunnableToEnd(shutdownCancel context.CancelFunc) (retErr error) {
 	// Cancel leader election only after we waited. It will os.Exit() the app for safety.
 	defer func() {
-		if cm.leaderElectionCancel != nil {
+		if retErr == nil && cm.leaderElectionCancel != nil {
+			// After asking the context to be cancelled, make sure
+			// we wait for the leader stopped channel to be closed, otherwise
+			// we might encounter race conditions between this code
+			// and the event recorder, which is used within leader election code.
 			cm.leaderElectionCancel()
+			<-cm.leaderElectionStopped
 		}
 	}()
 
@@ -591,10 +577,27 @@ func (cm *controllerManager) startNonLeaderElectionRunnables() {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
+	// First start any webhook servers, which includes conversion, validation, and defaulting
+	// webhooks that are registered.
+	//
+	// WARNING: Webhooks MUST start before any cache is populated, otherwise there is a race condition
+	// between conversion webhooks and the cache sync (usually initial list) which causes the webhooks
+	// to never start because no cache can be populated.
+	for _, c := range cm.nonLeaderElectionRunnables {
+		if _, ok := c.(*webhook.Server); ok {
+			cm.startRunnable(c)
+		}
+	}
+
+	// Start and wait for caches.
 	cm.waitForCache(cm.internalCtx)
 
 	// Start the non-leaderelection Runnables after the cache has synced
 	for _, c := range cm.nonLeaderElectionRunnables {
+		if _, ok := c.(*webhook.Server); ok {
+			continue
+		}
+
 		// Controllers block, but we want to return an error if any have an error starting.
 		// Write any Start errors to a channel so we can return them
 		cm.startRunnable(c)
@@ -622,17 +625,15 @@ func (cm *controllerManager) waitForCache(ctx context.Context) {
 		return
 	}
 
-	// Start the Cache. Allow the function to start the cache to be mocked out for testing
-	if cm.startCache == nil {
-		cm.startCache = cm.cache.Start
+	for _, cache := range cm.caches {
+		cm.startRunnable(cache)
 	}
-	cm.startRunnable(RunnableFunc(func(ctx context.Context) error {
-		return cm.startCache(ctx)
-	}))
 
 	// Wait for the caches to sync.
 	// TODO(community): Check the return value and write a test
-	cm.cache.WaitForCacheSync(ctx)
+	for _, cache := range cm.caches {
+		cache.GetCache().WaitForCacheSync(ctx)
+	}
 	// TODO: This should be the return value of cm.cache.WaitForCacheSync but we abuse
 	// cm.started as check if we already started the cache so it must always become true.
 	// Making sure that the cache doesn't get started twice is needed to not get a "close
@@ -664,8 +665,8 @@ func (cm *controllerManager) startLeaderElection() (err error) {
 		RetryPeriod:   cm.retryPeriod,
 		Callbacks: leaderelection.LeaderCallbacks{
 			OnStartedLeading: func(_ context.Context) {
-				close(cm.elected)
 				cm.startLeaderElectionRunnables()
+				close(cm.elected)
 			},
 			OnStoppedLeading: cm.onStoppedLeading,
 		},
@@ -676,7 +677,11 @@ func (cm *controllerManager) startLeaderElection() (err error) {
 	}
 
 	// Start the leader elector process
-	go l.Run(ctx)
+	go func() {
+		l.Run(ctx)
+		<-ctx.Done()
+		close(cm.leaderElectionStopped)
+	}()
 	return nil
 }
 

@@ -119,6 +119,24 @@ func SetDefaults_Seed(obj *Seed) {
 	if obj.Spec.Settings.VerticalPodAutoscaler == nil {
 		obj.Spec.Settings.VerticalPodAutoscaler = &SeedSettingVerticalPodAutoscaler{Enabled: true}
 	}
+
+	if obj.Spec.Settings.OwnerChecks == nil {
+		obj.Spec.Settings.OwnerChecks = &SeedSettingOwnerChecks{Enabled: true}
+	}
+
+	if obj.Spec.Settings.DependencyWatchdog == nil {
+		obj.Spec.Settings.DependencyWatchdog = &SeedSettingDependencyWatchdog{}
+	}
+}
+
+// SetDefaults_SeedSettingDependencyWatchdog sets defaults for SeedSettingDependencyWatchdog objects.
+func SetDefaults_SeedSettingDependencyWatchdog(obj *SeedSettingDependencyWatchdog) {
+	if obj.Endpoint == nil {
+		obj.Endpoint = &SeedSettingDependencyWatchdogEndpoint{Enabled: true}
+	}
+	if obj.Probe == nil {
+		obj.Probe = &SeedSettingDependencyWatchdogProbe{Enabled: true}
+	}
 }
 
 // SetDefaults_Shoot sets default values for Shoot objects.
@@ -128,7 +146,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 	// k8sVersionLessThan116 will default to `false`.
 
 	if obj.Spec.Kubernetes.AllowPrivilegedContainers == nil {
-		obj.Spec.Kubernetes.AllowPrivilegedContainers = pointer.BoolPtr(true)
+		obj.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(true)
 	}
 
 	if obj.Spec.Kubernetes.KubeAPIServer == nil {
@@ -136,19 +154,22 @@ func SetDefaults_Shoot(obj *Shoot) {
 	}
 	if obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication == nil {
 		if k8sVersionLessThan116 {
-			obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.BoolPtr(true)
+			obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.Bool(true)
 		} else {
-			obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.BoolPtr(false)
+			obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.Bool(false)
 		}
 	}
 	if obj.Spec.Kubernetes.KubeAPIServer.Requests == nil {
 		obj.Spec.Kubernetes.KubeAPIServer.Requests = &KubeAPIServerRequests{}
 	}
 	if obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxNonMutatingInflight == nil {
-		obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxNonMutatingInflight = pointer.Int32Ptr(400)
+		obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxNonMutatingInflight = pointer.Int32(400)
 	}
 	if obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight == nil {
-		obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight = pointer.Int32Ptr(200)
+		obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight = pointer.Int32(200)
+	}
+	if obj.Spec.Kubernetes.KubeAPIServer.EventTTL == nil {
+		obj.Spec.Kubernetes.KubeAPIServer.EventTTL = &metav1.Duration{Duration: time.Hour}
 	}
 
 	if obj.Spec.Kubernetes.KubeControllerManager == nil {
@@ -160,6 +181,9 @@ func SetDefaults_Shoot(obj *Shoot) {
 	if obj.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout == nil {
 		obj.Spec.Kubernetes.KubeControllerManager.PodEvictionTimeout = &metav1.Duration{Duration: 2 * time.Minute}
 	}
+	if obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod == nil {
+		obj.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod = &metav1.Duration{Duration: 2 * time.Minute}
+	}
 
 	if obj.Spec.Kubernetes.KubeProxy == nil {
 		obj.Spec.Kubernetes.KubeProxy = &KubeProxyConfig{}
@@ -167,6 +191,9 @@ func SetDefaults_Shoot(obj *Shoot) {
 	if obj.Spec.Kubernetes.KubeProxy.Mode == nil {
 		defaultProxyMode := ProxyModeIPTables
 		obj.Spec.Kubernetes.KubeProxy.Mode = &defaultProxyMode
+	}
+	if obj.Spec.Kubernetes.KubeProxy.Enabled == nil {
+		obj.Spec.Kubernetes.KubeProxy.Enabled = pointer.Bool(true)
 	}
 
 	if obj.Spec.Addons == nil {
@@ -201,23 +228,27 @@ func SetDefaults_Shoot(obj *Shoot) {
 		obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
 	}
 	if obj.Spec.Kubernetes.Kubelet.FailSwapOn == nil {
-		obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.BoolPtr(true)
+		obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(true)
+	}
+	if obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent == nil {
+		obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent = pointer.Int32(50)
+	}
+	if obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent == nil {
+		obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent = pointer.Int32(40)
+	}
+	if obj.Spec.Kubernetes.Kubelet.SerializeImagePulls == nil {
+		obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = pointer.Bool(true)
 	}
 
 	var (
 		kubeReservedMemory = resource.MustParse("1Gi")
 		kubeReservedCPU    = resource.MustParse("80m")
 		kubeReservedPID    = resource.MustParse("20k")
-
-		k8sVersionGreaterEqual115, _ = versionutils.CompareVersions(obj.Spec.Kubernetes.Version, ">=", "1.15")
 	)
 
 	if obj.Spec.Kubernetes.Kubelet.KubeReserved == nil {
 		obj.Spec.Kubernetes.Kubelet.KubeReserved = &KubeletConfigReserved{Memory: &kubeReservedMemory, CPU: &kubeReservedCPU}
-
-		if k8sVersionGreaterEqual115 {
-			obj.Spec.Kubernetes.Kubelet.KubeReserved.PID = &kubeReservedPID
-		}
+		obj.Spec.Kubernetes.Kubelet.KubeReserved.PID = &kubeReservedPID
 	} else {
 		if obj.Spec.Kubernetes.Kubelet.KubeReserved.Memory == nil {
 			obj.Spec.Kubernetes.Kubelet.KubeReserved.Memory = &kubeReservedMemory
@@ -225,13 +256,36 @@ func SetDefaults_Shoot(obj *Shoot) {
 		if obj.Spec.Kubernetes.Kubelet.KubeReserved.CPU == nil {
 			obj.Spec.Kubernetes.Kubelet.KubeReserved.CPU = &kubeReservedCPU
 		}
-		if obj.Spec.Kubernetes.Kubelet.KubeReserved.PID == nil && k8sVersionGreaterEqual115 {
+		if obj.Spec.Kubernetes.Kubelet.KubeReserved.PID == nil {
 			obj.Spec.Kubernetes.Kubelet.KubeReserved.PID = &kubeReservedPID
 		}
 	}
 
 	if obj.Spec.Maintenance == nil {
 		obj.Spec.Maintenance = &Maintenance{}
+	}
+
+	if obj.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication == nil {
+		obj.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = pointer.Bool(false)
+	}
+
+	for i, worker := range obj.Spec.Provider.Workers {
+		kubernetesVersion := obj.Spec.Kubernetes.Version
+		if worker.Kubernetes != nil && worker.Kubernetes.Version != nil {
+			kubernetesVersion = *worker.Kubernetes.Version
+		}
+
+		if k8sVersionGreaterOrEqualThan122, _ := versionutils.CompareVersions(kubernetesVersion, ">=", "1.22"); !k8sVersionGreaterOrEqualThan122 {
+			// Error is ignored here because we cannot do anything meaningful with it.
+			// k8sVersionLessThan116 and k8sVersionGreaterOrEqualThan122 will default to `false`.
+			continue
+		}
+
+		if worker.CRI != nil {
+			continue
+		}
+
+		obj.Spec.Provider.Workers[i].CRI = &CRI{Name: CRINameContainerD}
 	}
 }
 
@@ -300,6 +354,38 @@ func SetDefaults_Worker(obj *Worker) {
 	}
 }
 
+// SetDefaults_ClusterAutoscaler sets default values for ClusterAutoscaler object.
+func SetDefaults_ClusterAutoscaler(obj *ClusterAutoscaler) {
+	if obj.ScaleDownDelayAfterAdd == nil {
+		obj.ScaleDownDelayAfterAdd = &metav1.Duration{Duration: 1 * time.Hour}
+	}
+	if obj.ScaleDownDelayAfterDelete == nil {
+		obj.ScaleDownDelayAfterDelete = &metav1.Duration{Duration: 0}
+	}
+	if obj.ScaleDownDelayAfterFailure == nil {
+		obj.ScaleDownDelayAfterFailure = &metav1.Duration{Duration: 3 * time.Minute}
+	}
+	if obj.ScaleDownUnneededTime == nil {
+		obj.ScaleDownUnneededTime = &metav1.Duration{Duration: 30 * time.Minute}
+	}
+	if obj.ScaleDownUtilizationThreshold == nil {
+		obj.ScaleDownUtilizationThreshold = pointer.Float64(0.5)
+	}
+	if obj.ScanInterval == nil {
+		obj.ScanInterval = &metav1.Duration{Duration: 10 * time.Second}
+	}
+	if obj.Expander == nil {
+		leastWaste := ClusterAutoscalerExpanderLeastWaste
+		obj.Expander = &leastWaste
+	}
+	if obj.MaxNodeProvisionTime == nil {
+		obj.MaxNodeProvisionTime = &metav1.Duration{Duration: 20 * time.Minute}
+	}
+	if obj.MaxGracefulTerminationSeconds == nil {
+		obj.MaxGracefulTerminationSeconds = pointer.Int32(600)
+	}
+}
+
 // SetDefaults_NginxIngress sets default values for NginxIngress objects.
 func SetDefaults_NginxIngress(obj *NginxIngress) {
 	if obj.ExternalTrafficPolicy == nil {
@@ -311,12 +397,12 @@ func SetDefaults_NginxIngress(obj *NginxIngress) {
 // SetDefaults_ControllerResource sets default values for ControllerResource objects.
 func SetDefaults_ControllerResource(obj *ControllerResource) {
 	if obj.Primary == nil {
-		obj.Primary = pointer.BoolPtr(true)
+		obj.Primary = pointer.Bool(true)
 	}
 }
 
-// SetDefaults_ControllerDeployment sets default values for ControllerDeployment objects.
-func SetDefaults_ControllerDeployment(obj *ControllerDeployment) {
+// SetDefaults_ControllerRegistrationDeployment sets default values for ControllerDeployment objects.
+func SetDefaults_ControllerRegistrationDeployment(obj *ControllerRegistrationDeployment) {
 	p := ControllerDeploymentPolicyOnDemand
 	if obj.Policy == nil {
 		obj.Policy = &p

@@ -18,12 +18,15 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	gardenseedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // GetManagedSeed gets the ManagedSeed resource for the given shoot namespace and name,
@@ -43,4 +46,33 @@ func GetManagedSeed(ctx context.Context, seedManagementClient gardenseedmanageme
 		return nil, fmt.Errorf("found more than one ManagedSeed objects for shoot %s/%s", shootNamespace, shootName)
 	}
 	return &managedSeedList.Items[0], nil
+}
+
+// GetManagedSeedWithReader gets the ManagedSeed resource for the given shoot namespace and name,
+// by searching for all ManagedSeeds in the shoot namespace that have spec.shoot.name set to the shoot name.
+// If no such ManagedSeeds are found, nil is returned.
+func GetManagedSeedWithReader(ctx context.Context, r client.Reader, shootNamespace, shootName string) (*seedmanagementv1alpha1.ManagedSeed, error) {
+	managedSeedList := &seedmanagementv1alpha1.ManagedSeedList{}
+	if err := r.List(ctx, managedSeedList, client.InNamespace(shootNamespace), client.MatchingFields{seedmanagement.ManagedSeedShootName: shootName}); err != nil {
+		return nil, err
+	}
+	if len(managedSeedList.Items) == 0 {
+		return nil, nil
+	}
+	if len(managedSeedList.Items) > 1 {
+		return nil, fmt.Errorf("found more than one ManagedSeed objects for shoot %s/%s", shootNamespace, shootName)
+	}
+	return &managedSeedList.Items[0], nil
+}
+
+// GetManagedSeedByName tries to reads a ManagedSeed in the garden namespace. If it's not found then `nil` is returned.
+func GetManagedSeedByName(ctx context.Context, client client.Client, name string) (*seedmanagementv1alpha1.ManagedSeed, error) {
+	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
+	if err := client.Get(ctx, Key(constants.GardenNamespace, name), managedSeed); err != nil {
+		if errors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return managedSeed, nil
 }

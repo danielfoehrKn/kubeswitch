@@ -15,7 +15,13 @@
 package v1alpha1
 
 import (
+	"fmt"
 	"time"
+
+	"github.com/gardener/gardener/pkg/logger"
+
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -51,6 +57,9 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 	if obj.Controllers.BackupEntry == nil {
 		obj.Controllers.BackupEntry = &BackupEntryControllerConfiguration{}
 	}
+	if obj.Controllers.Bastion == nil {
+		obj.Controllers.Bastion = &BastionControllerConfiguration{}
+	}
 	if obj.Controllers.ControllerInstallation == nil {
 		obj.Controllers.ControllerInstallation = &ControllerInstallationControllerConfiguration{}
 	}
@@ -80,12 +89,17 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 	}
 
 	if obj.LeaderElection == nil {
-		obj.LeaderElection = &LeaderElectionConfiguration{}
+		obj.LeaderElection = &componentbaseconfigv1alpha1.LeaderElectionConfiguration{}
 	}
 
 	if obj.LogLevel == nil {
 		v := DefaultLogLevel
 		obj.LogLevel = &v
+	}
+
+	if obj.LogFormat == nil {
+		v := logger.FormatJSON
+		obj.LogFormat = &v
 	}
 
 	if obj.KubernetesLogLevel == nil {
@@ -103,8 +117,33 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 		obj.Server.HTTPS.Port = 2720
 	}
 
+	// TODO: consider enabling profiling by default (like in k8s components)
+
 	if obj.SNI == nil {
 		obj.SNI = &SNI{}
+	}
+
+	var defaultSVCName = DefaultSNIIngresServiceName
+	for i, handler := range obj.ExposureClassHandlers {
+		if obj.ExposureClassHandlers[i].SNI == nil {
+			obj.ExposureClassHandlers[i].SNI = &SNI{Ingress: &SNIIngress{}}
+		}
+		if obj.ExposureClassHandlers[i].SNI.Ingress == nil {
+			obj.ExposureClassHandlers[i].SNI.Ingress = &SNIIngress{}
+		}
+		if obj.ExposureClassHandlers[i].SNI.Ingress.Namespace == nil {
+			namespaceName := fmt.Sprintf("istio-ingress-handler-%s", handler.Name)
+			obj.ExposureClassHandlers[i].SNI.Ingress.Namespace = &namespaceName
+		}
+		if obj.ExposureClassHandlers[i].SNI.Ingress.ServiceName == nil {
+			obj.ExposureClassHandlers[i].SNI.Ingress.ServiceName = &defaultSVCName
+		}
+		if len(obj.ExposureClassHandlers[i].SNI.Ingress.Labels) == 0 {
+			obj.ExposureClassHandlers[i].SNI.Ingress.Labels = map[string]string{
+				v1beta1constants.LabelApp:    DefaultIngressGatewayAppLabelValue,
+				v1alpha1constants.GardenRole: v1alpha1constants.GardenRoleExposureClassHandler,
+			}
+		}
 	}
 }
 
@@ -119,23 +158,18 @@ func SetDefaults_ClientConnectionConfiguration(obj *componentbaseconfigv1alpha1.
 }
 
 // SetDefaults_LeaderElectionConfiguration sets defaults for the leader election of the gardenlet.
-func SetDefaults_LeaderElectionConfiguration(obj *LeaderElectionConfiguration) {
+func SetDefaults_LeaderElectionConfiguration(obj *componentbaseconfigv1alpha1.LeaderElectionConfiguration) {
 	if obj.ResourceLock == "" {
-		// TODO: change default to leases after a few releases
-		// make sure, we had configmapsleases as default for a few releases before migrating to leases to ensure,
-		// all users had at least one version running with the hybrid lock to avoid split-brain scenarios when migrating.
-		obj.ResourceLock = resourcelock.ConfigMapsLeasesResourceLock
+		obj.ResourceLock = resourcelock.LeasesResourceLock
 	}
 
-	componentbaseconfigv1alpha1.RecommendedDefaultLeaderElectionConfiguration(&obj.LeaderElectionConfiguration)
+	componentbaseconfigv1alpha1.RecommendedDefaultLeaderElectionConfiguration(obj)
 
-	if obj.LockObjectNamespace == nil {
-		v := GardenletDefaultLockObjectNamespace
-		obj.LockObjectNamespace = &v
+	if obj.ResourceNamespace == "" {
+		obj.ResourceNamespace = GardenletDefaultLockObjectNamespace
 	}
-	if obj.LockObjectName == nil {
-		v := GardenletDefaultLockObjectName
-		obj.LockObjectName = &v
+	if obj.ResourceName == "" {
+		obj.ResourceName = GardenletDefaultLockObjectName
 	}
 }
 
@@ -157,6 +191,14 @@ func SetDefaults_BackupEntryControllerConfiguration(obj *BackupEntryControllerCo
 	if obj.DeletionGracePeriodHours == nil || *obj.DeletionGracePeriodHours < 0 {
 		v := DefaultBackupEntryDeletionGracePeriodHours
 		obj.DeletionGracePeriodHours = &v
+	}
+}
+
+// SetDefaults_BastionControllerConfiguration sets defaults for the backup bucket controller.
+func SetDefaults_BastionControllerConfiguration(obj *BastionControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		v := DefaultControllerConcurrentSyncs
+		obj.ConcurrentSyncs = &v
 	}
 }
 
@@ -232,7 +274,7 @@ func SetDefaults_ShootControllerConfiguration(obj *ShootControllerConfiguration)
 	}
 
 	if obj.DNSEntryTTLSeconds == nil {
-		obj.DNSEntryTTLSeconds = pointer.Int64Ptr(120)
+		obj.DNSEntryTTLSeconds = pointer.Int64(120)
 	}
 }
 
@@ -293,6 +335,16 @@ func SetDefaults_ManagedSeedControllerConfiguration(obj *ManagedSeedControllerCo
 		obj.ConcurrentSyncs = &v
 	}
 
+	if obj.SyncPeriod == nil {
+		v := metav1.Duration{Duration: 1 * time.Hour}
+		obj.SyncPeriod = &v
+	}
+
+	if obj.WaitSyncPeriod == nil {
+		v := metav1.Duration{Duration: 15 * time.Second}
+		obj.WaitSyncPeriod = &v
+	}
+
 	if obj.SyncJitterPeriod == nil {
 		v := metav1.Duration{Duration: 5 * time.Minute}
 		obj.SyncJitterPeriod = &v
@@ -322,6 +374,9 @@ func SetDefaults_SNIIngress(obj *SNIIngress) {
 	}
 
 	if obj.Labels == nil {
-		obj.Labels = map[string]string{"istio": "ingressgateway"}
+		obj.Labels = map[string]string{
+			v1beta1constants.LabelApp: DefaultIngressGatewayAppLabelValue,
+			"istio":                   "ingressgateway",
+		}
 	}
 }

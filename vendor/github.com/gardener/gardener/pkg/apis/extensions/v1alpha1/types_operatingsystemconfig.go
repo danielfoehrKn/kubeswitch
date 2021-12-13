@@ -150,6 +150,10 @@ type FileContent struct {
 	// Inline is a struct that contains information about the inlined data.
 	// +optional
 	Inline *FileContentInline `json:"inline,omitempty"`
+	// TransmitUnencoded set to true will ensure that the os-extension does not encode the file content when sent to the node.
+	// This for example can be used to manipulate the clear-text content before it reaches the node.
+	// +optional
+	TransmitUnencoded *bool `json:"transmitUnencoded,omitempty"`
 }
 
 // FileContentSecretRef contains keys for referencing a file content's data from a secret in the same namespace.
@@ -187,14 +191,14 @@ type OperatingSystemConfigStatus struct {
 	Units []string `json:"units,omitempty"`
 }
 
-// CloudConfig is a structure for containing the generated output for the given operating system
+// CloudConfig contains the generated output for the given operating system
 // config spec. It contains a reference to a secret as the result may contain confidential data.
 type CloudConfig struct {
 	// SecretRef is a reference to a secret that contains the actual result of the generated cloud config.
 	SecretRef corev1.SecretReference `json:"secretRef"`
 }
 
-// OperatingSystemConfigPurpose  is a string alias.
+// OperatingSystemConfigPurpose is a string alias.
 type OperatingSystemConfigPurpose string
 
 const (
@@ -212,9 +216,9 @@ const (
 	OperatingSystemConfigSecretDataKey = "cloud_config"
 )
 
-// CRI config is a structure contains configurations of the CRI library
+// CRIConfig contains configurations of the CRI library.
 type CRIConfig struct {
-	// Name is a mandatory string containing the name of the CRI library.
+	// Name is a mandatory string containing the name of the CRI library. Supported values are `docker` and `containerd`.
 	Name CRIName `json:"name"`
 }
 
@@ -230,3 +234,15 @@ const (
 
 // ContainerDRuntimeContainersBinFolder is the folder where Container Runtime binaries should be saved for ContainerD usage
 const ContainerDRuntimeContainersBinFolder = "/var/bin/containerruntimes"
+
+// FileCodecID is the id of a FileCodec for cloud-init scripts.
+type FileCodecID string
+
+const (
+	// B64FileCodecID is the base64 file codec id.
+	B64FileCodecID FileCodecID = "b64"
+	// GZIPFileCodecID is the gzip file codec id.
+	GZIPFileCodecID FileCodecID = "gzip"
+	// GZIPB64FileCodecID is the gzip combined with base64 codec id.
+	GZIPB64FileCodecID FileCodecID = "gzip+b64"
+)

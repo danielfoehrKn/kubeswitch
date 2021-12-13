@@ -17,19 +17,11 @@ package kubernetes
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/chartrenderer"
-	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	gardencorescheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
-	gardenextensionsscheme "github.com/gardener/gardener/pkg/client/extensions/clientset/versioned/scheme"
-	gardenseedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
-	gardenseedmanagementscheme "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/scheme"
-
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
-	resourcesscheme "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
-	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -38,14 +30,22 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/version"
-	autoscalingscheme "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
-	corescheme "k8s.io/client-go/kubernetes/scheme"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	apiregistrationclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 	apiregistrationscheme "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/scheme"
+	metricsv1beta1 "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardenercoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	gardenoperationsinstall "github.com/gardener/gardener/pkg/apis/operations/install"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	gardenseedmanagementinstall "github.com/gardener/gardener/pkg/apis/seedmanagement/install"
+	gardensettingsinstall "github.com/gardener/gardener/pkg/apis/settings/install"
+	"github.com/gardener/gardener/pkg/chartrenderer"
 )
 
 var (
@@ -69,6 +69,9 @@ var (
 		client.GracePeriodSeconds(0),
 	}
 
+	// GardenCodec is a codec factory using the Garden scheme.
+	GardenCodec = serializer.NewCodecFactory(GardenScheme)
+
 	// SeedSerializer is a YAML serializer using the Seed scheme.
 	SeedSerializer = json.NewSerializerWithOptions(json.DefaultMetaFactory, SeedScheme, SeedScheme, json.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
 	// SeedCodec is a codec factory using the Seed scheme.
@@ -91,36 +94,40 @@ func DefaultUpdateOptions() metav1.UpdateOptions { return metav1.UpdateOptions{}
 
 func init() {
 	gardenSchemeBuilder := runtime.NewSchemeBuilder(
-		corescheme.AddToScheme,
-		gardencorescheme.AddToScheme,
-		gardenseedmanagementscheme.AddToScheme,
+		kubernetesscheme.AddToScheme,
+		gardenercoreinstall.AddToScheme,
+		gardenseedmanagementinstall.AddToScheme,
+		gardensettingsinstall.AddToScheme,
+		gardenoperationsinstall.AddToScheme,
+		apiregistrationscheme.AddToScheme,
 	)
 	utilruntime.Must(gardenSchemeBuilder.AddToScheme(GardenScheme))
 
 	seedSchemeBuilder := runtime.NewSchemeBuilder(
-		corescheme.AddToScheme,
+		kubernetesscheme.AddToScheme,
 		dnsv1alpha1.AddToScheme,
-		gardenextensionsscheme.AddToScheme,
-		resourcesscheme.AddToScheme,
-		autoscalingscheme.AddToScheme,
+		extensionsv1alpha1.AddToScheme,
+		resourcesv1alpha1.AddToScheme,
+		autoscalingv1beta2.AddToScheme,
 		hvpav1alpha1.AddToScheme,
 		druidv1alpha1.AddToScheme,
 		apiextensionsscheme.AddToScheme,
 		istionetworkingv1beta1.AddToScheme,
+		istionetworkingv1alpha3.AddToScheme,
 	)
 	utilruntime.Must(seedSchemeBuilder.AddToScheme(SeedScheme))
 
 	shootSchemeBuilder := runtime.NewSchemeBuilder(
-		corescheme.AddToScheme,
+		kubernetesscheme.AddToScheme,
 		apiextensionsscheme.AddToScheme,
 		apiregistrationscheme.AddToScheme,
-		autoscalingscheme.AddToScheme,
+		autoscalingv1beta2.AddToScheme,
+		metricsv1beta1.AddToScheme,
 	)
 	utilruntime.Must(shootSchemeBuilder.AddToScheme(ShootScheme))
 
 	plantSchemeBuilder := runtime.NewSchemeBuilder(
-		corescheme.AddToScheme,
-		gardencorescheme.AddToScheme,
+		kubernetesscheme.AddToScheme,
 	)
 	utilruntime.Must(plantSchemeBuilder.AddToScheme(PlantScheme))
 }
@@ -146,11 +153,12 @@ type Interface interface {
 	// a cache, which uses SharedIndexInformers to keep up-to-date.
 	Client() client.Client
 	// APIReader returns a client.Reader that directly reads from the API server.
+	// Wherever possible, try to avoid reading directly from the API server and instead rely on the cache. Some ideas:
+	// If you want to avoid conflicts, try using patch requests that don't require optimistic locking instead of reading
+	// from the APIReader. If you need to make sure, that you're not reading stale data (e.g. a previous update is
+	// observed), use some mechanism that can detect/tolerate stale reads (e.g. add a timestamp annotation during the
+	// write operation and wait until you see it in the cache).
 	APIReader() client.Reader
-	// DirectClient returns a controller-runtime client, which can be used to talk to the API server directly
-	// (without using a cache).
-	// Deprecated: used APIReader instead, if the controller can't tolerate stale reads.
-	DirectClient() client.Client
 	// Cache returns the ClientSet's controller-runtime cache. It can be used to get Informers for arbitrary objects.
 	Cache() cache.Cache
 
@@ -162,14 +170,6 @@ type Interface interface {
 	ChartApplier() ChartApplier
 
 	Kubernetes() kubernetesclientset.Interface
-	GardenCore() gardencoreclientset.Interface
-	GardenSeedManagement() gardenseedmanagementclientset.Interface
-	APIExtension() apiextensionsclientset.Interface
-	APIRegistration() apiregistrationclientset.Interface
-
-	// Deprecated: Use `Client()` and utils instead.
-	ForwardPodPort(string, string, int, int) (chan struct{}, error)
-	CheckForwardPodPort(string, string, int, int) error
 
 	// Version returns the server version of the targeted Kubernetes cluster.
 	Version() string

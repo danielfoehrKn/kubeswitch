@@ -100,7 +100,8 @@ func (b *defaultConditionBuilder) WithNowFunc(now func() metav1.Time) ConditionB
 // Build creates the condition and returns if there are modifications with the OldCondition.
 // If OldCondition is provided:
 // - Any changes to status set the `LastTransitionTime`
-// - Any updates to the message or the reason cause set `LastUpdateTime` to the current time.
+// - Any updates to the message, reason or the codes cause set `LastUpdateTime` to the current time.
+// - The error codes will not be transferred from the old to the new condition
 func (b *defaultConditionBuilder) Build() (new gardencorev1alpha1.Condition, updated bool) {
 	var (
 		now       = b.nowFunc()
@@ -137,17 +138,15 @@ func (b *defaultConditionBuilder) Build() (new gardencorev1alpha1.Condition, upd
 		new.Message = "The condition has been initialized but its semantic check has not been performed yet."
 	}
 
-	if b.codes != nil {
-		new.Codes = b.codes
-	} else if b.codes == nil && b.old.Codes == nil {
-		new.Codes = nil
-	}
+	new.Codes = b.codes
 
 	if new.Status != b.old.Status {
 		new.LastTransitionTime = now
 	}
 
-	if new.Reason != b.old.Reason || new.Message != b.old.Message {
+	if new.Reason != b.old.Reason ||
+		new.Message != b.old.Message ||
+		!apiequality.Semantic.DeepEqual(new.Codes, b.old.Codes) {
 		new.LastUpdateTime = now
 	}
 

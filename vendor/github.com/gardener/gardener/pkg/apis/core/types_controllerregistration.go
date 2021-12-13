@@ -16,7 +16,6 @@ package core
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -49,7 +48,7 @@ type ControllerRegistrationSpec struct {
 	// (aws-route53, gcp, auditlog, ...).
 	Resources []ControllerResource
 	// Deployment contains information for how this controller is deployed.
-	Deployment *ControllerDeployment
+	Deployment *ControllerRegistrationDeployment
 }
 
 // ControllerResource is a combination of a kind (DNSProvider, Infrastructure, Generic, ...) and the actual type for this
@@ -69,18 +68,22 @@ type ControllerResource struct {
 	Primary *bool
 }
 
-// ControllerDeployment contains information for how this controller is deployed.
-type ControllerDeployment struct {
-	// Type is the deployment type.
-	Type string
-	// ProviderConfig contains type-specific configuration.
-	ProviderConfig *runtime.RawExtension
+// DeploymentRef contains information about `ControllerDeployment` references.
+type DeploymentRef struct {
+	// Name is the name of the `ControllerDeployment` that is being referred to.
+	Name string
+}
+
+// ControllerRegistrationDeployment contains information for how this controller is deployed.
+type ControllerRegistrationDeployment struct {
 	// Policy controls how the controller is deployed. It defaults to 'OnDemand'.
 	Policy *ControllerDeploymentPolicy
 	// SeedSelector contains an optional label selector for seeds. Only if the labels match then this controller will be
 	// considered for a deployment.
 	// An empty list means that all seeds are selected.
 	SeedSelector *metav1.LabelSelector
+	// DeploymentRefs holds references to `ControllerDeployments`. Only one element is support now.
+	DeploymentRefs []DeploymentRef
 }
 
 // ControllerDeploymentPolicy is a string alias.

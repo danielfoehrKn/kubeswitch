@@ -26,9 +26,9 @@ import (
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
-	"github.com/pkg/errors"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
@@ -88,19 +88,16 @@ func GetOrInitCondition(conditions []gardencorev1alpha1.Condition, conditionType
 
 // UpdatedCondition updates the properties of one specific condition.
 func UpdatedCondition(condition gardencorev1alpha1.Condition, status gardencorev1alpha1.ConditionStatus, reason, message string, codes ...gardencorev1alpha1.ErrorCode) gardencorev1alpha1.Condition {
-	newCondition := gardencorev1alpha1.Condition{
-		Type:               condition.Type,
-		Status:             status,
-		Reason:             reason,
-		Message:            message,
-		LastTransitionTime: condition.LastTransitionTime,
-		LastUpdateTime:     Now(),
-		Codes:              codes,
-	}
+	builder, err := NewConditionBuilder(condition.Type)
+	utilruntime.Must(err)
+	newCondition, _ := builder.
+		WithOldCondition(condition).
+		WithStatus(status).
+		WithReason(reason).
+		WithMessage(message).
+		WithCodes(codes...).
+		Build()
 
-	if condition.Status != status {
-		newCondition.LastTransitionTime = Now()
-	}
 	return newCondition
 }
 
@@ -205,6 +202,7 @@ func TaintsHave(taints []gardencorev1alpha1.SeedTaint, key string) bool {
 	return false
 }
 
+// ShootedSeed contains the configuration of a shooted seed.
 type ShootedSeed struct {
 	DisableDNS                     *bool
 	DisableCapacityReservation     *bool
@@ -220,11 +218,13 @@ type ShootedSeed struct {
 	WithSecretRef                  bool
 }
 
+// ShootedSeedAPIServer contains the configuration of a shooted seed API server.
 type ShootedSeedAPIServer struct {
 	Replicas   *int32
 	Autoscaler *ShootedSeedAPIServerAutoscaler
 }
 
+// ShootedSeedAPIServerAutoscaler contains the configuration of a shooted seed API server autoscaler.
 type ShootedSeedAPIServerAutoscaler struct {
 	MinReplicas *int32
 	MaxReplicas int32
@@ -761,7 +761,7 @@ func WrapWithLastError(err error, lastError *gardencorev1alpha1.LastError) error
 	if err == nil || lastError == nil {
 		return err
 	}
-	return errors.Wrapf(err, "last error: %s", lastError.Description)
+	return fmt.Errorf("last error: %w: %s", err, lastError.Description)
 }
 
 // IsAPIServerExposureManaged returns true, if the Object is managed by Gardener for API server exposure.

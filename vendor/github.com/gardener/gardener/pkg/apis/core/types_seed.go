@@ -81,6 +81,7 @@ type SeedSpec struct {
 	Ingress *Ingress
 }
 
+// GetProviderType gets the type of the provider.
 func (s *Seed) GetProviderType() string {
 	return s.Spec.Provider.Type
 }
@@ -103,6 +104,8 @@ type SeedStatus struct {
 	// Allocatable represents the resources of a seed that are available for scheduling.
 	// Defaults to Capacity.
 	Allocatable corev1.ResourceList
+	// ClientCertificateExpirationTimestamp is the timestamp at which gardenlet's client certificate expires.
+	ClientCertificateExpirationTimestamp *metav1.Time
 }
 
 // SeedBackup contains the object store configuration for backups for shoot (currently only etcd).
@@ -199,16 +202,18 @@ type SeedSettings struct {
 	Scheduling *SeedSettingScheduling
 	// ShootDNS controls the shoot DNS settings for the seed.
 	ShootDNS *SeedSettingShootDNS
-	// LoadBalancerServices controls certain settings for services of type load balancer that are created in the
-	// seed.
+	// LoadBalancerServices controls certain settings for services of type load balancer that are created in the seed.
 	LoadBalancerServices *SeedSettingLoadBalancerServices
 	// VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.
 	VerticalPodAutoscaler *SeedSettingVerticalPodAutoscaler
+	// SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
+	OwnerChecks *SeedSettingOwnerChecks
+	// DependencyWatchdog controls certain settings for the dependency-watchdog components deployed in the seed.
+	DependencyWatchdog *SeedSettingDependencyWatchdog
 }
 
 // SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the
-// seed. When enabled then this is done via PodPriority and requires the Seed cluster to have Kubernetes version 1.11
-// or the PodPriority feature gate as well as the scheduling.k8s.io/v1alpha1 API group enabled.
+// seed.
 type SeedSettingExcessCapacityReservation struct {
 	// Enabled controls whether the excess capacity reservation should be enabled.
 	Enabled bool
@@ -242,6 +247,37 @@ type SeedSettingVerticalPodAutoscaler struct {
 	// Enabled controls whether the VPA components shall be deployed into the garden namespace in the seed cluster. It
 	// is enabled by default because Gardener heavily relies on a VPA being deployed. You should only disable this if
 	// your seed cluster already has another, manually/custom managed VPA deployment.
+	Enabled bool
+}
+
+// SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
+type SeedSettingOwnerChecks struct {
+	// Enabled controls whether owner checks are enabled for shoots scheduled on this seed. It
+	// is enabled by default because it is a prerequisite for control plane migration.
+	Enabled bool
+}
+
+// SeedSettingDependencyWatchdog controls the dependency-watchdog settings for the seed.
+type SeedSettingDependencyWatchdog struct {
+	// Endpoint controls the endpoint settings for the dependency-watchdog for the seed.
+	Endpoint *SeedSettingDependencyWatchdogEndpoint
+	// Probe controls the probe settings for the dependency-watchdog for the seed.
+	Probe *SeedSettingDependencyWatchdogProbe
+}
+
+// SeedSettingDependencyWatchdogEndpoint controls the endpoint settings for the dependency-watchdog for the seed.
+type SeedSettingDependencyWatchdogEndpoint struct {
+	// Enabled controls whether the endpoint controller of the dependency-watchdog should be enabled. This controller
+	// helps to alleviate the delay where control plane components remain unavailable by finding the respective pods in
+	// CrashLoopBackoff status and restarting them once their dependants become ready and available again.
+	Enabled bool
+}
+
+// SeedSettingDependencyWatchdogProbe controls the probe settings for the dependency-watchdog for the seed.
+type SeedSettingDependencyWatchdogProbe struct {
+	// Enabled controls whether the probe controller of the dependency-watchdog should be enabled. This controller
+	// scales down the kube-controller-manager of shoot clusters in case their respective kube-apiserver is not
+	// reachable via its external ingress in order to avoid melt-down situations.
 	Enabled bool
 }
 

@@ -53,8 +53,12 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&CloudProfileList{},
 		&ControllerRegistration{},
 		&ControllerRegistrationList{},
+		&ControllerDeployment{},
+		&ControllerDeploymentList{},
 		&ControllerInstallation{},
 		&ControllerInstallationList{},
+		&ExposureClass{},
+		&ExposureClassList{},
 		&Plant{},
 		&PlantList{},
 		&Project{},
@@ -69,6 +73,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ShootStateList{},
 		&Shoot{},
 		&ShootList{},
+		&ShootExtensionStatus{},
+		&ShootExtensionStatusList{},
 	)
 	return nil
 }

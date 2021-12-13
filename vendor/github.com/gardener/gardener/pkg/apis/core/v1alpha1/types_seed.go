@@ -104,6 +104,9 @@ type SeedStatus struct {
 	// ClusterIdentity is the identity of the Seed cluster
 	// +optional
 	ClusterIdentity *string `json:"clusterIdentity,omitempty" protobuf:"bytes,5,opt,name=clusterIdentity"`
+	// ClientCertificateExpirationTimestamp is the timestamp at which gardenlet's client certificate expires.
+	// +optional
+	ClientCertificateExpirationTimestamp *metav1.Time `json:"clientCertificateExpirationTimestamp,omitempty" protobuf:"bytes,6,opt,name=clientCertificateExpirationTimestamp"`
 }
 
 // SeedBackup contains the object store configuration for backups for shoot (currently only etcd).
@@ -212,18 +215,21 @@ type SeedSettings struct {
 	// ShootDNS controls the shoot DNS settings for the seed.
 	// +optional
 	ShootDNS *SeedSettingShootDNS `json:"shootDNS,omitempty" protobuf:"bytes,3,opt,name=shootDNS"`
-	// LoadBalancerServices controls certain settings for services of type load balancer that are created in the
-	// seed.
+	// LoadBalancerServices controls certain settings for services of type load balancer that are created in the seed.
 	// +optional
 	LoadBalancerServices *SeedSettingLoadBalancerServices `json:"loadBalancerServices,omitempty" protobuf:"bytes,4,opt,name=loadBalancerServices"`
 	// VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.
 	// +optional
 	VerticalPodAutoscaler *SeedSettingVerticalPodAutoscaler `json:"verticalPodAutoscaler,omitempty" protobuf:"bytes,5,opt,name=verticalPodAutoscaler"`
+	// SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
+	// +optional
+	OwnerChecks *SeedSettingOwnerChecks `json:"ownerChecks,omitempty" protobuf:"bytes,6,opt,name=ownerChecks"`
+	// DependencyWatchdog controls certain settings for the dependency-watchdog components deployed in the seed.
+	// +optional
+	DependencyWatchdog *SeedSettingDependencyWatchdog `json:"dependencyWatchdog,omitempty" protobuf:"bytes,7,opt,name=dependencyWatchdog"`
 }
 
-// SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the
-// seed. When enabled then this is done via PodPriority and requires the Seed cluster to have Kubernetes version 1.11
-// or the PodPriority feature gate as well as the scheduling.k8s.io/v1alpha1 API group enabled.
+// SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the seed.
 type SeedSettingExcessCapacityReservation struct {
 	// Enabled controls whether the excess capacity reservation should be enabled.
 	Enabled bool `json:"enabled" protobuf:"bytes,1,opt,name=enabled"`
@@ -258,6 +264,39 @@ type SeedSettingVerticalPodAutoscaler struct {
 	// Enabled controls whether the VPA components shall be deployed into the garden namespace in the seed cluster. It
 	// is enabled by default because Gardener heavily relies on a VPA being deployed. You should only disable this if
 	// your seed cluster already has another, manually/custom managed VPA deployment.
+	Enabled bool `json:"enabled" protobuf:"bytes,1,opt,name=enabled"`
+}
+
+// SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
+type SeedSettingOwnerChecks struct {
+	// Enabled controls whether owner checks are enabled for shoots scheduled on this seed. It
+	// is enabled by default because it is a prerequisite for control plane migration.
+	Enabled bool `json:"enabled" protobuf:"bytes,1,opt,name=enabled"`
+}
+
+// SeedSettingDependencyWatchdog controls the dependency-watchdog settings for the seed.
+type SeedSettingDependencyWatchdog struct {
+	// Endpoint controls the endpoint settings for the dependency-watchdog for the seed.
+	// +optional
+	Endpoint *SeedSettingDependencyWatchdogEndpoint `json:"endpoint,omitempty" protobuf:"bytes,1,opt,name=endpoint"`
+	// Probe controls the probe settings for the dependency-watchdog for the seed.
+	// +optional
+	Probe *SeedSettingDependencyWatchdogProbe `json:"probe,omitempty" protobuf:"bytes,2,opt,name=probe"`
+}
+
+// SeedSettingDependencyWatchdogEndpoint controls the endpoint settings for the dependency-watchdog for the seed.
+type SeedSettingDependencyWatchdogEndpoint struct {
+	// Enabled controls whether the endpoint controller of the dependency-watchdog should be enabled. This controller
+	// helps to alleviate the delay where control plane components remain unavailable by finding the respective pods in
+	// CrashLoopBackoff status and restarting them once their dependants become ready and available again.
+	Enabled bool `json:"enabled" protobuf:"bytes,1,opt,name=enabled"`
+}
+
+// SeedSettingDependencyWatchdogProbe controls the probe settings for the dependency-watchdog for the seed.
+type SeedSettingDependencyWatchdogProbe struct {
+	// Enabled controls whether the probe controller of the dependency-watchdog should be enabled. This controller
+	// scales down the kube-controller-manager of shoot clusters in case their respective kube-apiserver is not
+	// reachable via its external ingress in order to avoid melt-down situations.
 	Enabled bool `json:"enabled" protobuf:"bytes,1,opt,name=enabled"`
 }
 

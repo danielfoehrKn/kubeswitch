@@ -71,6 +71,7 @@ type CloudProfileSpec struct {
 	VolumeTypes []VolumeType
 }
 
+// GetProviderType gets the type of the provider.
 func (c *CloudProfile) GetProviderType() string {
 	return c.Spec.Type
 }
@@ -78,7 +79,7 @@ func (c *CloudProfile) GetProviderType() string {
 // SeedSelector contains constraints for selecting seed to be usable for shoots using a profile
 type SeedSelector struct {
 	// LabelSelector is optional and can be used to select seeds by their label settings
-	*metav1.LabelSelector
+	metav1.LabelSelector
 	// ProviderTypes contains a list of allowed provider types used by the Gardener scheduler to restricting seeds by
 	// their provider type and enable cross-provider scheduling.
 	// By default, Shoots are only scheduled on Seeds having the same provider type.
@@ -137,9 +138,12 @@ type MachineTypeStorage struct {
 	// Class is the class of the storage type.
 	Class string
 	// StorageSize is the storage size.
-	StorageSize resource.Quantity
+	StorageSize *resource.Quantity
 	// Type is the type of the storage.
 	Type string
+	// MinSize is the minimal supported storage size.
+	// This overrides any other common minimum size configuration in the `spec.volumeTypes[*].minSize`.
+	MinSize *resource.Quantity
 }
 
 // Region contains certain properties of a region.
@@ -172,6 +176,8 @@ type VolumeType struct {
 	Name string
 	// Usable defines if the volume type can be used for shoot clusters.
 	Usable *bool
+	// MinSize is the minimal supported storage size.
+	MinSize *resource.Quantity
 }
 
 const (
@@ -181,7 +187,7 @@ const (
 	VolumeClassPremium string = "premium"
 )
 
-// VersionClassification is the logical state of a version according to https://github.com/gardener/gardener/blob/master/docs/operations/versioning.md
+// VersionClassification is the logical state of a version.
 type VersionClassification string
 
 const (
@@ -189,7 +195,7 @@ const (
 	// ClassificationPreview versions will not be considered for automatic Kubernetes and Machine Image patch version updates.
 	ClassificationPreview VersionClassification = "preview"
 	// ClassificationSupported indicates that a patch version is the recommended version for a shoot.
-	// Using VersionMaintenance (see: https://github.com/gardener/gardener/docs/operation/versioning.md) there is one supported version per maintained minor version.
+	// Only one "supported" version is allowed per minor version.
 	// Supported versions are eligible for the automated Kubernetes and Machine image patch version update for shoot clusters in Gardener.
 	ClassificationSupported VersionClassification = "supported"
 	// ClassificationDeprecated indicates that a patch version should not be used anymore, should be updated to a new version

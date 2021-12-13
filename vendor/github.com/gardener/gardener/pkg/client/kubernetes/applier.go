@@ -54,7 +54,7 @@ func NewApplierForConfig(config *rest.Config) (Applier, error) {
 		return nil, err
 	}
 
-	c, err := NewDirectClient(config, opts)
+	c, err := client.New(config, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +218,9 @@ var (
 		},
 		{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}: func(newObj, oldObj *unstructured.Unstructured) {
 			// Never override the status of VPA resources
-			newObj.Object["status"] = oldObj.Object["status"]
+			if oldStatus := oldObj.Object["status"]; oldStatus != nil {
+				newObj.Object["status"] = oldStatus
+			}
 		},
 	}
 

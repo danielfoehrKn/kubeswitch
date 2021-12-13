@@ -27,8 +27,10 @@ import (
 )
 
 // +genclient
+// +genclient:method=CreateAdminKubeconfigRequest,verb=create,subresource=adminkubeconfig,input=github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.AdminKubeconfigRequest,result=github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.AdminKubeconfigRequest
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// Shoot represents a Shoot cluster created and managed by Gardener.
 type Shoot struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
@@ -105,6 +107,9 @@ type ShootSpec struct {
 	// +patchStrategy=merge
 	// +optional
 	Tolerations []Toleration `json:"tolerations,omitempty" patchStrategy:"merge" patchMergeKey:"key" protobuf:"bytes,17,rep,name=tolerations"`
+	// ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.
+	// +optional
+	ExposureClassName *string `json:"exposureClassName,omitempty" protobuf:"bytes,18,opt,name=exposureClassName"`
 }
 
 // ShootStatus holds the most recently observed status of the Shoot cluster.
@@ -153,6 +158,19 @@ type ShootStatus struct {
 	// ClusterIdentity is the identity of the Shoot cluster
 	// +optional
 	ClusterIdentity *string `json:"clusterIdentity,omitempty" protobuf:"bytes,13,opt,name=clusterIdentity"`
+	// List of addresses on which the Kube API server can be reached.
+	// +optional
+	// +patchMergeKey=name
+	// +patchStrategy=merge
+	AdvertisedAddresses []ShootAdvertisedAddress `json:"advertisedAddresses,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,14,rep,name=advertisedAddresses"`
+}
+
+// ShootAdvertisedAddress contains information for the shoot's Kube API server.
+type ShootAdvertisedAddress struct {
+	// Name of the advertised address. e.g. external
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	// The URL of the API Server. e.g. https://api.foo.bar or https://1.2.3.4
+	URL string `json:"url" protobuf:"bytes,2,opt,name=url"`
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -246,11 +264,12 @@ type DNSProvider struct {
 	Zones *DNSIncludeExclude `json:"zones,omitempty" protobuf:"bytes,5,opt,name=zones"`
 }
 
+// DNSIncludeExclude contains information about which domains shall be included/excluded.
 type DNSIncludeExclude struct {
-	// Include is a list of resources that shall be included.
+	// Include is a list of domains that shall be included.
 	// +optional
 	Include []string `json:"include,omitempty" protobuf:"bytes,1,rep,name=include"`
-	// Exclude is a list of resources that shall be excluded.
+	// Exclude is a list of domains that shall be excluded.
 	// +optional
 	Exclude []string `json:"exclude,omitempty" protobuf:"bytes,2,rep,name=exclude"`
 }
@@ -355,7 +374,7 @@ type ClusterAutoscaler struct {
 	// ScaleDownDelayAfterAdd defines how long after scale up that scale down evaluation resumes (default: 1 hour).
 	// +optional
 	ScaleDownDelayAfterAdd *metav1.Duration `json:"scaleDownDelayAfterAdd,omitempty" protobuf:"bytes,1,opt,name=scaleDownDelayAfterAdd"`
-	// ScaleDownDelayAfterDelete how long after node deletion that scale down evaluation resumes, defaults to scanInterval (defaults to ScanInterval).
+	// ScaleDownDelayAfterDelete how long after node deletion that scale down evaluation resumes, defaults to scanInterval (default: 0 secs).
 	// +optional
 	ScaleDownDelayAfterDelete *metav1.Duration `json:"scaleDownDelayAfterDelete,omitempty" protobuf:"bytes,2,opt,name=scaleDownDelayAfterDelete"`
 	// ScaleDownDelayAfterFailure how long after scale down failure that scale down evaluation resumes (default: 3 mins).
@@ -364,13 +383,44 @@ type ClusterAutoscaler struct {
 	// ScaleDownUnneededTime defines how long a node should be unneeded before it is eligible for scale down (default: 30 mins).
 	// +optional
 	ScaleDownUnneededTime *metav1.Duration `json:"scaleDownUnneededTime,omitempty" protobuf:"bytes,4,opt,name=scaleDownUnneededTime"`
-	// ScaleDownUtilizationThreshold defines the threshold in % under which a node is being removed
+	// ScaleDownUtilizationThreshold defines the threshold in decimal (0.0 - 1.0) under which a node is being removed (default: 0.5).
 	// +optional
 	ScaleDownUtilizationThreshold *float64 `json:"scaleDownUtilizationThreshold,omitempty" protobuf:"fixed64,5,opt,name=scaleDownUtilizationThreshold"`
 	// ScanInterval how often cluster is reevaluated for scale up or down (default: 10 secs).
 	// +optional
 	ScanInterval *metav1.Duration `json:"scanInterval,omitempty" protobuf:"bytes,6,opt,name=scanInterval"`
+	// Expander defines the algorithm to use during scale up (default: least-waste).
+	// See: https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/FAQ.md#what-are-expanders.
+	// +optional
+	Expander *ExpanderMode `json:"expander,omitempty" protobuf:"bytes,7,opt,name=expander"`
+	// MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).
+	// +optional
+	MaxNodeProvisionTime *metav1.Duration `json:"maxNodeProvisionTime,omitempty" protobuf:"bytes,8,opt,name=maxNodeProvisionTime"`
+	// MaxGracefulTerminationSeconds is the number of seconds CA waits for pod termination when trying to scale down a node (default: 600).
+	// +optional
+	MaxGracefulTerminationSeconds *int32 `json:"maxGracefulTerminationSeconds,omitempty" protobuf:"varint,9,opt,name=maxGracefulTerminationSeconds"`
 }
+
+// ExpanderMode is type used for Expander values
+type ExpanderMode string
+
+const (
+	// ClusterAutoscalerExpanderLeastWaste selects the node group that will have the least idle CPU (if tied, unused memory) after scale-up.
+	// This is useful when you have different classes of nodes, for example, high CPU or high memory nodes, and
+	// only want to expand those when there are pending pods that need a lot of those resources.
+	// This is the default value.
+	ClusterAutoscalerExpanderLeastWaste ExpanderMode = "least-waste"
+	// ClusterAutoscalerExpanderMostPods selects the node group that would be able to schedule the most pods when scaling up.
+	// This is useful when you are using nodeSelector to make sure certain pods land on certain nodes.
+	// Note that this won't cause the autoscaler to select bigger nodes vs. smaller, as it can add multiple smaller nodes at once.
+	ClusterAutoscalerExpanderMostPods ExpanderMode = "most-pods"
+	// ClusterAutoscalerExpanderPriority selects the node group that has the highest priority assigned by the user. For configurations,
+	// See: https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/expander/priority/readme.md
+	ClusterAutoscalerExpanderPriority ExpanderMode = "priority"
+	// ClusterAutoscalerExpanderRandom should be used when you don't have a particular need
+	// for the node groups to scale differently.
+	ClusterAutoscalerExpanderRandom ExpanderMode = "random"
+)
 
 // VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.
 type VerticalPodAutoscaler struct {
@@ -472,6 +522,15 @@ type KubeAPIServerConfig struct {
 	// Requests contains configuration for request-specific settings for the kube-apiserver.
 	// +optional
 	Requests *KubeAPIServerRequests `json:"requests,omitempty" protobuf:"bytes,10,opt,name=requests"`
+	// EnableAnonymousAuthentication defines whether anonymous requests to the secure port
+	// of the API server should be allowed (flag `--anonymous-auth`).
+	// See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
+	// +optional
+	EnableAnonymousAuthentication *bool `json:"enableAnonymousAuthentication,omitempty" protobuf:"varint,11,opt,name=enableAnonymousAuthentication"`
+	// EventTTL controls the amount of time to retain events.
+	// Defaults to 1h.
+	// +optional
+	EventTTL *metav1.Duration `json:"eventTTL,omitempty" protobuf:"bytes,12,opt,name=eventTTL"`
 }
 
 // KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.
@@ -498,6 +557,17 @@ type ServiceAccountConfig struct {
 	// Only useful if service account tokens are also issued by another external system.
 	// +optional
 	SigningKeySecret *corev1.LocalObjectReference `json:"signingKeySecretName,omitempty" protobuf:"bytes,2,opt,name=signingKeySecretName"`
+	// ExtendTokenExpiration turns on projected service account expiration extension during token generation, which
+	// helps safe transition from legacy token to bound service account token feature. If this flag is enabled,
+	// admission injected tokens would be extended up to 1 year to prevent unexpected failure during transition,
+	// ignoring value of service-account-max-token-expiration.
+	// +optional
+	ExtendTokenExpiration *bool `json:"extendTokenExpiration,omitempty" protobuf:"bytes,3,opt,name=extendTokenExpiration"`
+	// MaxTokenExpiration is the maximum validity duration of a token created by the service account token issuer. If an
+	// otherwise valid TokenRequest with a validity duration larger than this value is requested, a token will be issued
+	// with a validity duration of this value.
+	// +optional
+	MaxTokenExpiration *metav1.Duration `json:"maxTokenExpiration,omitempty" protobuf:"bytes,4,opt,name=maxTokenExpiration"`
 }
 
 // AuditConfig contains settings for audit of the api server
@@ -536,7 +606,6 @@ type OIDCConfig struct {
 	// The URL of the OpenID issuer, only HTTPS scheme will be accepted. If set, it will be used to verify the OIDC JSON Web Token (JWT).
 	// +optional
 	IssuerURL *string `json:"issuerURL,omitempty" protobuf:"bytes,6,opt,name=issuerURL"`
-	// ATTENTION: Only meaningful for Kubernetes >= 1.11
 	// key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value.
 	// +optional
 	RequiredClaims map[string]string `json:"requiredClaims,omitempty" protobuf:"bytes,7,rep,name=requiredClaims"`
@@ -610,6 +679,9 @@ type KubeControllerManagerConfig struct {
 	// PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.
 	// +optional
 	PodEvictionTimeout *metav1.Duration `json:"podEvictionTimeout,omitempty" protobuf:"bytes,4,opt,name=podEvictionTimeout"`
+	// NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.
+	// +optional
+	NodeMonitorGracePeriod *metav1.Duration `json:"nodeMonitorGracePeriod,omitempty" protobuf:"bytes,5,opt,name=nodeMonitorGracePeriod"`
 }
 
 // HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager.
@@ -618,9 +690,6 @@ type HorizontalPodAutoscalerConfig struct {
 	// The period after which a ready pod transition is considered to be the first.
 	// +optional
 	CPUInitializationPeriod *metav1.Duration `json:"cpuInitializationPeriod,omitempty" protobuf:"bytes,1,opt,name=cpuInitializationPeriod"`
-	// The period since last downscale, before another downscale can be performed in horizontal pod autoscaler.
-	// +optional
-	DownscaleDelay *metav1.Duration `json:"downscaleDelay,omitempty" protobuf:"bytes,2,opt,name=downscaleDelay"`
 	// The configurable window at which the controller will choose the highest recommendation for autoscaling.
 	// +optional
 	DownscaleStabilization *metav1.Duration `json:"downscaleStabilization,omitempty" protobuf:"bytes,3,opt,name=downscaleStabilization"`
@@ -633,20 +702,13 @@ type HorizontalPodAutoscalerConfig struct {
 	// The minimum change (from 1.0) in the desired-to-actual metrics ratio for the horizontal pod autoscaler to consider scaling.
 	// +optional
 	Tolerance *float64 `json:"tolerance,omitempty" protobuf:"fixed64,6,opt,name=tolerance"`
-	// The period since last upscale, before another upscale can be performed in horizontal pod autoscaler.
-	// +optional
-	UpscaleDelay *metav1.Duration `json:"upscaleDelay,omitempty" protobuf:"bytes,7,opt,name=upscaleDelay"`
 }
 
 const (
-	// DefaultHPADownscaleDelay is a constant for the default HPA downscale delay for a Shoot cluster.
-	DefaultHPADownscaleDelay = 15 * time.Minute
 	// DefaultHPASyncPeriod is a constant for the default HPA sync period for a Shoot cluster.
 	DefaultHPASyncPeriod = 30 * time.Second
 	// DefaultHPATolerance is a constant for the default HPA tolerance for a Shoot cluster.
 	DefaultHPATolerance = 0.1
-	// DefaultHPAUpscaleDelay is for the default HPA upscale delay for a Shoot cluster.
-	DefaultHPAUpscaleDelay = 1 * time.Minute
 	// DefaultDownscaleStabilization is the default HPA downscale stabilization window for a Shoot cluster
 	DefaultDownscaleStabilization = 5 * time.Minute
 	// DefaultInitialReadinessDelay is for the default HPA  ReadinessDelay value in the Shoot cluster
@@ -673,6 +735,11 @@ type KubeProxyConfig struct {
 	// defaults to IPTables.
 	// +optional
 	Mode *ProxyMode `json:"mode,omitempty" protobuf:"bytes,2,opt,name=mode,casttype=ProxyMode"`
+	// Enabled indicates whether kube-proxy should be deployed or not.
+	// Depending on the networking extensions switching kube-proxy off might be rejected. Consulting the respective documentation of the used networking extension is recommended before using this field.
+	// defaults to true if not specified.
+	// +optional
+	Enabled *bool `json:"enabled,omitempty" protobuf:"varint,3,opt,name=enabled"`
 }
 
 // ProxyMode available in Linux platform: 'userspace' (older, going to be EOL), 'iptables'
@@ -761,6 +828,18 @@ type KubeletConfig struct {
 	// When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
 	// +optional
 	SystemReserved *KubeletConfigReserved `json:"systemReserved,omitempty" protobuf:"bytes,15,opt,name=systemReserved"`
+	// ImageGCHighThresholdPercent describes the percent of the disk usage which triggers image garbage collection.
+	// +optional
+	// Default: 50
+	ImageGCHighThresholdPercent *int32 `json:"imageGCHighThresholdPercent,omitempty" protobuf:"bytes,16,opt,name=imageGCHighThresholdPercent"`
+	// ImageGCLowThresholdPercent describes the percent of the disk to which garbage collection attempts to free.
+	// +optional
+	// Default: 40
+	ImageGCLowThresholdPercent *int32 `json:"imageGCLowThresholdPercent,omitempty" protobuf:"bytes,17,opt,name=imageGCLowThresholdPercent"`
+	// SerializeImagePulls describes whether the images are pulled one at a time.
+	// +optional
+	// Default: true
+	SerializeImagePulls *bool `json:"serializeImagePulls,omitempty" protobuf:"varint,18,opt,name=serializeImagePulls"`
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.
@@ -832,7 +911,6 @@ type KubeletConfigReserved struct {
 	// +optional
 	EphemeralStorage *resource.Quantity `json:"ephemeralStorage,omitempty" protobuf:"bytes,3,opt,name=ephemeralStorage"`
 	// PID is the reserved process-ids.
-	// To reserve PID, the SupportNodePidsLimit feature gate must be enabled in Kubernetes versions < 1.15.
 	// +optional
 	PID *resource.Quantity `json:"pid,omitempty" protobuf:"bytes,4,opt,name=pid"`
 }
@@ -960,7 +1038,8 @@ type Worker struct {
 	// CABundle is a certificate bundle which will be installed onto every machine of this worker pool.
 	// +optional
 	CABundle *string `json:"caBundle,omitempty" protobuf:"bytes,2,opt,name=caBundle"`
-	// CRI contains configurations of CRI support of every machine in the worker pool
+	// CRI contains configurations of CRI support of every machine in the worker pool.
+	// Defaults to a CRI with name `containerd` when the Kubernetes version of the `Shoot` is >= 1.22.
 	// +optional
 	CRI *CRI `json:"cri,omitempty" protobuf:"bytes,3,opt,name=cri"`
 	// Kubernetes contains configuration for Kubernetes components related to this worker pool.
@@ -1041,6 +1120,12 @@ type WorkerKubernetes struct {
 	// If set, all `spec.kubernetes.kubelet` settings will be overwritten for this worker pool (no merge of settings).
 	// +optional
 	Kubelet *KubeletConfig `json:"kubelet,omitempty" protobuf:"bytes,1,opt,name=kubelet"`
+	// Version is the semantic Kubernetes version to use for the Kubelet in this Worker Group.
+	// If not specified the kubelet version is derived from the global shoot cluster kubernetes version.
+	// version must be equal or lower than the version of the shoot kubernetes version.
+	// Only one minor version difference to other worker groups and global kubernetes version is allowed.
+	// +optional
+	Version *string `json:"version,omitempty" protobuf:"bytes,2,opt,name=version"`
 }
 
 // Machine contains information about the machine type and image.
@@ -1098,7 +1183,7 @@ type DataVolume struct {
 
 // CRI contains information about the Container Runtimes.
 type CRI struct {
-	// The name of the CRI library
+	// The name of the CRI library. Supported values are `docker` and `containerd`.
 	Name CRIName `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// ContainerRuntimes is the list of the required container runtimes supported for a worker pool.
 	// +optional
@@ -1109,7 +1194,10 @@ type CRI struct {
 type CRIName string
 
 const (
+	// CRINameContainerD is a constant for ContainerD CRI name.
 	CRINameContainerD CRIName = "containerd"
+	// CRINameDocker is a constant for Docker CRI name.
+	CRINameDocker CRIName = "docker"
 )
 
 // ContainerRuntime contains information about worker's available container runtime

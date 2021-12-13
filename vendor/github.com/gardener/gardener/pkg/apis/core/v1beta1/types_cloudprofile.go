@@ -90,7 +90,7 @@ type CloudProfileSpec struct {
 type SeedSelector struct {
 	// LabelSelector is optional and can be used to select seeds by their label settings
 	// +optional
-	*metav1.LabelSelector `json:",inline,omitempty" protobuf:"bytes,1,opt,name=labelSelector"`
+	metav1.LabelSelector `json:",inline,omitempty" protobuf:"bytes,1,opt,name=labelSelector"`
 	// Providers is optional and can be used by restricting seeds by their provider type. '*' can be used to enable seeds regardless of their provider type.
 	// +optional
 	ProviderTypes []string `json:"providerTypes,omitempty" protobuf:"bytes,2,rep,name=providerTypes"`
@@ -158,9 +158,14 @@ type MachineTypeStorage struct {
 	// Class is the class of the storage type.
 	Class string `json:"class" protobuf:"bytes,1,opt,name=class"`
 	// StorageSize is the storage size.
-	StorageSize resource.Quantity `json:"size" protobuf:"bytes,2,opt,name=size"`
+	// +optional
+	StorageSize *resource.Quantity `json:"size,omitempty" protobuf:"bytes,2,opt,name=size"`
 	// Type is the type of the storage.
 	Type string `json:"type" protobuf:"bytes,3,opt,name=type"`
+	// MinSize is the minimal supported storage size.
+	// This overrides any other common minimum size configuration from `spec.volumeTypes[*].minSize`.
+	// +optional
+	MinSize *resource.Quantity `json:"minSize,omitempty" protobuf:"bytes,4,opt,name=minSize"`
 }
 
 // Region contains certain properties of a region.
@@ -200,6 +205,9 @@ type VolumeType struct {
 	// Usable defines if the volume type can be used for shoot clusters.
 	// +optional
 	Usable *bool `json:"usable,omitempty" protobuf:"varint,3,opt,name=usable"`
+	// MinSize is the minimal supported storage size.
+	// +optional
+	MinSize *resource.Quantity `json:"minSize,omitempty" protobuf:"bytes,4,opt,name=minSize"`
 }
 
 const (
@@ -209,7 +217,7 @@ const (
 	VolumeClassPremium string = "premium"
 )
 
-// VersionClassification is the logical state of a version according to https://github.com/gardener/gardener/blob/master/docs/operations/versioning.md
+// VersionClassification is the logical state of a version.
 type VersionClassification string
 
 const (
@@ -217,7 +225,7 @@ const (
 	// ClassificationPreview versions will not be considered for automatic Kubernetes and Machine Image patch version updates.
 	ClassificationPreview VersionClassification = "preview"
 	// ClassificationSupported indicates that a patch version is the recommended version for a shoot.
-	// Using VersionMaintenance (see: https://github.com/gardener/gardener/docs/operation/versioning.md) there is one supported version per maintained minor version.
+	// Only one "supported" version is allowed per minor version.
 	// Supported versions are eligible for the automated Kubernetes and Machine image patch version update for shoot clusters in Gardener.
 	ClassificationSupported VersionClassification = "supported"
 	// ClassificationDeprecated indicates that a patch version should not be used anymore, should be updated to a new version

@@ -15,6 +15,7 @@
 package config
 
 import (
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 
 	corev1 "k8s.io/api/core/v1"
@@ -42,31 +43,37 @@ type GardenletConfiguration struct {
 	// Resources defines the total capacity for seed resources and the amount reserved for use by Gardener.
 	Resources *ResourcesConfiguration
 	// LeaderElection defines the configuration of leader election client.
-	LeaderElection *LeaderElectionConfiguration
+	LeaderElection *componentbaseconfig.LeaderElectionConfiguration
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	LogLevel *string
+	// LogFormat is the output format for the logs. Must be one of [text,json].
+	LogFormat *string
 	// KubernetesLogLevel is the log level used for Kubernetes' k8s.io/klog functions.
 	KubernetesLogLevel *klog.Level
 	// Server defines the configuration of the HTTP server.
 	Server *ServerConfiguration
+	// Debugging holds configuration for Debugging related features.
+	Debugging *componentbaseconfig.DebuggingConfiguration
 	// FeatureGates is a map of feature names to bools that enable or disable alpha/experimental
 	// features. This field modifies piecemeal the built-in default values from
 	// "github.com/gardener/gardener/pkg/gardenlet/features/features.go".
 	// Default: nil
 	FeatureGates map[string]bool
-	// SeedConfig contains configuration for the seed cluster. Must not be set if seed selector is set.
-	// In this case the gardenlet creates the `Seed` object itself based on the provided config.
+	// SeedConfig contains configuration for the seed cluster.
 	SeedConfig *SeedConfig
-	// SeedSelector contains an optional list of labels on `Seed` resources that shall be managed by
-	// this gardenlet instance. In this case the `Seed` object is not managed by the Gardenlet and must
-	// be created by an operator/administrator.
-	SeedSelector *metav1.LabelSelector
 	// Logging contains an optional configurations for the logging stack deployed
 	// by the Gardenlet in the seed clusters.
 	Logging *Logging
 	// SNI contains an optional configuration for the APIServerSNI feature used
 	// by the Gardenlet in the seed clusters.
 	SNI *SNI
+	// ETCDConfig contains an optional configuration for the
+	// backup compaction feature of ETCD backup-restore functionality.
+	ETCDConfig *ETCDConfig
+	// ExposureClassHandlers is a list of optional of exposure class handlers.
+	ExposureClassHandlers []ExposureClassHandler
+	// MonitoringConfig is optional and adds additional settings for the monitoring stack.
+	Monitoring *MonitoringConfig
 }
 
 // GardenClientConnection specifies the kubeconfig file and the client connection settings
@@ -107,6 +114,8 @@ type GardenletControllerConfiguration struct {
 	BackupBucket *BackupBucketControllerConfiguration
 	// BackupEntry defines the configuration of the BackupEntry controller.
 	BackupEntry *BackupEntryControllerConfiguration
+	// Bastion defines the configuration of the Bastion controller.
+	Bastion *BastionControllerConfiguration
 	// ControllerInstallation defines the configuration of the ControllerInstallation controller.
 	ControllerInstallation *ControllerInstallationControllerConfiguration
 	// ControllerInstallationCare defines the configuration of the ControllerInstallationCare controller.
@@ -145,6 +154,13 @@ type BackupEntryControllerConfiguration struct {
 	// DeletionGracePeriodShootPurposes is a list of shoot purposes for which the deletion grace period applies. All
 	// BackupEntries corresponding to Shoots with different purposes will be deleted immediately.
 	DeletionGracePeriodShootPurposes []gardencore.ShootPurpose
+}
+
+// BastionControllerConfiguration defines the configuration of the Bastion
+// controller.
+type BastionControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on events.
+	ConcurrentSyncs *int
 }
 
 // ControllerInstallationControllerConfiguration defines the configuration of the
@@ -266,6 +282,10 @@ type ManagedSeedControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs *int
+	// SyncPeriod is the duration how often the existing resources are reconciled.
+	SyncPeriod *metav1.Duration
+	// WaitSyncPeriod is the duration how often an existing resource is reconciled when the controller is waiting for an event.
+	WaitSyncPeriod *metav1.Duration
 	// SyncJitterPeriod is a jitter duration for the reconciler sync that can be used to distribute the syncs randomly.
 	// If its value is greater than 0 then the managed seeds will not be enqueued immediately but only after a random
 	// duration between 0 and the configured value. It is defaulted to 5m.
@@ -279,16 +299,6 @@ type ResourcesConfiguration struct {
 	// Reserved defines the resources of a seed that are reserved for use by Gardener.
 	// Defaults to 0.
 	Reserved corev1.ResourceList
-}
-
-// LeaderElectionConfiguration defines the configuration of leader election
-// clients for components that can run with leader election enabled.
-type LeaderElectionConfiguration struct {
-	componentbaseconfig.LeaderElectionConfiguration
-	// LockObjectNamespace defines the namespace of the lock object.
-	LockObjectNamespace *string
-	// LockObjectName defines the lock object name.
-	LockObjectName *string
 }
 
 // SeedConfig contains configuration for the seed cluster.
@@ -309,10 +319,36 @@ type FluentBit struct {
 	OutputSection *string
 }
 
+// Loki contains configuration for the Loki.
+type Loki struct {
+	// Enabled is used to enable or disable the shoot and seed Loki.
+	// If FluentBit is used with a custom output the Loki can, Loki is maybe unused and can be disabled.
+	// If not set, by default Loki is enabled
+	Enabled *bool
+	// Garden contains configuration for the Loki in garden namespace.
+	Garden *GardenLoki
+}
+
+// GardenLoki contains configuration for the Loki in garden namespace.
+type GardenLoki struct {
+	// Priority is the priority value for the Loki
+	Priority *int32
+}
+
+// ShootNodeLogging contains configuration for the shoot node logging.
+type ShootNodeLogging struct {
+	// ShootPurposes determines which shoots can have node logging by their purpose
+	ShootPurposes []core.ShootPurpose
+}
+
 // Logging contains configuration for the logging stack.
 type Logging struct {
 	// FluentBit contains configurations for the fluent-bit
 	FluentBit *FluentBit
+	// Loki contains configuration for the Loki
+	Loki *Loki
+	// ShootNodeLogging contains configurations for the shoot node logging
+	ShootNodeLogging *ShootNodeLogging
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.
@@ -358,10 +394,97 @@ type SNIIngress struct {
 	// ServiceName is the name of the ingressgateway Service.
 	// Defaults to "istio-ingressgateway".
 	ServiceName *string
+	// ServiceExternalIP is the external ip which should be assigned to the
+	// load balancer service of the ingress gateway.
+	// Compatibility is depending on the respective provider cloud-controller-manager.
+	ServiceExternalIP *string
 	// Namespace is the namespace in which the ingressgateway is deployed in.
 	// Defaults to "istio-ingress".
 	Namespace *string
 	// Labels of the ingressgateway
 	// Defaults to "istio: ingressgateway".
 	Labels map[string]string
+}
+
+// ETCDConfig contains ETCD related configs
+type ETCDConfig struct {
+	// ETCDController contains config specific to ETCD controller
+	ETCDController *ETCDController
+	// CustodianController contains config specific to custodian controller
+	CustodianController *CustodianController
+	// BackupCompactionController contains config specific to backup compaction controller
+	BackupCompactionController *BackupCompactionController
+}
+
+// ETCDController contains config specific to ETCD controller
+type ETCDController struct {
+	// Workers specify number of worker threads in ETCD controller
+	// Defaults to 3
+	Workers *int64
+}
+
+// CustodianController contains config specific to custodian controller
+type CustodianController struct {
+	// Workers specify number of worker threads in custodian controller
+	// Defaults to 3
+	Workers *int64
+}
+
+// BackupCompactionController contains config specific to backup compaction controller
+type BackupCompactionController struct {
+	// Workers specify number of worker threads in backup compaction controller
+	// Defaults to 3
+	Workers *int64
+	// EnableBackupCompaction enables automatic compaction of etcd backups
+	// Defaults to false
+	EnableBackupCompaction *bool
+	// EventsThreshold defines total number of etcd events that can be allowed before a backup compaction job is triggered
+	// Defaults to 1 Million events
+	EventsThreshold *int64
+	// ActiveDeadlineDuration defines duration after which a running backup compaction job will be killed
+	// Defaults to 3 hours
+	ActiveDeadlineDuration *metav1.Duration
+}
+
+// ExposureClassHandler contains configuration for an exposure class handler.
+type ExposureClassHandler struct {
+	// Name is the name of the exposure class handler.
+	Name string
+	// LoadBalancerService contains configuration which is used to configure the underlying
+	// load balancer to apply the control plane endpoint exposure strategy.
+	LoadBalancerService LoadBalancerServiceConfig
+	// SNI contains optional configuration for a dedicated ingressgateway belonging to
+	// an exposure class handler. This is only required in context of the APIServerSNI feature of the gardenlet.
+	SNI *SNI
+}
+
+// LoadBalancerServiceConfig contains configuration which is used to configure the underlying
+// load balancer to apply the control plane endpoint exposure strategy.
+type LoadBalancerServiceConfig struct {
+	// Annotations is a key value map to annotate the underlying load balancer services.
+	Annotations map[string]string
+}
+
+// MonitoringConfig contains settings for the monitoring stack.
+type MonitoringConfig struct {
+	// Shoot is optional and contains settings for the shoot monitoring stack.
+	Shoot *ShootMonitoringConfig
+}
+
+// ShootMonitoringConfig contains settings for the shoot monitoring stack.
+type ShootMonitoringConfig struct {
+	// RemoteWrite is optional and contains remote write setting.
+	RemoteWrite *RemoteWriteMonitoringConfig
+	// ExternalLabels is optional and sets additional external labels for the monitoring stack.
+	ExternalLabels map[string]string
+}
+
+// RemoteWriteMonitoringConfig contains settings for the remote write setting for monitoring stack.
+type RemoteWriteMonitoringConfig struct {
+	// URL contains an Url for remote write setting in prometheus.
+	URL string
+	// Keep contains a list of metrics that will be remote written
+	Keep []string
+	// QueueConfig contains the queue_config for prometheus remote write.
+	QueueConfig *string
 }

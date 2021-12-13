@@ -29,6 +29,7 @@ import (
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// Shoot represents a Shoot cluster created and managed by Gardener.
 type Shoot struct {
 	metav1.TypeMeta
 	// Standard object metadata.
@@ -48,6 +49,14 @@ type ShootList struct {
 	metav1.ListMeta
 	// Items is the list of Shoots.
 	Items []Shoot
+}
+
+// ShootTemplate is a template for creating a Shoot object.
+type ShootTemplate struct {
+	// Standard object metadata.
+	metav1.ObjectMeta
+	// Specification of the desired behavior of the Shoot.
+	Spec ShootSpec
 }
 
 // ShootSpec is the specification of a Shoot.
@@ -88,8 +97,11 @@ type ShootSpec struct {
 	Resources []NamedResourceReference
 	// Tolerations contains the tolerations for taints on seed clusters.
 	Tolerations []Toleration
+	// ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.
+	ExposureClassName *string
 }
 
+// GetProviderType gets the type of the provider.
 func (s *Shoot) GetProviderType() string {
 	return s.Spec.Provider.Type
 }
@@ -125,6 +137,16 @@ type ShootStatus struct {
 	UID types.UID
 	// ClusterIdentity is the identity of the Shoot cluster
 	ClusterIdentity *string
+	// List of addresses on which the Kube API server can be reached.
+	AdvertisedAddresses []ShootAdvertisedAddress
+}
+
+// ShootAdvertisedAddress contains information for the shoot's Kube API server.
+type ShootAdvertisedAddress struct {
+	// Name of the advertised address. e.g. external
+	Name string
+	// The URL of the API Server. e.g. https://api.foo.bar or https://1.2.3.4
+	URL string
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -204,10 +226,11 @@ type DNSProvider struct {
 	Zones *DNSIncludeExclude
 }
 
+// DNSIncludeExclude contains information about which domains shall be included/excluded.
 type DNSIncludeExclude struct {
-	// Include is a list of resources that shall be included.
+	// Include is a list of domains that shall be included.
 	Include []string
-	// Exclude is a list of resources that shall be excluded.
+	// Exclude is a list of domains that shall be excluded.
 	Exclude []string
 }
 
@@ -295,17 +318,45 @@ type Kubernetes struct {
 type ClusterAutoscaler struct {
 	// ScaleDownDelayAfterAdd defines how long after scale up that scale down evaluation resumes (default: 1 hour).
 	ScaleDownDelayAfterAdd *metav1.Duration
-	// ScaleDownDelayAfterDelete how long after node deletion that scale down evaluation resumes, defaults to scanInterval (defaults to ScanInterval).
+	// ScaleDownDelayAfterDelete how long after node deletion that scale down evaluation resumes, defaults to scanInterval (default: 0 secs).
 	ScaleDownDelayAfterDelete *metav1.Duration
 	// ScaleDownDelayAfterFailure how long after scale down failure that scale down evaluation resumes (default: 3 mins).
 	ScaleDownDelayAfterFailure *metav1.Duration
 	// ScaleDownUnneededTime defines how long a node should be unneeded before it is eligible for scale down (default: 30 mins).
 	ScaleDownUnneededTime *metav1.Duration
-	// ScaleDownUtilizationThreshold defines the threshold in % under which a node is being removed
+	// ScaleDownUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) under which a node is being removed (default: 0.5).
 	ScaleDownUtilizationThreshold *float64
 	// ScanInterval how often cluster is reevaluated for scale up or down (default: 10 secs).
 	ScanInterval *metav1.Duration
+	// Expander defines the algorithm to use during scale up (default: least-waste).
+	// See: https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/FAQ.md#what-are-expanders.
+	Expander *ExpanderMode
+	// MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).
+	MaxNodeProvisionTime *metav1.Duration
+	// MaxGracefulTerminationSeconds is the number of seconds CA waits for pod termination when trying to scale down a node (default: 600).
+	MaxGracefulTerminationSeconds *int32
 }
+
+// ExpanderMode is type used for Expander values
+type ExpanderMode string
+
+const (
+	// ClusterAutoscalerExpanderLeastWaste selects the node group that will have the least idle CPU (if tied, unused memory) after scale-up.
+	// This is useful when you have different classes of nodes, for example, high CPU or high memory nodes, and
+	// only want to expand those when there are pending pods that need a lot of those resources.
+	// This is the default value.
+	ClusterAutoscalerExpanderLeastWaste ExpanderMode = "least-waste"
+	// ClusterAutoscalerExpanderMostPods selects the node group that would be able to schedule the most pods when scaling up.
+	// This is useful when you are using nodeSelector to make sure certain pods land on certain nodes.
+	// Note that this won't cause the autoscaler to select bigger nodes vs. smaller, as it can add multiple smaller nodes at once.
+	ClusterAutoscalerExpanderMostPods ExpanderMode = "most-pods"
+	// ClusterAutoscalerExpanderPriority selects the node group that has the highest priority assigned by the user. For configurations,
+	// See: https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/expander/priority/readme.md
+	ClusterAutoscalerExpanderPriority ExpanderMode = "priority"
+	// ClusterAutoscalerExpanderRandom should be used when you don't have a particular need
+	// for the node groups to scale differently.
+	ClusterAutoscalerExpanderRandom ExpanderMode = "random"
+)
 
 // VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.
 type VerticalPodAutoscaler struct {
@@ -368,6 +419,12 @@ type KubeAPIServerConfig struct {
 	WatchCacheSizes *WatchCacheSizes
 	// Requests contains configuration for request-specific settings for the kube-apiserver.
 	Requests *KubeAPIServerRequests
+	// EnableAnonymousAuthentication defines whether anonymous requests to the secure port
+	// of the API server should be allowed (flag `--anonymous-auth`).
+	// See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
+	EnableAnonymousAuthentication *bool
+	// EventTTL controls the amount of time to retain events.
+	EventTTL *metav1.Duration
 }
 
 // KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.
@@ -390,6 +447,15 @@ type ServiceAccountConfig struct {
 	// service account token issuer. The issuer will sign issued ID tokens with this private key.
 	// Only useful if service account tokens are also issued by another external system.
 	SigningKeySecret *corev1.LocalObjectReference
+	// ExtendTokenExpiration turns on projected service account expiration extension during token generation, which
+	// helps safe transition from legacy token to bound service account token feature. If this flag is enabled,
+	// admission injected tokens would be extended up to 1 year to prevent unexpected failure during transition,
+	// ignoring value of service-account-max-token-expiration.
+	ExtendTokenExpiration *bool
+	// MaxTokenExpiration is the maximum validity duration of a token created by the service account token issuer. If an
+	// otherwise valid TokenRequest with a validity duration larger than this value is requested, a token will be issued
+	// with a validity duration of this value.
+	MaxTokenExpiration *metav1.Duration
 }
 
 // AuditConfig contains settings for audit of the api server
@@ -420,7 +486,6 @@ type OIDCConfig struct {
 	GroupsPrefix *string
 	// The URL of the OpenID issuer, only HTTPS scheme will be accepted. If set, it will be used to verify the OIDC JSON Web Token (JWT).
 	IssuerURL *string
-	// ATTENTION: Only meaningful for Kubernetes >= 1.11
 	// key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value.
 	RequiredClaims map[string]string
 	// List of allowed JOSE asymmetric signing algorithms. JWTs with a 'alg' header value not in this list will be rejected. Values are defined by RFC 7518 https://tools.ietf.org/html/rfc7518#section-3.1
@@ -481,6 +546,8 @@ type KubeControllerManagerConfig struct {
 	NodeCIDRMaskSize *int32
 	// PodEvictionTimeout defines the grace period for deleting pods on failed nodes.
 	PodEvictionTimeout *metav1.Duration
+	// NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.
+	NodeMonitorGracePeriod *metav1.Duration
 }
 
 // HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager.
@@ -488,8 +555,6 @@ type KubeControllerManagerConfig struct {
 type HorizontalPodAutoscalerConfig struct {
 	// The period after which a ready pod transition is considered to be the first.
 	CPUInitializationPeriod *metav1.Duration
-	// The period since last downscale, before another downscale can be performed in horizontal pod autoscaler.
-	DownscaleDelay *metav1.Duration
 	// The configurable window at which the controller will choose the highest recommendation for autoscaling.
 	DownscaleStabilization *metav1.Duration
 	// The configurable period at which the horizontal pod autoscaler considers a Pod “not yet ready” given that it’s unready and it has  transitioned to unready during that time.
@@ -498,26 +563,7 @@ type HorizontalPodAutoscalerConfig struct {
 	SyncPeriod *metav1.Duration
 	// The minimum change (from 1.0) in the desired-to-actual metrics ratio for the horizontal pod autoscaler to consider scaling.
 	Tolerance *float64
-	// The period since last upscale, before another upscale can be performed in horizontal pod autoscaler.
-	UpscaleDelay *metav1.Duration
 }
-
-const (
-	// DefaultHPADownscaleDelay is a constant for the default HPA downscale delay for a Shoot cluster.
-	DefaultHPADownscaleDelay = 15 * time.Minute
-	// DefaultHPASyncPeriod is a constant for the default HPA sync period for a Shoot cluster.
-	DefaultHPASyncPeriod = 30 * time.Second
-	// DefaultHPATolerance is a constant for the default HPA tolerance for a Shoot cluster.
-	DefaultHPATolerance = 0.1
-	// DefaultHPAUpscaleDelay is for the default HPA upscale delay for a Shoot cluster.
-	DefaultHPAUpscaleDelay = 1 * time.Minute
-	// DefaultDownscaleStabilization is the default HPA downscale stabilization window for a Shoot cluster
-	DefaultDownscaleStabilization = 5 * time.Minute
-	// DefaultInitialReadinessDelay is for the default HPA  ReadinessDelay value in the Shoot cluster
-	DefaultInitialReadinessDelay = 30 * time.Second
-	// DefaultCPUInitializationPeriod is the for the default value of the CPUInitializationPeriod in the Shoot cluster
-	DefaultCPUInitializationPeriod = 5 * time.Minute
-)
 
 // KubeSchedulerConfig contains configuration settings for the kube-scheduler.
 type KubeSchedulerConfig struct {
@@ -535,6 +581,10 @@ type KubeProxyConfig struct {
 	// Mode specifies which proxy mode to use.
 	// defaults to IPTables.
 	Mode *ProxyMode
+	// Enabled indicates whether kube-proxy should be deployed or not.
+	// Depending on the networking extensions switching kube-proxy off might be rejected. Consulting the respective documentation of the used networking extension is recommended before using this field.
+	// defaults to true if not specified.
+	Enabled *bool
 }
 
 // ProxyMode available in Linux platform: 'userspace' (older, going to be EOL), 'iptables'
@@ -609,6 +659,12 @@ type KubeletConfig struct {
 	// SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald).
 	// When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
 	SystemReserved *KubeletConfigReserved
+	// ImageGCHighThresholdPercent describes the percent of the disk usage which triggers image garbage collection.
+	ImageGCHighThresholdPercent *int32
+	// ImageGCLowThresholdPercent describes the percent of the disk to which garbage collection attempts to free.
+	ImageGCLowThresholdPercent *int32
+	// SerializeImagePulls describes whether the images are pulled one at a time.
+	SerializeImagePulls *bool
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.
@@ -662,7 +718,6 @@ type KubeletConfigReserved struct {
 	// EphemeralStorage is the reserved ephemeral-storage.
 	EphemeralStorage *resource.Quantity
 	// PID is the reserved process-ids.
-	// To reserve PID, the SupportNodePidsLimit feature gate must be enabled in Kubernetes versions < 1.15.
 	PID *resource.Quantity
 }
 
@@ -774,7 +829,8 @@ type Worker struct {
 	Annotations map[string]string
 	// CABundle is a certificate bundle which will be installed onto every machine of this worker pool.
 	CABundle *string
-	// CRI contains configurations of CRI support of every machine in the worker pool
+	// CRI contains configurations of CRI support of every machine in the worker pool.
+	// Defaults to a CRI with name `containerd` when the Kubernetes version of the `Shoot` is >= 1.22.
 	CRI *CRI
 	// Kubernetes contains configuration for Kubernetes components related to this worker pool.
 	Kubernetes *WorkerKubernetes
@@ -836,6 +892,11 @@ type WorkerKubernetes struct {
 	// Kubelet contains configuration settings for all kubelets of this worker pool.
 	// If set, all `spec.kubernetes.kubelet` settings will be overwritten for this worker pool (no merge of settings).
 	Kubelet *KubeletConfig
+	// Version is the semantic Kubernetes version to use for the Kubelet in this Worker Group.
+	// If not specified the kubelet version is derived from the global shoot cluster kubernetes version.
+	// version must be equal or lower than the version of the shoot kubernetes version.
+	// Only one minor version difference to other worker groups and global kubernetes version is allowed.
+	Version *string
 }
 
 // Machine contains information about the machine type and image.
@@ -895,7 +956,10 @@ type CRI struct {
 type CRIName string
 
 const (
+	// CRINameContainerD is a constant for ContainerD CRI name.
 	CRINameContainerD CRIName = "containerd"
+	// CRINameDocker is a constant for Docker CRI name.
+	CRINameDocker CRIName = "docker"
 )
 
 // ContainerRuntime contains information about worker's available container runtime

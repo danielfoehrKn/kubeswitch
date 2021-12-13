@@ -96,6 +96,9 @@ type ProjectStatus struct {
 	// because it's stale/unused.
 	// +optional
 	StaleAutoDeleteTimestamp *metav1.Time `json:"staleAutoDeleteTimestamp,omitempty" protobuf:"bytes,4,opt,name=staleAutoDeleteTimestamp"`
+	// LastActivityTimestamp contains the timestamp from the last activity performed in this project.
+	// +optional
+	LastActivityTimestamp *metav1.Time `json:"lastActivityTimestamp,omitempty" protobuf:"bytes,5,opt,name=lastActivityTimestamp"`
 }
 
 // ProjectMember is a member of a project.
@@ -106,7 +109,7 @@ type ProjectMember struct {
 	// Role represents the role of this member.
 	// IMPORTANT: Be aware that this field will be removed in the `v1` version of this API in favor of the `roles`
 	// list.
-	// TODO: Remove this field in favor of the `owner` role in `v1`.
+	// TODO: Remove this field in favor of the `roles` list in `v1`.
 	Role string `json:"role" protobuf:"bytes,2,opt,name=role"`
 	// Roles represents the list of roles of this member.
 	// +optional
