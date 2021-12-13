@@ -30,6 +30,41 @@ func (k *Kubeconfig) contextsNode() (*yaml.Node, error) {
 	return contexts, nil
 }
 
+func (k *Kubeconfig) contextNode(name string) (*yaml.Node, error) {
+	contexts, err := k.contextsNode()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, contextNode := range contexts.Content {
+		nameNode := valueOf(contextNode, "name")
+		if nameNode.Kind == yaml.ScalarNode && nameNode.Value == name {
+			return contextNode, nil
+		}
+	}
+	return nil, errors.Errorf("context with name \"%s\" not found", name)
+}
+
+// GetCurrentContext returns "current-context" value in given
+// kubeconfig object Node, or returns "" if not found.
+func (k *Kubeconfig) GetCurrentContext() string {
+	v := valueOf(k.rootNode, "current-context")
+	if v == nil {
+		return ""
+	}
+	return v.Value
+}
+
+// GetKubeswitchContext returns the "kubeswitch-context" value in given
+// kubeconfig object Node, or returns "" if not found.
+func (k *Kubeconfig) GetKubeswitchContext() string {
+	v := valueOf(k.rootNode, "kubeswitch-context")
+	if v == nil {
+		return ""
+	}
+	return v.Value
+}
+
 func valueOf(mapNode *yaml.Node, key string) *yaml.Node {
 	if mapNode.Kind != yaml.MappingNode {
 		return nil

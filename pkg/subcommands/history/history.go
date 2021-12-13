@@ -20,9 +20,13 @@ import (
 	"github.com/danielfoehrkn/kubeswitch/pkg/store"
 	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/history/util"
 	setcontext "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/set-context"
+	kubeconfigutil "github.com/danielfoehrkn/kubeswitch/pkg/util/kubectx_copied"
 	"github.com/danielfoehrkn/kubeswitch/types"
 	"github.com/ktr0731/go-fuzzyfinder"
+	"github.com/sirupsen/logrus"
 )
+
+var logger = logrus.New()
 
 func SwitchToHistory(stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) error {
 	history, err := util.ReadHistory()
@@ -33,14 +37,76 @@ func SwitchToHistory(stores []store.KubeconfigStore, config *types.Config, state
 	idx, err := fuzzyfinder.Find(
 		history,
 		func(i int) string {
-			return fmt.Sprintf("%d: %s", len(history)-i-1, history[i])
+			// we expect a mapping context: namespace
+			context, ns, err := util.ParseHistoryEntry(history[i])
+			if err != nil {
+				logger.Debugf("failed to parse namespace history entry")
+				return ""
+			}
+
+			if ns == nil {
+				return fmt.Sprintf("%d: %s", len(history)-i-1, *context)
+			}
+
+			previousContext, _, err := util.ParseHistoryEntry(history[i+1])
+			if err != nil {
+				logger.Debugf("failed to parse previous namespace history entry")
+				return ""
+			}
+
+			// Grouping: check if the previous entry has the same context name
+			// then only show the namespace
+			if *context == *previousContext {
+				return fmt.Sprintf(" > %s", *ns)
+			}
+
+			return fmt.Sprintf("%d: %s (ns: %s)", len(history)-i-1, *context, *ns)
 		})
 
 	if err != nil {
 		return err
 	}
 
-	return setcontext.SetContext(history[idx], stores, config, stateDir, noIndex, true)
+	context, ns, err := util.ParseHistoryEntry(history[idx])
+	if err != nil {
+		return fmt.Errorf("failed to set namespace: %v", err)
+	}
+
+	// TODO: only switch context if the current context is not already set
+	// requires to first check if a kubeconfig is already set (setcontext always creates a new file)
+	// do not append to history as the old namespace will be added (only add history after changing the namespace)
+	tmpKubeconfigFile, err := setcontext.SetContext(*context, stores, config, stateDir, noIndex, false)
+	if err != nil {
+		return err
+	}
+
+	// old history entry that does not include a namespace
+	if ns == nil {
+		return nil
+	}
+
+	if err := setNamespace(*ns, *tmpKubeconfigFile); err != nil {
+		return err
+	}
+
+	return util.AppendToHistory(*context, *ns)
+}
+
+func setNamespace(ns string, tmpKubeconfigFile string) error {
+	kubeconfig, err := kubeconfigutil.NewKubeconfigForPath(tmpKubeconfigFile)
+	if err != nil {
+		return err
+	}
+
+	if err := kubeconfig.SetNamespaceForCurrentContext(ns); err != nil {
+		return fmt.Errorf("failed to set namespace %q: %v", ns, err)
+	}
+
+	if _, err := kubeconfig.WriteKubeconfigFile(); err != nil {
+		return fmt.Errorf("failed to write namespace to kubeconfig %q: %v", ns, err)
+	}
+
+	return nil
 }
 
 // SetPreviousContext sets the previously used context from the history (position 1)
@@ -62,7 +128,22 @@ func SetPreviousContext(stores []store.KubeconfigStore, config *types.Config, st
 		position = 1
 	}
 
-	return setcontext.SetContext(history[position], stores, config, stateDir, noIndex, false)
+	context, ns, err := util.ParseHistoryEntry(history[position])
+	if err != nil {
+		return fmt.Errorf("failed to set previous context: %v", err)
+	}
+
+	tmpKubeconfigFile, err := setcontext.SetContext(*context, stores, config, stateDir, noIndex, false)
+	if err != nil {
+		return err
+	}
+
+	// old history entry that does not include a namespace
+	if ns == nil {
+		return nil
+	}
+
+	return setNamespace(*ns, *tmpKubeconfigFile)
 }
 
 // SetLastContext sets the last used context from the history (position 0)
@@ -77,5 +158,20 @@ func SetLastContext(stores []store.KubeconfigStore, config *types.Config, stateD
 		return nil
 	}
 
-	return setcontext.SetContext(history[0], stores, config, stateDir, noIndex, false)
+	context, ns, err := util.ParseHistoryEntry(history[0])
+	if err != nil {
+		return fmt.Errorf("failed to set previous context: %v", err)
+	}
+
+	tmpKubeconfigFile, err := setcontext.SetContext(*context, stores, config, stateDir, noIndex, false)
+	if err != nil {
+		return err
+	}
+
+	// old history entry that does not include a namespace
+	if ns == nil {
+		return nil
+	}
+
+	return setNamespace(*ns, *tmpKubeconfigFile)
 }

@@ -54,12 +54,13 @@ Usage:
 
 Available Commands:
   <context-name>  Switch to context name provided as first argument
-  history, h      Switch to any previous context from the history (short: h)
+  ns              Change the current namespace
+  history, h      Switch to any previous context/namespace from the history (short: h)
   hooks           Runs configured hooks
   alias           Create an alias for a context. Use <ALIAS>=<CONTEXT_NAME> (<ALIAS>=. to rename current-context to <ALIAS>). To list all use "alias ls" and to remove an alias use "alias rm <ALIAS>"
   list-contexts   List all available contexts without fuzzy search
   clean           Cleans all temporary kubeconfig files
-  -               Switch to the previous context from the history
+  -               Switch to the previous context/namespace from the history
   .               Switch to the last used context from the history
   -d <NAME>       Delete context <NAME> ('.' for current-context) from the local kubeconfig file.
   -c, --current   Show the current context name
@@ -105,7 +106,6 @@ usage()
 
 }
 
-
 function switch(){
 #  if the executable path is not set, the switcher binary has to be on the path
 # this is the case when installing it via homebrew
@@ -120,6 +120,7 @@ function switch(){
   EXECUTABLE_PATH=''
   CLEAN=''
   SET_CONTEXT=''
+  NAMESPACE=''
   HISTORY=''
   PREV_HISTORY=''
   LAST_HISTORY=''
@@ -187,6 +188,10 @@ function switch(){
                       ;;
                   h)
                       HISTORY=$1
+                      shift
+                      ;;
+                  ns)
+                      NAMESPACE=$1
                       shift
                       ;;
                   history)
@@ -448,6 +453,16 @@ function switch(){
      )
 
      setKubeconfigEnvironmentVariable $NEW_KUBECONFIG
+     return
+  fi
+
+  if [ -n "$NAMESPACE" ]
+  then
+     $EXECUTABLE_PATH ns \
+     $KUBECONFIG_PATH_FLAG ${KUBECONFIG_PATH} \
+     $DEBUG_FLAG ${DEBUG} \
+     $NO_INDEX_FLAG ${NO_INDEX}
+
      return
   fi
 

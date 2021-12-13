@@ -29,26 +29,43 @@ const (
 )
 
 type Kubeconfig struct {
-	temporaryKubeconfigPath string
-	rootNode                *yaml.Node
+	path       string
+	useTmpFile bool
+	rootNode   *yaml.Node
 }
 
-// GetContextWithoutFolderPrefix returns the real kubeconfig context name
+// GetContextWithoutPrefix returns the real kubeconfig context name
 // selectable kubeconfig context names have the folder prefixed like <parent-folder>/<context-name>
-func GetContextWithoutFolderPrefix(path string) string {
+func GetContextWithoutPrefix(path string) string {
 	split := strings.SplitAfterN(path, "/", 2)
 	return split[len(split)-1]
 }
 
-func ParseTemporaryKubeconfig(kubeconfigData []byte) (*Kubeconfig, error) {
+// NewKubeconfigForPath creates a kubeconfig representation based on an existing kubeconfig
+// given by the path argument
+// This will overwrite the kubeconfig given by path when calling WriteKubeconfigFile()
+func NewKubeconfigForPath(path string) (*Kubeconfig, error) {
+	bytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read kubeconfig file: %v", err)
+	}
+	return newKubeconfig(bytes, path, false)
+}
+
+func NewKubeconfig(kubeconfigData []byte) (*Kubeconfig, error) {
+	return newKubeconfig(kubeconfigData, os.ExpandEnv(TemporaryKubeconfigDir), true)
+}
+
+func newKubeconfig(kubeconfigData []byte, path string, useTmpFile bool) (*Kubeconfig, error) {
 	n := &yaml.Node{}
 	if err := yaml.Unmarshal(kubeconfigData, n); err != nil {
 		return nil, err
 	}
 
 	k := &Kubeconfig{
-		rootNode:                n.Content[0],
-		temporaryKubeconfigPath: os.ExpandEnv(TemporaryKubeconfigDir),
+		rootNode:   n.Content[0],
+		path:       path,
+		useTmpFile: useTmpFile,
 	}
 
 	if k.rootNode.Kind != yaml.MappingNode {
@@ -84,18 +101,50 @@ func (k *Kubeconfig) SetContext(currentContext, originalContextBeforeAlias strin
 	return nil
 }
 
-// WriteTemporaryKubeconfigFile writes the temporary kubeconfig file to the local filesystem
-// and returns the kubeconfig path
-func (k *Kubeconfig) WriteTemporaryKubeconfigFile() (string, error) {
-	err := os.Mkdir(k.temporaryKubeconfigPath, 0700)
-	if err != nil && !os.IsExist(err) {
-		return "", err
+func (k *Kubeconfig) SetKubeswitchContext(context string) error {
+	if err := k.ModifyKubeswitchContext(context); err != nil {
+		return fmt.Errorf("failed to set switch context on selected kubeconfig: %v", err)
+	}
+	return nil
+}
+
+func (k *Kubeconfig) SetNamespaceForCurrentContext(namespace string) error {
+	currentContext := k.GetCurrentContext()
+	if len(currentContext) == 0 {
+		return fmt.Errorf("current-context is not set")
 	}
 
-	// write temporary kubeconfig file
-	file, err := ioutil.TempFile(k.temporaryKubeconfigPath, "config.*.tmp")
-	if err != nil {
-		return "", err
+	if err := k.SetNamespace(currentContext, namespace); err != nil {
+		return fmt.Errorf("failed to set namespace %q: %v", namespace, err)
+	}
+
+	return nil
+}
+
+// WriteKubeconfigFile writes kubeconfig bytes to the local filesystem
+// and returns the kubeconfig path
+func (k *Kubeconfig) WriteKubeconfigFile() (string, error) {
+	var (
+		file *os.File
+		err  error
+	)
+	// if we do not use a tmp file, then k.path is the path to a directory to create the tmp file in
+	if k.useTmpFile {
+		err = os.Mkdir(k.path, 0700)
+		if err != nil && !os.IsExist(err) {
+			return "", err
+		}
+
+		// write temporary kubeconfig file
+		file, err = ioutil.TempFile(k.path, "config.*.tmp")
+		if err != nil {
+			return "", err
+		}
+	} else {
+		file, err = os.OpenFile(k.path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		if err != nil {
+			return "", fmt.Errorf("failed to open existing kubeconfig file: %v", err)
+		}
 	}
 
 	enc := yaml.NewEncoder(file)

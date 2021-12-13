@@ -20,6 +20,8 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/history"
+	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/ns"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"k8s.io/utils/pointer"
@@ -30,7 +32,6 @@ import (
 	"github.com/danielfoehrkn/kubeswitch/pkg/store"
 	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/alias"
 	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/clean"
-	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/history"
 	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/hooks"
 	list_contexts "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/list-contexts"
 	setcontext "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/set-context"
@@ -165,7 +166,7 @@ func init() {
 	historyCmd := &cobra.Command{
 		Use:     "history",
 		Aliases: []string{"h"},
-		Short:   "Switch to any previous context from the history",
+		Short:   "Switch to any previous tuple {context,namespace} from the history",
 		Long:    `Lists the context history with the ability to switch to a previous context.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			stores, config, err := initialize()
@@ -174,6 +175,16 @@ func init() {
 			}
 
 			return history.SwitchToHistory(stores, config, stateDirectory, noIndex)
+		},
+	}
+
+	namespaceCommand := &cobra.Command{
+		Use:     "namespace",
+		Aliases: []string{"ns"},
+		Short:   "Change the current namespace",
+		Long:    `Search namespaces in the current cluster and change to it.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return ns.SwitchNamespace(getKubeconfigPathFromFlag(), stateDirectory, noIndex)
 		},
 	}
 
@@ -187,7 +198,8 @@ func init() {
 				return err
 			}
 
-			return setcontext.SetContext(args[0], stores, config, stateDirectory, noIndex, true)
+			_, err = setcontext.SetContext(args[0], stores, config, stateDirectory, noIndex, true)
+			return err
 		},
 	}
 
@@ -205,7 +217,7 @@ func init() {
 		},
 	}
 
-	deleteCmd := &cobra.Command{
+	cleanCmd := &cobra.Command{
 		Use:   "clean",
 		Short: "Cleans all temporary kubeconfig files",
 		Long:  `Cleans the temporary kubeconfig files created in the directory $HOME/.kube/switch_tmp`,
@@ -288,7 +300,8 @@ func init() {
 	}
 	rootCommand.AddCommand(setContextCmd)
 	rootCommand.AddCommand(listContextsCmd)
-	rootCommand.AddCommand(deleteCmd)
+	rootCommand.AddCommand(cleanCmd)
+	rootCommand.AddCommand(namespaceCommand)
 	rootCommand.AddCommand(hookCmd)
 	rootCommand.AddCommand(historyCmd)
 	rootCommand.AddCommand(previousContextCmd)
@@ -300,12 +313,15 @@ func init() {
 	aliasContextCmd.SilenceErrors = true
 	aliasRmCmd.SilenceErrors = true
 
-	setCommonFlags(setContextCmd)
-	setCommonFlags(listContextsCmd)
-	setCommonFlags(historyCmd)
-	setCommonFlags(previousContextCmd)
-	setCommonFlags(lastContextCmd)
-	setCommonFlags(aliasContextCmd)
+	setFlagsForContextCommands(setContextCmd)
+	setFlagsForContextCommands(listContextsCmd)
+	setFlagsForContextCommands(historyCmd)
+	// need to add flags as the namespace history allows switching to any {context: namespace} combination
+	setFlagsForContextCommands(previousContextCmd)
+	setFlagsForContextCommands(lastContextCmd)
+	setFlagsForContextCommands(aliasContextCmd)
+
+	setCommonFlags(namespaceCommand)
 }
 
 func NewCommandStartSwitcher() *cobra.Command {
@@ -313,8 +329,38 @@ func NewCommandStartSwitcher() *cobra.Command {
 }
 
 func init() {
-	setCommonFlags(rootCommand)
+	setFlagsForContextCommands(rootCommand)
 	rootCommand.SilenceUsage = true
+}
+
+func setFlagsForContextCommands(command *cobra.Command) {
+	setCommonFlags(command)
+	command.Flags().StringVar(
+		&storageBackend,
+		"store",
+		"filesystem",
+		"the backing store to be searched for kubeconfig files. Can be either \"filesystem\" or \"vault\"")
+	command.Flags().StringVar(
+		&kubeconfigName,
+		"kubeconfig-name",
+		defaultKubeconfigName,
+		"only shows kubeconfig files with this name. Accepts wilcard arguments '*' and '?'. Defaults to 'config'.")
+	command.Flags().StringVar(
+		&vaultAPIAddressFromFlag,
+		"vault-api-address",
+		"",
+		"the API address of the Vault store. Overrides the default \"vaultAPIAddress\" field in the SwitchConfig. This flag is overridden by the environment variable \"VAULT_ADDR\".")
+	command.Flags().StringVar(
+		&configPath,
+		"config-path",
+		os.ExpandEnv("$HOME/.kube/switch-config.yaml"),
+		"path on the local filesystem to the configuration file.")
+	// not used for setContext command. Makes call in switch.sh script easier (no need to exclude flag from call)
+	command.Flags().BoolVar(
+		&showPreview,
+		"show-preview",
+		true,
+		"show preview of the selected kubeconfig. Possibly makes sense to disable when using vault as the kubeconfig store to prevent excessive requests against the API.")
 }
 
 func setCommonFlags(command *cobra.Command) {
@@ -334,37 +380,10 @@ func setCommonFlags(command *cobra.Command) {
 		defaultKubeconfigPath,
 		"path to be recursively searched for kubeconfigs. Can be a file or a directory on the local filesystem or a path in Vault.")
 	command.Flags().StringVar(
-		&storageBackend,
-		"store",
-		"filesystem",
-		"the backing store to be searched for kubeconfig files. Can be either \"filesystem\" or \"vault\"")
-	command.Flags().StringVar(
-		&kubeconfigName,
-		"kubeconfig-name",
-		defaultKubeconfigName,
-		"only shows kubeconfig files with this name. Accepts wilcard arguments '*' and '?'. Defaults to 'config'.")
-	command.Flags().StringVar(
-		&vaultAPIAddressFromFlag,
-		"vault-api-address",
-		"",
-		"the API address of the Vault store. Overrides the default \"vaultAPIAddress\" field in the SwitchConfig. This flag is overridden by the environment variable \"VAULT_ADDR\".")
-	command.Flags().StringVar(
 		&stateDirectory,
 		"state-directory",
 		os.ExpandEnv("$HOME/.kube/switch-state"),
 		"path to the local directory used for storing internal state.")
-	command.Flags().StringVar(
-		&configPath,
-		"config-path",
-		os.ExpandEnv("$HOME/.kube/switch-config.yaml"),
-		"path on the local filesystem to the configuration file.")
-
-	// not used for setContext command. Makes call in switch.sh script easier (no need to exclude flag from call)
-	command.Flags().BoolVar(
-		&showPreview,
-		"show-preview",
-		true,
-		"show preview of the selected kubeconfig. Possibly makes sense to disable when using vault as the kubeconfig store to prevent excessive requests against the API.")
 }
 
 func initialize() ([]store.KubeconfigStore, *types.Config, error) {

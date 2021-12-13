@@ -20,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	historyutil "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/history/util"
 	"github.com/hashicorp/go-multierror"
 	"github.com/ktr0731/go-fuzzyfinder"
 	"github.com/sirupsen/logrus"
@@ -28,7 +29,6 @@ import (
 	"github.com/danielfoehrkn/kubeswitch/pkg/index"
 	"github.com/danielfoehrkn/kubeswitch/pkg/store"
 	aliasutil "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/alias/util"
-	historyutil "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/history/util"
 	"github.com/danielfoehrkn/kubeswitch/pkg/util"
 	kubeconfigutil "github.com/danielfoehrkn/kubeswitch/pkg/util/kubectx_copied"
 	"github.com/danielfoehrkn/kubeswitch/types"
@@ -127,7 +127,7 @@ func Switcher(stores []store.KubeconfigStore, config *types.Config, stateDir str
 		return err
 	}
 
-	kubeconfig, err := kubeconfigutil.ParseTemporaryKubeconfig(kubeconfigData)
+	kubeconfig, err := kubeconfigutil.NewKubeconfig(kubeconfigData)
 	if err != nil {
 		return fmt.Errorf("failed to parse selected kubeconfig. Please check if this file is a valid kubeconfig: %v", err)
 	}
@@ -145,13 +145,21 @@ func Switcher(stores []store.KubeconfigStore, config *types.Config, stateDir str
 		return err
 	}
 
+	if err := kubeconfig.SetKubeswitchContext(contextForHistory); err != nil {
+		return err
+	}
+
 	// write a temporary kubeconfig file and return the path
-	tempKubeconfigPath, err := kubeconfig.WriteTemporaryKubeconfigFile()
+	tempKubeconfigPath, err := kubeconfig.WriteKubeconfigFile()
 	if err != nil {
 		return fmt.Errorf("failed to write temporary kubeconfig file: %v", err)
 	}
 
-	if err := historyutil.AppendContextToHistory(contextForHistory); err != nil {
+	// get namespace for current context
+	ns, err := kubeconfig.NamespaceOfContext(kubeconfig.GetCurrentContext())
+	if err != nil {
+		logger.Warnf("failed to append context to history file: failed to get namespace of current context: %v", err)
+	} else if err := historyutil.AppendToHistory(contextForHistory, ns); err != nil {
 		logger.Warnf("failed to append context to history file: %v", err)
 	}
 
