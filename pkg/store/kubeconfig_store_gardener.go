@@ -18,14 +18,17 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"strings"
 	"time"
 
+	kubeconfigutil "github.com/danielfoehrkn/kubeswitch/pkg/util/kubectx_copied"
 	"github.com/disiqueira/gotree"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,10 +42,33 @@ import (
 )
 
 const (
-	CM_NAME_CLUSTER_IDENTITY   = "cluster-identity"
-	KEY_CLUSTER_IDENTITY       = CM_NAME_CLUSTER_IDENTITY
-	ALL_NAMESPACES_DENOMINATOR = "/"
+	// CmNameClusterIdentity is the config map name that contains the gardener cluster identity
+	CmNameClusterIdentity = "cluster-identity"
+	// KeyClusterIdentity is the key in the cluster identity config map
+	KeyClusterIdentity = CmNameClusterIdentity
+	// AllNamespacesDenominator is a character that indicates that all Shoot clusters should be considered for the search
+	AllNamespacesDenominator = "/"
+	// defaultGardenloginConfigPath is the path to the default gardenlogin config
+	defaultGardenloginConfigPath = "$HOME/.garden/gardenlogin.yaml"
 )
+
+// GardenloginConfig represents the config for the Gardenlogin-exec-provider that is
+// required to work with the kubeconfig files obtained from the GardenConfig cluster
+// If missing, this configuration is generated based on the Kubeswitch config
+type GardenloginConfig struct {
+	// Gardens is a list of known GardenConfig clusters
+	Gardens []GardenConfig `yaml:"gardens"`
+}
+
+// GardenConfig holds the config of a garden cluster
+type GardenConfig struct {
+	// Identity is the cluster identity of the garden cluster.
+	// See cluster-identity ConfigMap in kube-system namespace of the garden cluster
+	Identity string `yaml:"identity"`
+
+	// Kubeconfig holds the path for the kubeconfig of the garden cluster
+	Kubeconfig string `yaml:"kubeconfig"`
+}
 
 // NewGardenerStore creates a new Gardener store
 func NewGardenerStore(store types.KubeconfigStore, stateDir string) (*GardenerStore, error) {
@@ -79,18 +105,105 @@ func (s *GardenerStore) InitializeGardenerStore() error {
 	defer cancel()
 
 	cm := &corev1.ConfigMap{}
-	if err := gardenClient.Get(ctx, client.ObjectKey{Name: CM_NAME_CLUSTER_IDENTITY, Namespace: metav1.NamespaceSystem}, cm); err != nil {
-		return fmt.Errorf("unable to get gardener landscape identity from config map %s/%s: %w", metav1.NamespaceSystem, CM_NAME_CLUSTER_IDENTITY, err)
+	if err := gardenClient.Get(ctx, client.ObjectKey{Name: CmNameClusterIdentity, Namespace: metav1.NamespaceSystem}, cm); err != nil {
+		return fmt.Errorf("unable to get gardener landscape identity from config map %s/%s: %w", metav1.NamespaceSystem, CmNameClusterIdentity, err)
 	}
 
-	identity, ok := cm.Data[KEY_CLUSTER_IDENTITY]
+	identity, ok := cm.Data[KeyClusterIdentity]
 	if !ok {
-		return fmt.Errorf("unable to get gardener landscape identity from config map %s/%s: data key %q not found", metav1.NamespaceSystem, CM_NAME_CLUSTER_IDENTITY, KEY_CLUSTER_IDENTITY)
+		return fmt.Errorf("unable to get gardener landscape identity from config map %s/%s: data key %q not found", metav1.NamespaceSystem, CmNameClusterIdentity, KeyClusterIdentity)
 	}
 	s.LandscapeIdentity = identity
+
+	// possibly concurrent access to file when multiple stores
+	// For now, ignore the env variables: `GL_HOME` & `GL_CONFIG_NAME` that could be used to set alternative config directories
+	gardenloginConfigPath := os.ExpandEnv(defaultGardenloginConfigPath)
+	if _, err := os.Stat(gardenloginConfigPath); err != nil {
+		if !os.IsNotExist(err) {
+			return err
+		}
+
+		// the default configuration does not exist. Write based on the Kubeswitch configuration file
+		if err := writeGardenloginConfig(gardenloginConfigPath, &GardenloginConfig{Gardens: []GardenConfig{
+			{
+				Identity:   s.LandscapeIdentity,
+				Kubeconfig: s.Config.GardenerAPIKubeconfigPath,
+			},
+		}}); err != nil {
+			return fmt.Errorf("failed to write Gardenlogin config: %v", err)
+		}
+		return nil
+	}
+
+	// if already exists, check if contains an entry with the specified landscape identity
+	gardenloginConfig, err := getGardenloginConfig(gardenloginConfigPath)
+	if err != nil {
+		return err
+	}
+
+	foundEntry := false
+	for _, entry := range gardenloginConfig.Gardens {
+		if entry.Identity == s.LandscapeIdentity {
+			foundEntry = true
+			break
+		}
+	}
+
+	if !foundEntry {
+		gardenloginConfig.Gardens = append(gardenloginConfig.Gardens, GardenConfig{
+			Identity:   s.LandscapeIdentity,
+			Kubeconfig: s.Config.GardenerAPIKubeconfigPath,
+		})
+		if err := writeGardenloginConfig(gardenloginConfigPath, gardenloginConfig); err != nil {
+			return fmt.Errorf("failed to write Gardenlogin config: %v", err)
+		}
+	}
+
 	return nil
 }
 
+// getGardenloginConfig returns the GardenloginConfig from the provided filepath
+func getGardenloginConfig(path string) (*GardenloginConfig, error) {
+	bytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	config := &GardenloginConfig{}
+	if len(bytes) == 0 {
+		return config, nil
+	}
+
+	err = yaml.Unmarshal(bytes, &config)
+	if err != nil {
+		return nil, fmt.Errorf("could not unmarshal Gardenlogin config file with path '%s': %v", path, err)
+	}
+	return config, nil
+}
+
+// writeGardenloginConfig writes the given gardenlogin config to path
+func writeGardenloginConfig(path string, config *GardenloginConfig) error {
+	// creates or truncate/clean the existing file
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	output, err := yaml.Marshal(config)
+	if err != nil {
+		return err
+	}
+
+	_, err = file.Write(output)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// TODO: also get soil cluster OIDC kubeconfigs
+// k -n garden get secrets | grep .oidc
 func (s *GardenerStore) StartSearch(channel chan SearchResult) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -104,7 +217,7 @@ func (s *GardenerStore) StartSearch(channel chan SearchResult) {
 	}
 
 	for _, p := range s.KubeconfigStore.Paths {
-		if p == ALL_NAMESPACES_DENOMINATOR {
+		if p == AllNamespacesDenominator {
 			continue
 		}
 
@@ -120,8 +233,8 @@ func (s *GardenerStore) StartSearch(channel chan SearchResult) {
 		}
 	}
 
-	kubeconfigSecretSelector := labels.SelectorFromSet(labels.Set{"gardener.cloud/role": "kubeconfig"})
-	secretResult, err := s.getListForPaths(ctx, &corev1.SecretList{}, &kubeconfigSecretSelector)
+	kubeconfigLabelSelector := labels.SelectorFromSet(labels.Set{"operations.gardener.cloud/role": "kubeconfig"})
+	resultList, err := s.getListForPaths(ctx, &corev1.ConfigMapList{}, &kubeconfigLabelSelector)
 	if err != nil {
 		channel <- SearchResult{
 			Error: fmt.Errorf("failed to call Gardener API: %v", err),
@@ -129,9 +242,9 @@ func (s *GardenerStore) StartSearch(channel chan SearchResult) {
 		return
 	}
 
-	shootNameToSecret := gardenerstore.GetSecretNamespaceNameToSecret(s.Logger, secretResult)
+	shootNameToSecret := gardenerstore.GetShootToConfigMap(s.Logger, resultList)
 	// save to use later in GetKubeconfigForPath()
-	s.SecretNamespaceNameToSecret = shootNameToSecret
+	s.ShootToKubeconfigSecret = shootNameToSecret
 	s.Logger.Debugf("Found %d kubeconfigs", len(shootNameToSecret))
 
 	shootResult, err := s.getListForPaths(ctx, &gardencorev1beta1.ShootList{}, nil)
@@ -168,7 +281,7 @@ func (s *GardenerStore) GetContextPrefix(path string) string {
 func (s *GardenerStore) getListForPaths(ctx context.Context, list client.ObjectList, selector *labels.Selector) ([]client.ObjectList, error) {
 	// specifying no path equals to all namespaces being searched
 	if len(s.KubeconfigStore.Paths) == 0 {
-		s.KubeconfigStore.Paths = []string{ALL_NAMESPACES_DENOMINATOR}
+		s.KubeconfigStore.Paths = []string{AllNamespacesDenominator}
 	}
 
 	resultList := make([]client.ObjectList, len(s.KubeconfigStore.Paths))
@@ -178,7 +291,7 @@ func (s *GardenerStore) getListForPaths(ctx context.Context, list client.ObjectL
 			listOptions = client.ListOptions{}
 		)
 
-		if path != ALL_NAMESPACES_DENOMINATOR {
+		if path != AllNamespacesDenominator {
 			listOptions.Namespace = path
 		}
 
@@ -192,7 +305,7 @@ func (s *GardenerStore) getListForPaths(ctx context.Context, list client.ObjectL
 		copy := l.DeepCopyObject()
 		resultList[i] = copy.(client.ObjectList)
 
-		if path == ALL_NAMESPACES_DENOMINATOR {
+		if path == AllNamespacesDenominator {
 			break
 		}
 	}
@@ -254,12 +367,12 @@ func (s *GardenerStore) GetKubeconfigForPath(path string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	kubeconfigSecret := corev1.Secret{}
+	kubeconfigConfigMap := corev1.ConfigMap{}
 
 	switch resource {
 	case gardenerstore.GardenerResourceSeed:
 		// For Seeds:
-		// at the moment, managed seeds can only refer to Shoots in the Garden namespace
+		// at the moment, managed seeds can only refer to Shoots in the GardenConfig namespace
 		// we do not support external Seeds (that have a kubeconfig set)
 
 		namespace = "garden"
@@ -269,9 +382,9 @@ func (s *GardenerStore) GetKubeconfigForPath(path string) ([]byte, error) {
 
 		s.Logger.Debugf("getting kubeconfig for %s (%s/%s)", resource, namespace, name)
 
-		kubeconfigSecret, ok = s.SecretNamespaceNameToSecret[gardenerstore.GetSecretIdentifier(namespace, name)]
+		kubeconfigConfigMap, ok = s.ShootToKubeconfigSecret[gardenerstore.GetSecretIdentifier(namespace, name)]
 		if !ok {
-			if err := s.Client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: fmt.Sprintf("%s.kubeconfig", name)}, &kubeconfigSecret); err != nil {
+			if err := s.Client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: fmt.Sprintf("%s.kubeconfig", name)}, &kubeconfigConfigMap); err != nil {
 				if apierrors.IsNotFound(err) {
 					return nil, fmt.Errorf("kubeconfig secret for %s (%s/%s) not found", resource, namespace, name)
 				}
@@ -282,12 +395,36 @@ func (s *GardenerStore) GetKubeconfigForPath(path string) ([]byte, error) {
 		return nil, fmt.Errorf("unknown Gardener resource %q", resource)
 	}
 
-	value, found := kubeconfigSecret.Data[secrets.DataKeyKubeconfig]
+	value, found := kubeconfigConfigMap.Data[secrets.DataKeyKubeconfig]
 	if !found {
-		return nil, fmt.Errorf("kubeconfig secret for Shoot (%s/%s) does not contain a kubeconfig", namespace, name)
+		return nil, fmt.Errorf("kubeconfig config map for Shoot (%s/%s) does not contain a kubeconfig", namespace, name)
 	}
 
-	return value, nil
+	config, err := kubeconfigutil.NewKubeconfig([]byte(value))
+	if err != nil {
+		return nil, err
+	}
+
+	contextNames, err := config.GetContextNames()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, name := range contextNames {
+		if strings.HasSuffix(name, "-internal") {
+			if err := config.RemoveContext(name); err != nil {
+				return nil, fmt.Errorf("unable to remove internal kubeconfig context: %v", err)
+			}
+			break
+		}
+	}
+
+	bytes, err := config.GetBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes, nil
 }
 
 func (s *GardenerStore) GetSearchPreview(path string) (string, error) {

@@ -57,6 +57,7 @@ func (k *Kubeconfig) ModifyCurrentContext(name string) error {
 		Kind:  yaml.ScalarNode,
 		Value: "current-context",
 		Tag:   "!!str"}
+
 	valueNode := &yaml.Node{
 		Kind:  yaml.ScalarNode,
 		Value: name,
@@ -83,5 +84,28 @@ func (k *Kubeconfig) ModifyContextName(old, new string) error {
 	if !changed {
 		return fmt.Errorf("context with name %q not found", old)
 	}
+	return nil
+}
+
+func (k *Kubeconfig) RemoveContext(name string) error {
+	contexts := valueOf(k.rootNode, "contexts")
+	if contexts == nil {
+		return fmt.Errorf("contexts entry is nil")
+	} else if contexts.Kind != yaml.SequenceNode {
+		return fmt.Errorf("contexts is not a sequence node")
+	}
+
+	var keepContexts []*yaml.Node
+	for _, contextNode := range contexts.Content {
+		contextName := valueOf(contextNode, "name")
+		if contextName.Value == name {
+			continue
+		}
+
+		keepContexts = append(keepContexts, contextNode)
+	}
+
+	contexts.Content = keepContexts
+
 	return nil
 }

@@ -34,13 +34,6 @@ type Kubeconfig struct {
 	rootNode   *yaml.Node
 }
 
-// GetContextWithoutPrefix returns the real kubeconfig context name
-// selectable kubeconfig context names have the folder prefixed like <parent-folder>/<context-name>
-func GetContextWithoutPrefix(path string) string {
-	split := strings.SplitAfterN(path, "/", 2)
-	return split[len(split)-1]
-}
-
 // NewKubeconfigForPath creates a kubeconfig representation based on an existing kubeconfig
 // given by the path argument
 // This will overwrite the kubeconfig given by path when calling WriteKubeconfigFile()
@@ -155,4 +148,8 @@ func (k *Kubeconfig) WriteKubeconfigFile() (string, error) {
 	}
 
 	return file.Name(), nil
+}
+
+func (k *Kubeconfig) GetBytes() ([]byte, error) {
+	return yaml.Marshal(k.rootNode)
 }

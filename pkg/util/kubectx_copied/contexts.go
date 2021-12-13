@@ -55,6 +55,22 @@ func (k *Kubeconfig) GetCurrentContext() string {
 	return v.Value
 }
 
+// GetContextNames returns all context names in the kubeconfig
+func (k *Kubeconfig) GetContextNames() ([]string, error) {
+	contexts, err := k.contextsNode()
+	if err != nil {
+		return nil, err
+	}
+
+	var contextNames []string
+	for _, contextNode := range contexts.Content {
+		contextName := valueOf(contextNode, "name")
+		contextNames = append(contextNames, contextName.Value)
+	}
+
+	return contextNames, nil
+}
+
 // GetKubeswitchContext returns the "kubeswitch-context" value in given
 // kubeconfig object Node, or returns "" if not found.
 func (k *Kubeconfig) GetKubeswitchContext() string {

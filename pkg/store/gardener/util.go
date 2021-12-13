@@ -94,17 +94,17 @@ func GetGardenKubeconfigPath(landscapeIdentity string) string {
 	return fmt.Sprintf("%s-garden", landscapeIdentity)
 }
 
-// <namespace>-<name>
+// GetSecretIdentifier returns the Secret identifier in the form <namespace>-<name>
 func GetSecretIdentifier(namespace string, shootName string) string {
 	return fmt.Sprintf("%s/%s", namespace, shootName)
 }
 
-// <landscape>--seed--<seed-name>
+// GetSeedIdentifier returns the Seed identifier in the form <landscape>--seed--<seed-name>
 func GetSeedIdentifier(landscape, seedName string) string {
 	return fmt.Sprintf("%s--seed--%s", landscape, seedName)
 }
 
-// <landscape>--shoot--<project-name>--<shoot-name>
+// GetShootIdentifier returns the Shoot identifier in the form <landscape>--shoot--<project-name>--<shoot-name>
 func GetShootIdentifier(landscape, project, shoot string) string {
 	return fmt.Sprintf("%s--shoot--%s--%s", landscape, project, shoot)
 }
@@ -124,7 +124,6 @@ func ParseIdentifier(path string) (string, GardenerResource, string, string, str
 			return "", "", "", "", "", fmt.Errorf("cannot parse kubeconfig path %q", path)
 		}
 
-		// TODO something is off here, I should be getting the project name only right??
 		projectName := "garden"
 		namespace := "garden"
 		if split[2] != "garden" { // e.g d060239
@@ -144,23 +143,22 @@ func ParseIdentifier(path string) (string, GardenerResource, string, string, str
 	}
 }
 
-// takes a slice of client.ObjectList and casts each client.ObjectList to corev1.SecretList
-// returns a map[string]corev1.Secret where the key is the secret <namespace>-<name> and the value the secret resource
-func GetSecretNamespaceNameToSecret(log *logrus.Entry, secretSlice []client.ObjectList) map[string]corev1.Secret {
-	shootNameToSecret := make(map[string]corev1.Secret)
+// GetShootToConfigMap returns a mapping Shoot <namespace>-<name> -> kubeconfig config map
+func GetShootToConfigMap(log *logrus.Entry, secretSlice []client.ObjectList) map[string]corev1.ConfigMap {
+	shootNameToSecret := make(map[string]corev1.ConfigMap)
 	// we have a list of lists
 	for _, objectList := range secretSlice {
-		list := objectList.(*corev1.SecretList)
+		list := objectList.(*corev1.ConfigMapList)
 		for _, secret := range list.Items {
 			if _, exists := secret.Data[secrets.DataKeyKubeconfig]; !exists {
-				log.Warnf("Secret %s/%s does not contain a kubeconfig. Skipping.", secret.Namespace, secret.Name)
+				log.Warnf("Config Map %s/%s does not contain a kubeconfig. Skipping.", secret.Namespace, secret.Name)
 				continue
 			}
 
 			var shootName string
 			if len(secret.ObjectMeta.OwnerReferences) == 0 || secret.ObjectMeta.OwnerReferences[0].Kind != "Shoot" {
 				if !strings.Contains(secret.Namespace, ".kubeconfig") {
-					log.Warnf("Secret %s/%s could not be associated with any Shoot. Skipping.", secret.Namespace, secret.Name)
+					log.Warnf("Config Map %s/%s could not be associated with any Shoot. Skipping.", secret.Namespace, secret.Name)
 					continue
 				}
 				shootName = strings.Split(secret.Namespace, ".kubeconfig")[0]
@@ -173,7 +171,7 @@ func GetSecretNamespaceNameToSecret(log *logrus.Entry, secretSlice []client.Obje
 	return shootNameToSecret
 }
 
-// isShootedSeed determines if this Shoot is a Shooted seed based on an annotation
+// IsShootedSeed determines if this Shoot is a Shooted seed based on an annotation
 func IsShootedSeed(shoot gardencorev1beta1.Shoot) bool {
 	if shoot.Namespace == v1beta1constants.GardenNamespace && shoot.Annotations != nil {
 		return shoot.Annotations[v1beta1constants.AnnotationShootUseAsSeed] != ""

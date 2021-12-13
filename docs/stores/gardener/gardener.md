@@ -4,6 +4,15 @@ Kubeswitch can search through multiple [Gardener](https://gardener.cloud) instal
 of `Shoot` clusters and `Shooted /Managed Seeds`.
 External `Seeds` (not managed) and `Plants` are currently not supported.
 
+## Prerequisites
+
+Since `kubeswitch` version `> 0.5.0` only kubeconfigs with short-lived static tokens are used to access Shoot clusters.
+For this to work, the Gardener API Server must be started with feature gate `AdminKubeconfigRequest` (will be enabled per-default in future versions of Gardener).
+For more information, please see the [GEP](https://github.com/gardener/gardener/blob/master/docs/proposals/16-adminkubeconfig-subresource.md).
+
+On the client side, you need to have the `Gardenlogin` credentials plugin installed. Please check the [documentation here](https://github.com/gardener/gardenlogin#installation).
+For your convenience, the configuration file for the credential-plugin at `$HOME/.garden/gardenlogin.yaml` will be generated based on the `kubeswitch` configuration file .
+
 ## Search Semantics
 
 Kubeconfig contexts names are searchable using Gardener semantics.

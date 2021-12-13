@@ -100,9 +100,9 @@ type GardenerStore struct {
 	LandscapeName     string
 	StateDirectory    string
 	// if a search against the Gardener API has been executed, this is filled with
-	// all the discovered secrets.
+	// all the discovered config maps containing the kubeconfig bytes.
 	// This way we can save some requests against the API when getting the kubeconfig later
-	SecretNamespaceNameToSecret map[string]corev1.Secret
+	ShootToKubeconfigSecret map[string]corev1.ConfigMap
 }
 
 type EKSStore struct {
