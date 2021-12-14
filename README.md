@@ -5,7 +5,6 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/danielfoehrKn/kubeswitch)](https://goreportcard.com/badge/github.com/danielfoehrKn/kubeswitch)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-
 Steroids for your Kubernetes terminal.
 
 `kubeswitch` (lazy: `switch`) is the single pane of glass for all of your kubeconfig files.  
