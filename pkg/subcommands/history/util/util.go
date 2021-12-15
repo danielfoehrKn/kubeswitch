@@ -30,6 +30,9 @@ func ReadHistory() ([]string, error) {
 	fileName := os.ExpandEnv(historyFilePath)
 	file, err := os.Open(fileName)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("no history entries yet - please run `switch` first")
+		}
 		return nil, err
 	}
 	defer file.Close()
@@ -46,6 +49,13 @@ func ReadHistory() ([]string, error) {
 // AppendToHistory appends the given context: namespace to the history file
 func AppendToHistory(context, namespace string) error {
 	filepath := os.ExpandEnv(historyFilePath)
+	f, err := os.OpenFile(filepath,
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
 	historyEntry := fmt.Sprintf("%s:: %s\n", context, namespace)
 
 	lastHistoryEntry, err := getLastLineWithSeek(filepath)
@@ -54,16 +64,9 @@ func AppendToHistory(context, namespace string) error {
 	}
 
 	// do not entry history entry if previous entry is identical
-	if strings.Contains(historyEntry, lastHistoryEntry) {
+	if historyEntry == lastHistoryEntry {
 		return nil
 	}
-
-	f, err := os.OpenFile(filepath,
-		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
 
 	if _, err := f.WriteString(historyEntry); err != nil {
 		return err
@@ -99,6 +102,11 @@ func getLastLineWithSeek(filepath string) (string, error) {
 	var cursor int64 = 0
 	stat, _ := fileHandle.Stat()
 	filesize := stat.Size()
+
+	if filesize == 0 {
+		return "", nil
+	}
+
 	for {
 		cursor -= 1
 		if _, err := fileHandle.Seek(cursor, io.SeekEnd); err != nil {

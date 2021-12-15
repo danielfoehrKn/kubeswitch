@@ -34,6 +34,8 @@ func SwitchToHistory(stores []store.KubeconfigStore, config *types.Config, state
 		return err
 	}
 
+	historyLength := len(history)
+
 	idx, err := fuzzyfinder.Find(
 		history,
 		func(i int) string {
@@ -46,6 +48,10 @@ func SwitchToHistory(stores []store.KubeconfigStore, config *types.Config, state
 
 			if ns == nil {
 				return fmt.Sprintf("%d: %s", len(history)-i-1, *context)
+			}
+
+			if i+1 == historyLength {
+				return fmt.Sprintf("%d: %s (ns: %s)", 0, *context, *ns)
 			}
 
 			previousContext, _, err := util.ParseHistoryEntry(history[i+1])

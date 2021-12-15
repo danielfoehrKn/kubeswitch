@@ -15,5 +15,8 @@
 /hack/switch/switcher_darwin_amd64
 /hack/switch/switcher_darwin_amd64.tar.gz
 
+/hack/switch/switcher_darwin_arm64
+/hack/switch/switcher_darwin_arm64.tar.gz
+
 /hack/switch/switcher_linux_amd64
 /hack/switch/switcher_linux_amd64.tar.gz
