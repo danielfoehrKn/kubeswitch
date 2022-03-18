@@ -52,7 +52,8 @@ func SwitchNamespace(kubeconfigPathFromFlag, stateDir string, noIndex bool) erro
 	cachedNamespaces := sets.NewString()
 	kubeconfigPath := kubeconfigPathFromFlag
 
-	if kubeconfigPath == os.ExpandEnv(defaultKubeconfigPath) && len(kubeconfigPathFromEnv) > 0 {
+	// kubeconfig path from flag is preferred over env (just not if it is only the default)
+	if (len(kubeconfigPath) == 0 || kubeconfigPath == os.ExpandEnv(defaultKubeconfigPath)) && len(kubeconfigPathFromEnv) > 0 {
 		if len(strings.Split(kubeconfigPathFromEnv, linuxEnvKubeconfigSeperator)) > 1 {
 			return fmt.Errorf("providing multiple kubeconfig files via environemnt varibale KUBECONFIG is not supported for namespace switching")
 		}
