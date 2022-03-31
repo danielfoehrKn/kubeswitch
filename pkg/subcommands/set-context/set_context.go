@@ -51,7 +51,7 @@ func SetContext(desiredContext string, stores []store.KubeconfigStore, config *t
 
 		kubeconfigStore := *discoveredContext.Store
 
-		contextWithoutPrefix := discoveredContext.Path
+		contextWithoutPrefix := discoveredContext.Name
 		if len(kubeconfigStore.GetContextPrefix(discoveredContext.Path)) > 0 && strings.HasPrefix(discoveredContext.Name, kubeconfigStore.GetContextPrefix(discoveredContext.Path)) {
 			contextWithoutPrefix = strings.TrimPrefix(discoveredContext.Name, fmt.Sprintf("%s/", kubeconfigStore.GetContextPrefix(discoveredContext.Path)))
 		}
@@ -73,14 +73,7 @@ func SetContext(desiredContext string, stores []store.KubeconfigStore, config *t
 				originalContextBeforeAlias = contextWithoutPrefix
 			}
 
-			// only if the desired context matches the ContextWithoutPrefix, then use it to set the current context
-			// otherwise, use the desiredContext
-			currentContextToSet := desiredContext
-			if matchesContextWithoutPrefix {
-				currentContextToSet = contextWithoutPrefix
-			}
-
-			if err := kubeconfig.SetContext(currentContextToSet, originalContextBeforeAlias, kubeconfigStore.GetContextPrefix(discoveredContext.Path)); err != nil {
+			if err := kubeconfig.SetContext(contextWithoutPrefix, originalContextBeforeAlias, kubeconfigStore.GetContextPrefix(discoveredContext.Path)); err != nil {
 				return nil, err
 			}
 
