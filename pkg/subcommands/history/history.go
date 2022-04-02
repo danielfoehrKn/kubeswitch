@@ -15,6 +15,7 @@
 package history
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/danielfoehrkn/kubeswitch/pkg/store"
@@ -63,10 +64,22 @@ func SwitchToHistory(stores []store.KubeconfigStore, config *types.Config, state
 			// Grouping: check if the previous entry has the same context name
 			// then only show the namespace
 			if *context == *previousContext {
-				return fmt.Sprintf(" > %s", *ns)
+				unicodeCirceledStar := '\U0000272A'
+				unicodeWhitespace := '\U00002009'
+
+				// just to make sure that the namespace is shown in the terminal
+				// window at the same position as the context
+				var b bytes.Buffer
+				n := len(history)-i-1
+				for n > 0 {
+					n = n/10
+					b.WriteRune(unicodeWhitespace)
+				}
+
+				return fmt.Sprintf("%s%c %s", b.String(), unicodeCirceledStar, *ns)
 			}
 
-			return fmt.Sprintf("%d: %s (ns: %s)", len(history)-i-1, *context, *ns)
+			return fmt.Sprintf("%d: %s (%s)", len(history)-i-1, *context, *ns)
 		})
 
 	if err != nil {
