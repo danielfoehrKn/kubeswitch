@@ -70,9 +70,9 @@ func SwitchToHistory(stores []store.KubeconfigStore, config *types.Config, state
 				// just to make sure that the namespace is shown in the terminal
 				// window at the same position as the context
 				var b bytes.Buffer
-				n := len(history)-i-1
+				n := len(history) - i - 1
 				for n > 0 {
-					n = n/10
+					n = n / 10
 					b.WriteRune(unicodeWhitespace)
 				}
 
