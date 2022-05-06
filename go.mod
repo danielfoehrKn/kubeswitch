@@ -16,7 +16,7 @@ require (
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/jedib0t/go-pretty/v6 v6.1.0
 	github.com/karrick/godirwalk v1.16.1
-	github.com/ktr0731/go-fuzzyfinder v0.5.0
+	github.com/ktr0731/go-fuzzyfinder v0.6.0
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.15.0
 	github.com/pkg/errors v0.9.1

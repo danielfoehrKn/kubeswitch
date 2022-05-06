@@ -16,3 +16,4 @@
 coverage.txt
 fuzz.out
 _tools
+.idea

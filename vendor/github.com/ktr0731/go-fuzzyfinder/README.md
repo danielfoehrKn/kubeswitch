@@ -17,7 +17,7 @@ $ go get github.com/ktr0731/go-fuzzyfinder
 `go-fuzzyfinder` provides two functions, `Find` and `FindMulti`.
 `FindMulti` can select multiple lines. It is similar to `fzf -m`.
 
-This is [an example](//github.com/ktr0731/go-fuzzyfinder/blob/master/_example/track/main.go) of `FindMulti`.
+This is [an example](//github.com/ktr0731/go-fuzzyfinder/blob/master/example/track/main.go) of `FindMulti`.
 
 ``` go
 type Track struct {
