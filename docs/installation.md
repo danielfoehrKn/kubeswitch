@@ -58,7 +58,7 @@ $ source /usr/local/bin/switch.sh
 
 # Command completion
 
-Please [see here](docs/command_completion.md) how to install command completion for bash and zsh shells.
+Please [see here](command_completion.md) how to install command completion for bash and zsh shells.
 This completes both the `kubeswitch` commands as well as the context names.
 
 # Cleanup temporary kubeconfig files
