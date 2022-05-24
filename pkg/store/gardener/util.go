@@ -144,10 +144,10 @@ func ParseIdentifier(path string) (string, GardenerResource, string, string, str
 }
 
 // GetShootToConfigMap returns a mapping Shoot <namespace>-<name> -> kubeconfig config map
-func GetShootToConfigMap(log *logrus.Entry, secretSlice []client.ObjectList) map[string]corev1.ConfigMap {
+func GetShootToConfigMap(log *logrus.Entry, objectLists []client.ObjectList) map[string]corev1.ConfigMap {
 	shootNameToSecret := make(map[string]corev1.ConfigMap)
 	// we have a list of lists
-	for _, objectList := range secretSlice {
+	for _, objectList := range objectLists {
 		list := objectList.(*corev1.ConfigMapList)
 		for _, secret := range list.Items {
 			if _, exists := secret.Data[secrets.DataKeyKubeconfig]; !exists {

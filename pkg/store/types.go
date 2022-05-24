@@ -20,7 +20,10 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	eks "github.com/aws/aws-sdk-go-v2/service/eks/types"
+	gardenclient "github.com/danielfoehrkn/kubeswitch/pkg/store/gardener/copied_gardenctlv2"
 	"github.com/danielfoehrkn/kubeswitch/types"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
 	gkev1 "google.golang.org/api/container/v1"
@@ -92,17 +95,17 @@ type VaultStore struct {
 }
 
 type GardenerStore struct {
-	Logger            *logrus.Entry
-	KubeconfigStore   types.KubeconfigStore
-	Client            client.Client
-	Config            *types.StoreConfigGardener
-	LandscapeIdentity string
-	LandscapeName     string
-	StateDirectory    string
-	// if a search against the Gardener API has been executed, this is filled with
-	// all the discovered config maps containing the kubeconfig bytes.
-	// This way we can save some requests against the API when getting the kubeconfig later
-	ShootToKubeconfigSecret map[string]corev1.ConfigMap
+	Logger                    *logrus.Entry
+	KubeconfigStore           types.KubeconfigStore
+	GardenClient              gardenclient.Client
+	Client                    client.Client
+	Config                    *types.StoreConfigGardener
+	LandscapeIdentity         string
+	LandscapeName             string
+	StateDirectory            string
+	CachePathToShoot          map[string]gardencorev1beta1.Shoot
+	CachePathToManagedSeed    map[string]seedmanagementv1alpha1.ManagedSeed
+	CacheCaSecretNameToSecret map[string]corev1.Secret
 }
 
 type EKSStore struct {

@@ -22,17 +22,18 @@ import (
 	"strings"
 	"time"
 
+	gardenclient "github.com/danielfoehrkn/kubeswitch/pkg/store/gardener/copied_gardenctlv2"
 	kubeconfigutil "github.com/danielfoehrkn/kubeswitch/pkg/util/kubectx_copied"
 	"github.com/disiqueira/gotree"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardenerstore "github.com/danielfoehrkn/kubeswitch/pkg/store/gardener"
@@ -95,17 +96,17 @@ func NewGardenerStore(store types.KubeconfigStore, stateDir string) (*GardenerSt
 // decoupled from the NewGardenerStore() to be called when starting the search to reduce
 // time when the CLI can start showing the fuzzy search
 func (s *GardenerStore) InitializeGardenerStore() error {
-	gardenClient, err := gardenerstore.GetGardenClient(s.Config)
+	var err error
+	s.Client, err = gardenerstore.GetGardenClient(s.Config)
 	if err != nil {
 		return err
 	}
-	s.Client = gardenClient
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	cm := &corev1.ConfigMap{}
-	if err := gardenClient.Get(ctx, client.ObjectKey{Name: CmNameClusterIdentity, Namespace: metav1.NamespaceSystem}, cm); err != nil {
+	if err := s.Client.Get(ctx, client.ObjectKey{Name: CmNameClusterIdentity, Namespace: metav1.NamespaceSystem}, cm); err != nil {
 		return fmt.Errorf("unable to get gardener landscape identity from config map %s/%s: %w", metav1.NamespaceSystem, CmNameClusterIdentity, err)
 	}
 
@@ -114,6 +115,7 @@ func (s *GardenerStore) InitializeGardenerStore() error {
 		return fmt.Errorf("unable to get gardener landscape identity from config map %s/%s: data key %q not found", metav1.NamespaceSystem, CmNameClusterIdentity, KeyClusterIdentity)
 	}
 	s.LandscapeIdentity = identity
+	s.GardenClient = gardenclient.NewGardenClient(s.Client, s.LandscapeIdentity)
 
 	// possibly concurrent access to file when multiple stores
 	// For now, ignore the env variables: `GL_HOME` & `GL_CONFIG_NAME` that could be used to set alternative config directories
@@ -202,8 +204,7 @@ func writeGardenloginConfig(path string, config *GardenloginConfig) error {
 	return nil
 }
 
-// TODO: also get soil cluster OIDC kubeconfigs
-// k -n garden get secrets | grep .oidc
+// StartSearch starts the search for Shoots and Managed Seeds
 func (s *GardenerStore) StartSearch(channel chan SearchResult) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -216,43 +217,49 @@ func (s *GardenerStore) StartSearch(channel chan SearchResult) {
 		return
 	}
 
-	for _, p := range s.KubeconfigStore.Paths {
-		if p == AllNamespacesDenominator {
-			continue
+	// specifying no path equals to all namespaces being searched
+	if len(s.KubeconfigStore.Paths) == 0 {
+		s.KubeconfigStore.Paths = []string{AllNamespacesDenominator}
+	}
+
+	var (
+		shootList  []gardencorev1beta1.Shoot
+		secretList []corev1.Secret
+	)
+	for _, path := range s.KubeconfigStore.Paths {
+		var (
+			shoots      *gardencorev1beta1.ShootList
+			listOptions = client.ListOptions{}
+		)
+
+		if path != AllNamespacesDenominator {
+			listOptions.Namespace = path
 		}
 
-		ns := corev1.Namespace{}
-		if err := s.Client.Get(ctx, client.ObjectKey{Name: p}, &ns); err != nil {
-			if apierrors.IsNotFound(err) {
-				err = fmt.Errorf("namespace %q does not exist. Please check your path configuration : %w", p, err)
-			}
+		shoots, err := s.GardenClient.ListShoots(ctx, &listOptions)
+		if err != nil {
 			channel <- SearchResult{
-				Error: err,
+				Error: fmt.Errorf("failed to call list Shoots from the Gardener API for namespace %q: %v", path, err),
 			}
 			return
 		}
-	}
 
-	kubeconfigLabelSelector := labels.SelectorFromSet(labels.Set{"operations.gardener.cloud/role": "kubeconfig"})
-	resultList, err := s.getListForPaths(ctx, &corev1.ConfigMapList{}, &kubeconfigLabelSelector)
-	if err != nil {
-		channel <- SearchResult{
-			Error: fmt.Errorf("failed to call Gardener API: %v", err),
+		selector := labels.SelectorFromSet(labels.Set{"gardener.cloud/role": "ca-cluster"})
+		listOptions.LabelSelector = selector
+		secrets := &corev1.SecretList{}
+		if err := s.Client.List(ctx, secrets, &listOptions); err != nil {
+			channel <- SearchResult{
+				Error: fmt.Errorf("failed to list CA secrets for namespace %q: %v", path, err),
+			}
+			return
 		}
-		return
-	}
 
-	shootNameToSecret := gardenerstore.GetShootToConfigMap(s.Logger, resultList)
-	// save to use later in GetKubeconfigForPath()
-	s.ShootToKubeconfigSecret = shootNameToSecret
-	s.Logger.Debugf("Found %d kubeconfigs", len(shootNameToSecret))
+		shootList = append(shootList, shoots.Items...)
+		secretList = append(secretList, secrets.Items...)
 
-	shootResult, err := s.getListForPaths(ctx, &gardencorev1beta1.ShootList{}, nil)
-	if err != nil {
-		channel <- SearchResult{
-			Error: fmt.Errorf("failed to call Gardener API: %v", err),
+		if path == AllNamespacesDenominator {
+			break
 		}
-		return
 	}
 
 	managedSeeds := &seedmanagementv1alpha1.ManagedSeedList{}
@@ -262,7 +269,13 @@ func (s *GardenerStore) StartSearch(channel chan SearchResult) {
 		s.Logger.Debugf("failed to list managed seeds: %v", err)
 	}
 
-	s.sendKubeconfigPaths(channel, shootResult, managedSeeds)
+	// for memoization
+	s.CacheCaSecretNameToSecret = make(map[string]corev1.Secret, len(secretList))
+	for _, secret := range secretList {
+		s.CacheCaSecretNameToSecret[fmt.Sprintf("%s:%s", secret.Namespace, secret.Name)] = secret
+	}
+
+	s.sendKubeconfigPaths(channel, shootList, managedSeeds.Items)
 }
 
 func (s *GardenerStore) GetContextPrefix(path string) string {
@@ -274,42 +287,6 @@ func (s *GardenerStore) GetContextPrefix(path string) string {
 	// <landscape-name>--shoot-<project-name>--<shoot-name>
 	// just use this semantic information as a prefix & remove the double dashes
 	return strings.ReplaceAll(path, "--", "-")
-}
-
-// getListForPaths takes a context an object list (e.g secretsList)
-// returns an object list for each configured paths (namespaces)
-func (s *GardenerStore) getListForPaths(ctx context.Context, list client.ObjectList, selector *labels.Selector) ([]client.ObjectList, error) {
-	// specifying no path equals to all namespaces being searched
-	if len(s.KubeconfigStore.Paths) == 0 {
-		s.KubeconfigStore.Paths = []string{AllNamespacesDenominator}
-	}
-
-	resultList := make([]client.ObjectList, len(s.KubeconfigStore.Paths))
-	for i, path := range s.KubeconfigStore.Paths {
-		var (
-			l           = list
-			listOptions = client.ListOptions{}
-		)
-
-		if path != AllNamespacesDenominator {
-			listOptions.Namespace = path
-		}
-
-		if selector != nil {
-			listOptions.LabelSelector = *selector
-		}
-
-		if err := s.Client.List(ctx, l, &listOptions); err != nil {
-			return nil, err
-		}
-		copy := l.DeepCopyObject()
-		resultList[i] = copy.(client.ObjectList)
-
-		if path == AllNamespacesDenominator {
-			break
-		}
-	}
-	return resultList, nil
 }
 
 // IsInitialized checks if the store has been initialized already
@@ -367,40 +344,44 @@ func (s *GardenerStore) GetKubeconfigForPath(path string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	kubeconfigConfigMap := corev1.ConfigMap{}
-
+	var clientConfig clientcmd.ClientConfig
 	switch resource {
 	case gardenerstore.GardenerResourceSeed:
-		// For Seeds:
-		// at the moment, managed seeds can only refer to Shoots in the GardenConfig namespace
-		// we do not support external Seeds (that have a kubeconfig set)
+		managedSeed, ok := s.CachePathToManagedSeed[path]
 
+		// we know the namespace and name for the Shoot for the ManagedSeed
+		// so we can use that knowledge to get the correct index to get the corresponding Shoot from the cache
 		namespace = "garden"
+		if ok {
+			path = gardenerstore.GetShootIdentifier(landscape, "garden", managedSeed.Spec.Shoot.Name)
+		}
 		fallthrough
 	case gardenerstore.GardenerResourceShoot:
-		var ok bool
-
 		s.Logger.Debugf("getting kubeconfig for %s (%s/%s)", resource, namespace, name)
 
-		kubeconfigConfigMap, ok = s.ShootToKubeconfigSecret[gardenerstore.GetSecretIdentifier(namespace, name)]
-		if !ok {
-			if err := s.Client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: fmt.Sprintf("%s.kubeconfig", name)}, &kubeconfigConfigMap); err != nil {
-				if apierrors.IsNotFound(err) {
-					return nil, fmt.Errorf("kubeconfig secret for %s (%s/%s) not found", resource, namespace, name)
-				}
-				return nil, fmt.Errorf("failed to get kubeconfig secret for Shoot (%s/%s): %w", namespace, name, err)
-			}
+		shoot, _ := s.CachePathToShoot[path]
+		caClusterSecretName := fmt.Sprintf("%s:%s.%s", namespace, name, gardenclient.ShootProjectSecretSuffixCACluster)
+		caSecret, _ := s.CacheCaSecretNameToSecret[caClusterSecretName]
+
+		clientConfig, err = s.GardenClient.GetShootClientConfig(ctx, namespace, name, shoot, caSecret)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate Shoot kubeconfig: %w", err)
 		}
 	default:
 		return nil, fmt.Errorf("unknown Gardener resource %q", resource)
 	}
 
-	value, found := kubeconfigConfigMap.Data[secrets.DataKeyKubeconfig]
-	if !found {
-		return nil, fmt.Errorf("kubeconfig config map for Shoot (%s/%s) does not contain a kubeconfig", namespace, name)
+	rawConfig, err := clientConfig.RawConfig()
+	if err != nil {
+		return nil, err
 	}
 
-	config, err := kubeconfigutil.NewKubeconfig([]byte(value))
+	bytes, err := clientcmd.Write(rawConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	config, err := kubeconfigutil.NewKubeconfig(bytes)
 	if err != nil {
 		return nil, err
 	}
@@ -419,12 +400,7 @@ func (s *GardenerStore) GetKubeconfigForPath(path string) ([]byte, error) {
 		}
 	}
 
-	bytes, err := config.GetBytes()
-	if err != nil {
-		return nil, err
-	}
-
-	return bytes, nil
+	return config.GetBytes()
 }
 
 func (s *GardenerStore) GetSearchPreview(path string) (string, error) {
@@ -485,7 +461,7 @@ func (s *GardenerStore) GetSearchPreview(path string) (string, error) {
 	}
 }
 
-func (s *GardenerStore) sendKubeconfigPaths(channel chan SearchResult, shoots []client.ObjectList, managedSeeds *seedmanagementv1alpha1.ManagedSeedList) {
+func (s *GardenerStore) sendKubeconfigPaths(channel chan SearchResult, shoots []gardencorev1beta1.Shoot, managedSeeds []seedmanagementv1alpha1.ManagedSeed) {
 	var landscapeName = s.LandscapeIdentity
 
 	// first, send the garden context name configured in the switch config
@@ -509,61 +485,74 @@ func (s *GardenerStore) sendKubeconfigPaths(channel chan SearchResult, shoots []
 		}
 	}
 
+	s.CachePathToManagedSeed = make(map[string]seedmanagementv1alpha1.ManagedSeed, len(managedSeeds))
+	s.CachePathToShoot = make(map[string]gardencorev1beta1.Shoot, len(shoots))
+
 	shootNamesManagedSeed := make(map[string]struct{})
-	for _, managedSeed := range managedSeeds.Items {
+	for _, managedSeed := range managedSeeds {
 		// shoots referenced by managed Seeds are assumed to be in the garden namespace
 		shootNamesManagedSeed[fmt.Sprintf("garden:%s", managedSeed.Spec.Shoot.Name)] = struct{}{}
-		// currently the name of the Seed resource of a manged Seed is ALWAYS the managed resource name
+		// currently the name of the Seed resource of a manged Seed is ALWAYS the managed Seed's name
 		kubeconfigPath := gardenerstore.GetSeedIdentifier(landscapeName, managedSeed.Name)
+
+		// for memoization
+		s.CachePathToManagedSeed[kubeconfigPath] = managedSeed
+	}
+
+	// loop over all Shoots/ShootedSeeds and construct and send their kubeconfig paths as search result
+	for _, shoot := range shoots {
+		seedName := shoot.Spec.SeedName
+		if seedName == nil {
+			// shoots that are not scheduled to Seed yet do not have a control plane
+			continue
+		}
+
+		var projectName string
+		if shoot.Namespace == "garden" {
+			projectName = "garden"
+		} else {
+			// need to deduct the project name from the Shoot namespace garden-<projectname>
+			split := strings.SplitN(shoot.Namespace, "garden-", 2)
+			switch len(split) {
+			case 2:
+				projectName = split[1]
+			default:
+				continue
+			}
+		}
+
+		var kubeconfigPath string
+
+		// check for shooted seed annotation
+		// check that the Shoot is not already added through the managed Seed to avoid duplicates
+		if gardenerstore.IsShootedSeed(shoot) {
+			// seed resource of a Shooted seed should have the same name as the Seed
+			kubeconfigPath = gardenerstore.GetSeedIdentifier(landscapeName, shoot.Name)
+		} else {
+			kubeconfigPath = gardenerstore.GetShootIdentifier(landscapeName, projectName, shoot.Name)
+		}
+
+		// for memoization
+		s.CachePathToShoot[kubeconfigPath] = shoot
+
+		_, isAlreadyReferencedByManagedSeed := shootNamesManagedSeed[fmt.Sprintf("%s:%s", shoot.Namespace, shoot.Name)]
+		if isAlreadyReferencedByManagedSeed {
+			continue
+		}
+
 		channel <- SearchResult{
 			KubeconfigPath: kubeconfigPath,
 			Error:          nil,
 		}
 	}
 
-	// loop over all Shoots/ShootedSeeds and construct and send their kubeconfig paths as search result
-	for _, objectList := range shoots {
-		shootList := objectList.(*gardencorev1beta1.ShootList)
-		for _, shoot := range shootList.Items {
-			seedName := shoot.Spec.SeedName
-			if seedName == nil {
-				// shoots that are not scheduled to Seed yet do not have a control plane
-				continue
-			}
-
-			var projectName string
-			if shoot.Namespace == "garden" {
-				projectName = "garden"
-			} else {
-				// need to deduct the project name from the Shoot namespace garden-<projectname>
-				split := strings.SplitN(shoot.Namespace, "garden-", 2)
-				switch len(split) {
-				case 2:
-					projectName = split[1]
-				default:
-					continue
-				}
-			}
-
-			var kubeconfigPath string
-
-			_, isAlreadyReferencedByManagedSeed := shootNamesManagedSeed[fmt.Sprintf("%s:%s", shoot.Namespace, shoot.Name)]
-			if isAlreadyReferencedByManagedSeed {
-				continue
-			}
-			// check for shooted seed annotation
-			// check that the Shoot is not already added through the managed Seed to avoid duplicates
-			if gardenerstore.IsShootedSeed(shoot) {
-				// seed resource of a Shooted seed should have the same name as the Seed
-				kubeconfigPath = gardenerstore.GetSeedIdentifier(landscapeName, shoot.Name)
-			} else {
-				kubeconfigPath = gardenerstore.GetShootIdentifier(landscapeName, projectName, shoot.Name)
-			}
-
-			channel <- SearchResult{
-				KubeconfigPath: kubeconfigPath,
-				Error:          nil,
-			}
+	// the reason why the paths for managed seeds are populated here in the end (even though they are available before),
+	// is so that the corresponding Shoot resource for the ManagedSeed is already available the cache s.CachePathToShoot[]
+	// when populating the path. This avoids cache misses.
+	for pathForSeed, _ := range s.CachePathToManagedSeed {
+		channel <- SearchResult{
+			KubeconfigPath: pathForSeed,
+			Error:          nil,
 		}
 	}
 }
