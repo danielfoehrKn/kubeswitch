@@ -1054,12 +1054,28 @@ backing instances associated with the service.</p>
 <td><code>DNS</code></td>
 <td>
 <p>Attempt to resolve the IP address by querying the ambient DNS,
-during request processing. If no endpoints are specified, the proxy
+asynchronously. If no endpoints are specified, the proxy
 will resolve the DNS address specified in the hosts field, if
 wildcards are not used. If endpoints are specified, the DNS
 addresses specified in the endpoints will be resolved to determine
 the destination IP address.  DNS resolution cannot be used with Unix
 domain socket endpoints.</p>
+
+</td>
+</tr>
+<tr id="ServiceEntry-Resolution-DNS_ROUND_ROBIN">
+<td><code>DNS_ROUND_ROBIN</code></td>
+<td>
+<p>Attempt to resolve the IP address by querying the ambient DNS,
+asynchronously. Unlike DNS, DNS<em>ROUND</em>ROBIN only uses the
+first IP address returned when a new connection needs to be initiated
+without relying on complete results of DNS resolution and connections
+made to hosts will be retained even if DNS records change frequently
+eliminating draining connection pools and connection cycling.
+This is best suited for large web scale services that
+must be accessed via DNS. The proxy will resolve the DNS address
+specified in the hosts field, if wildcards are not used. DNS resolution
+cannot be used with Unix domain socket endpoints.</p>
 
 </td>
 </tr>

@@ -40,6 +40,7 @@ type Bastion struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// Spec is the specification of this Bastion.
+	// If the object's deletion timestamp is set, this field is immutable.
 	Spec BastionSpec `json:"spec"`
 	// Status is the bastion's status.
 	// +optional
@@ -62,6 +63,7 @@ type BastionSpec struct {
 	DefaultSpec `json:",inline"`
 	// UserData is the base64-encoded user data for the bastion instance. This should
 	// contain code to provision the SSH key on the bastion instance.
+	// This field is immutable.
 	UserData []byte `json:"userData"`
 	// Ingress controls from where the created bastion host should be reachable.
 	Ingress []BastionIngressPolicy `json:"ingress"`
@@ -78,7 +80,8 @@ type BastionStatus struct {
 	// DefaultStatus is a structure containing common fields used by all extension resources.
 	DefaultStatus `json:",inline"`
 	// Ingress is the external IP and/or hostname of the bastion host.
-	Ingress corev1.LoadBalancerIngress `json:"ingress"`
+	// +optional
+	Ingress *corev1.LoadBalancerIngress `json:"ingress,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

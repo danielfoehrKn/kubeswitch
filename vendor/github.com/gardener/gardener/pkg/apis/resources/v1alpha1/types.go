@@ -36,7 +36,7 @@ const (
 	// mode that should be used to reconcile the resource.
 	Mode = "resources.gardener.cloud/mode"
 	// ModeIgnore is a constant for the value of the mode annotation describing an ignore mode.
-	// Reconciliation in ignore more removes the resource from the ManagedResource status and does not
+	// Reconciliation in ignore mode removes the resource from the ManagedResource status and does not
 	// perform any action on the cluster.
 	ModeIgnore = "Ignore"
 	// PreserveReplicas is a constant for an annotation on a resource managed by a ManagedResource. If set to
@@ -44,7 +44,7 @@ const (
 	PreserveReplicas = "resources.gardener.cloud/preserve-replicas"
 	// PreserveResources is a constant for an annotation on a resource managed by a ManagedResource. If set to
 	// true then the controller will keep the resource requests and limits in Pod templates (e.g. in a
-	// DeploymentSpec) during updates to the resource.
+	// DeploymentSpec) during updates to the resource. This applies for all containers.
 	PreserveResources = "resources.gardener.cloud/preserve-resources"
 
 	// StaticTokenSkip is a constant for a label on a ServiceAccount which indicates that this ServiceAccount should not
@@ -54,20 +54,35 @@ const (
 	// for the invalidation of the static ServiceAccount token.
 	StaticTokenConsider = "token-invalidator.resources.gardener.cloud/consider"
 
-	// ResourceManagerPurpose is a constant for the key in a label describing the purpose of the respective object reconciled by the resource manager.
+	// TokenRequestorTargetSecretName is a constant for an annotation on a Secret which indicates that the token requestor
+	// shall sync the token to a secret in the target cluster with the given name.
+	TokenRequestorTargetSecretName = "token-requestor.resources.gardener.cloud/target-secret-name"
+	// TokenRequestorTargetSecretNamespace is a constant for an annotation on a Secret which indicates that the token
+	// requestor shall sync the token to a secret in the target cluster with the given namespace.
+	TokenRequestorTargetSecretNamespace = "token-requestor.resources.gardener.cloud/target-secret-namespace"
+
+	// ResourceManagerPurpose is a constant for the key in a label describing the purpose of the respective object
+	// reconciled by the resource manager.
 	ResourceManagerPurpose = "resources.gardener.cloud/purpose"
-	// LabelPurposeTokenRequest is a constant for a label value indicating that this secret should be reconciled by the token-requestor.
+	// LabelPurposeTokenRequest is a constant for a label value indicating that this secret should be reconciled by the
+	// token-requestor.
 	LabelPurposeTokenRequest = "token-requestor"
-	// LabelPurposeTokenInvalidation is a constant for a label value indicating that this secret should be considered by the token-invalidator.
+	// LabelPurposeTokenInvalidation is a constant for a label value indicating that this secret should be considered by
+	// the token-invalidator.
 	LabelPurposeTokenInvalidation = "token-invalidator"
-	// ServiceAccountName is the key of an annotation of a secret whose value contains the service account name
+
+	// ServiceAccountName is the key of an annotation of a secret whose value contains the service account name.
 	ServiceAccountName = "serviceaccount.resources.gardener.cloud/name"
-	// ServiceAccountNamespace is the key of an annotation of a secret whose value contains the service account namespace
+	// ServiceAccountNamespace is the key of an annotation of a secret whose value contains the service account
+	// namespace.
 	ServiceAccountNamespace = "serviceaccount.resources.gardener.cloud/namespace"
-	// ServiceAccountTokenExpirationDuration is the key of an annotation of a secret whose value contains the expiration duration of the token created
+	// ServiceAccountTokenExpirationDuration is the key of an annotation of a secret whose value contains the expiration
+	// duration of the token created.
 	ServiceAccountTokenExpirationDuration = "serviceaccount.resources.gardener.cloud/token-expiration-duration"
-	// ServiceAccountTokenRenewTimestamp is the key of an annotation of a secret whose value contains the timestamp when the token needs to be renewed
+	// ServiceAccountTokenRenewTimestamp is the key of an annotation of a secret whose value contains the timestamp when
+	// the token needs to be renewed.
 	ServiceAccountTokenRenewTimestamp = "serviceaccount.resources.gardener.cloud/token-renew-timestamp"
+
 	// DataKeyToken is the data key whose value contains a service account token.
 	DataKeyToken = "token"
 	// DataKeyKubeconfig is the data key whose value contains a kubeconfig with a service account token.
@@ -76,11 +91,17 @@ const (
 	// ProjectedTokenSkip is a constant for a label on a Pod which indicates that this Pod should not be considered for
 	// an automatic mount of a projected ServiceAccount token.
 	ProjectedTokenSkip = "projected-token-mount.resources.gardener.cloud/skip"
-	// ProjectedTokenExpirationSeconds is a constant for a label on a Pod which overwrites the default token expiration
+	// ProjectedTokenExpirationSeconds is a constant for an annotation on a Pod which overwrites the default token expiration
 	// seconds for the automatic mount of a projected ServiceAccount token.
 	ProjectedTokenExpirationSeconds = "projected-token-mount.resources.gardener.cloud/expiration-seconds"
 )
 
+// +kubebuilder:resource:shortName="mr"
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Class",type=string,JSONPath=`.spec.class`,description="The class identifies which resource manager is responsible for this ManagedResource."
+// +kubebuilder:printcolumn:name="Applied",type=string,JSONPath=`.status.conditions[?(@.type=="ResourcesApplied")].status`,description=" Indicates whether all resources have been applied."
+// +kubebuilder:printcolumn:name="Healthy",type=string,JSONPath=`.status.conditions[?(@.type=="ResourcesHealthy")].status`,description="Indicates whether all resources are healthy."
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="creation timestamp"
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ManagedResource describes a list of managed resources.

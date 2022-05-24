@@ -15,9 +15,17 @@
 package constants
 
 const (
+	// SecretManagerIdentityControllerManager is the identity for the secret manager used inside controller-manager.
+	SecretManagerIdentityControllerManager = "controller-manager"
+	// SecretManagerIdentityGardenlet is the identity for the secret manager used inside gardenlet.
+	SecretManagerIdentityGardenlet = "gardenlet"
+
 	// SecretNameCACluster is a constant for the name of a Kubernetes secret object that contains the CA
 	// certificate of a shoot cluster.
 	SecretNameCACluster = "ca"
+	// SecretNameCAClient is a constant for the name of a Kubernetes secret object that contains the client CA
+	// certificate of a shoot cluster.
+	SecretNameCAClient = "ca-client"
 	// SecretNameCAETCD is a constant for the name of a Kubernetes secret object that contains the CA
 	// certificate of the etcd of a shoot cluster.
 	SecretNameCAETCD = "ca-etcd"
@@ -33,19 +41,22 @@ const (
 	// SecretNameCAVPN is a constant for the name of a Kubernetes secret object that contains the CA
 	// certificate of the VPN components of a shoot cluster.
 	SecretNameCAVPN = "ca-vpn"
+	// SecretNameCASeed is a constant for the name of a Kubernetes secret object that contains the CA
+	// certificate generated for a seed cluster.
+	SecretNameCASeed = "ca-seed"
+
 	// SecretNameCloudProvider is a constant for the name of a Kubernetes secret object that contains the provider
 	// specific credentials that shall be used to create/delete the shoot.
 	SecretNameCloudProvider = "cloudprovider"
 	// SecretNameSSHKeyPair is a constant for the name of a Kubernetes secret object that contains the SSH key pair
 	// (public and private key) that can be used to SSH into the shoot nodes.
 	SecretNameSSHKeyPair = "ssh-keypair"
-	// SecretNameOldSSHKeyPair is a constant for the name of a Kubernetes secret object that contains the previous
-	// SSH key pair for a shoot cluster. This exists only after the first key rotation. Both the current and the
-	// old key are placed onto each shoot node.
-	SecretNameOldSSHKeyPair = "ssh-keypair.old"
 	// SecretNameServiceAccountKey is a constant for the name of a Kubernetes secret object that contains a
-	// PEM-encoded private RSA or ECDSA key used by the Kube Controller Manager to sign service account tokens
+	// PEM-encoded private RSA or ECDSA key used by the Kube Controller Manager to sign service account tokens.
 	SecretNameServiceAccountKey = "service-account-key"
+	// SecretNameObservabilityIngress is a constant for the name of a Kubernetes secret object that contains the ingress
+	// credentials for observability components.
+	SecretNameObservabilityIngress = "observability-ingress"
 
 	// SecretNameGardener is a constant for the name of a Kubernetes secret object that contains the client
 	// certificate and a kubeconfig for a shoot cluster. It is used by Gardener and can be used by extension
@@ -61,7 +72,12 @@ const (
 
 	// SecretNameGenericTokenKubeconfig is a constant for the name of the kubeconfig used by the shoot controlplane
 	// components to authenticate against the shoot Kubernetes API server.
+	// Use `pkg/extensions.GenericTokenKubeconfigSecretNameFromCluster` instead.
 	SecretNameGenericTokenKubeconfig = "generic-token-kubeconfig"
+	// AnnotationKeyGenericTokenKubeconfigSecretName is a constant for the key of an annotation on
+	// extensions.gardener.cloud/v1alpha1.Cluster resources whose value contains the name of the generic token
+	// kubeconfig secret in the seed cluster.
+	AnnotationKeyGenericTokenKubeconfigSecretName = "generic-token-kubeconfig.secret.gardener.cloud/name"
 
 	// SecretPrefixGeneratedBackupBucket is a constant for the prefix of a secret name in the garden cluster related to
 	// BackpuBuckets.
@@ -108,6 +124,10 @@ const (
 	DeploymentNameVPARecommender = "vpa-recommender"
 	// DeploymentNameVPAUpdater is a constant for the name of the VPA updater deployment.
 	DeploymentNameVPAUpdater = "vpa-updater"
+
+	// DeploymentNameMachineControllerManager is a constant for the name of a Kubernetes deployment object that contains
+	// the machine-controller-manager pod.
+	DeploymentNameMachineControllerManager = "machine-controller-manager"
 
 	// StatefulSetNameAlertManager is a constant for the name of a Kubernetes stateful set object that contains
 	// the alertmanager pod.
@@ -186,6 +206,8 @@ const (
 	GardenRoleCloudConfig = "cloud-config"
 	// GardenRoleKubeconfig is the value of the GardenRole key indicating type 'kubeconfig'.
 	GardenRoleKubeconfig = "kubeconfig"
+	// GardenRoleCACluster is the value of the GardenRole key indicating type 'ca-cluster'.
+	GardenRoleCACluster = "ca-cluster"
 	// GardenRoleSSHKeyPair is the value of the GardenRole key indicating type 'ssh-keypair'.
 	GardenRoleSSHKeyPair = "ssh-keypair"
 	// GardenRoleDefaultDomain is the value of the GardenRole key indicating type 'default-domain'.
@@ -247,6 +269,15 @@ const (
 	// ShootTaskDeployInfrastructure is a name for a Shoot's infrastructure deployment task. It indicates that the
 	// Infrastructure extension resource shall be reconciled.
 	ShootTaskDeployInfrastructure = "deployInfrastructure"
+	// ShootTaskDeployDNSRecordInternal is a name for a Shoot's internal DNS record deployment task. It indicates that
+	// the internal DNSRecord extension resources shall be reconciled.
+	ShootTaskDeployDNSRecordInternal = "deployDNSRecordInternal"
+	// ShootTaskDeployDNSRecordExternal is a name for a Shoot's external DNS record deployment task. It indicates that
+	// the external DNSRecord extension resources shall be reconciled.
+	ShootTaskDeployDNSRecordExternal = "deployDNSRecordExternal"
+	// ShootTaskDeployDNSRecordIngress is a name for a Shoot's ingress DNS record deployment task. It indicates that
+	// the ingress DNSRecord extension resources shall be reconciled.
+	ShootTaskDeployDNSRecordIngress = "deployDNSRecordIngress"
 	// ShootTaskRestartControlPlanePods is a name for a Shoot task which is dedicated to restart related control plane pods.
 	ShootTaskRestartControlPlanePods = "restartControlPlanePods"
 	// ShootTaskRestartCoreAddons is a name for a Shoot task which is dedicated to restart some core addons.
@@ -263,6 +294,12 @@ const (
 	// ShootOperationRotateSSHKeypair is a constant for an annotation on a Shoot indicating that the SSH keypair for the shoot
 	// nodes shall be rotated.
 	ShootOperationRotateSSHKeypair = "rotate-ssh-keypair"
+	// ShootOperationRotateCAStart is a constant for an annotation on a Shoot indicating that the rotation of the
+	// certificate authorities shall be started.
+	ShootOperationRotateCAStart = "rotate-ca-start"
+	// ShootOperationRotateCAComplete is a constant for an annotation on a Shoot indicating that the rotation of the
+	// certificate authorities shall be completed.
+	ShootOperationRotateCAComplete = "rotate-ca-complete"
 
 	// SeedResourceManagerClass is the resource-class managed by the Gardener-Resource-Manager
 	// instance in the garden namespace on the seeds.
@@ -273,6 +310,9 @@ const (
 	LabelSeedProvider = "seed.gardener.cloud/provider"
 	// LabelShootProvider is used to identify the shoot provider.
 	LabelShootProvider = "shoot.gardener.cloud/provider"
+	// LabelShootProviderPrefix is used to prefix label that indicates the provider type.
+	// The label key is in the form provider.shoot.gardener.cloud/<type>.
+	LabelShootProviderPrefix = "provider.shoot.gardener.cloud/"
 	// LabelNetworkingProvider is used to identify the networking provider for the cni plugin.
 	LabelNetworkingProvider = "networking.shoot.gardener.cloud/provider"
 	// LabelExtensionPrefix is used to prefix extension specific labels.
@@ -283,6 +323,19 @@ const (
 	LabelLogging = "logging"
 	// LabelMonitoring is a constant for a label for monitoring stack configurations
 	LabelMonitoring = "monitoring"
+
+	// LabelExtensionExtensionTypePrefix is used to prefix extension label for extension types.
+	LabelExtensionExtensionTypePrefix = "extensions.extensions.gardener.cloud/"
+	// LabelExtensionProviderTypePrefix is used to prefix extension label for cloud provider types.
+	LabelExtensionProviderTypePrefix = "provider.extensions.gardener.cloud/"
+	// LabelExtensionDNSRecordTypePrefix is used to prefix extension label for DNS types.
+	LabelExtensionDNSRecordTypePrefix = "dnsrecord.extensions.gardener.cloud/"
+	// LabelExtensionNetworkingTypePrefix is used to prefix extension label for networking plugin types.
+	LabelExtensionNetworkingTypePrefix = "networking.extensions.gardener.cloud/"
+	// LabelExtensionOperatingSystemConfigTypePrefix is used to prefix extension label for OperatingSystemConfig types.
+	LabelExtensionOperatingSystemConfigTypePrefix = "operatingsystemconfig.extensions.gardener.cloud/"
+	// LabelExtensionContainerRuntimeTypePrefix is used to prefix extension label for ContainerRuntime types.
+	LabelExtensionContainerRuntimeTypePrefix = "containerruntime.extensions.gardener.cloud/"
 
 	// LabelNetworkPolicyToBlockedCIDRs allows Egress from pods labeled with 'networking.gardener.cloud/to-blocked-cidrs=allowed'.
 	LabelNetworkPolicyToBlockedCIDRs = "networking.gardener.cloud/to-blocked-cidrs"
@@ -344,6 +397,8 @@ const (
 	LabelControllerManager = "controller-manager"
 	// LabelScheduler is a constant for a label for the kube-scheduler.
 	LabelScheduler = "scheduler"
+	// LabelProxy is a constant for a label for the kube-proxy.
+	LabelProxy = "proxy"
 	// LabelExtensionProjectRole is a constant for a label value for extension project roles
 	LabelExtensionProjectRole = "extension-project-role"
 
@@ -393,6 +448,8 @@ const (
 	// Gardener will wait for the specified time after the Infrastructure extension object has been deleted to allow
 	// controllers to gracefully cleanup everything (default behaviour is 300s).
 	AnnotationShootInfrastructureCleanupWaitPeriodSeconds = "shoot.gardener.cloud/infrastructure-cleanup-wait-period-seconds"
+	// AnnotationShootForceRestore is a key for an annotation on a Shoot or BackupEntry resource to trigger a forceful restoration to a different seed.
+	AnnotationShootForceRestore = "shoot.gardener.cloud/force-restore"
 	// AnnotationReversedVPN moves the vpn-server to the seed.
 	AnnotationReversedVPN = "alpha.featuregates.shoot.gardener.cloud/reversed-vpn"
 	// AnnotationNodeLocalDNS enables a per node dns cache on the shoot cluster.
@@ -474,15 +531,13 @@ const (
 	SeedNginxIngressClass122 = "nginx-ingress-gardener"
 	// IngressKindNginx defines nginx as kind as managed Seed ingress
 	IngressKindNginx = "nginx"
-	// ShootNginxIngressClass defines the ingress class for the seed nginx ingress controller
-	ShootNginxIngressClass = "nginx"
+	// NginxIngressClass defines the ingress class for the seed nginx ingress controller if the seed cluster is a non Gardener managed cluster.
+	NginxIngressClass = "nginx"
 
 	// SeedsGroup is the identity group for gardenlets when authenticating to the API server.
 	SeedsGroup = "gardener.cloud:system:seeds"
 	// SeedUserNamePrefix is the identity user name prefix for gardenlets when authenticating to the API server.
 	SeedUserNamePrefix = "gardener.cloud:system:seed:"
-	// SeedUserNameSuffixAmbiguous is the default seed name in case the gardenlet config.SeedConfig is not set
-	SeedUserNameSuffixAmbiguous = "<ambiguous>"
 
 	// ProjectName is the key of a label on namespaces whose value holds the project name.
 	ProjectName = "project.gardener.cloud/name"
@@ -496,6 +551,10 @@ const (
 	// should not be deleted if the corresponding `Project` gets deleted. Please note that all project related labels
 	// from the namespace will be removed when the project is being deleted.
 	NamespaceKeepAfterProjectDeletion = "namespace.gardener.cloud/keep-after-project-deletion"
+	// NamespaceCreatedByProjectController is a constant for annotation on a `Namespace` resource that states that it
+	// was created by the project controller because either the Project's `spec.namespace` field was not specified
+	// or the specified namespace was not present.
+	NamespaceCreatedByProjectController = "namespace.gardener.cloud/created-by-project-controller"
 
 	// DefaultVpnRange is the default network range for the vpn between seed and shoot cluster.
 	DefaultVpnRange = "192.168.123.0/24"
@@ -504,9 +563,18 @@ const (
 	BackupSecretName string = "etcd-backup"
 	// DataKeyBackupBucketName is the name of a data key whose value contains the backup bucket name.
 	DataKeyBackupBucketName string = "bucketName"
+	// BackupSourcePrefix is the prefix for names of resources related to source backupentries when copying backups.
+	BackupSourcePrefix = "source"
 
 	// GardenerAudience is the identifier for Gardener controllers when interacting with the API Server
 	GardenerAudience = "gardener"
+
+	// DNSRecordInternalName is a constant for DNSRecord objects used for the internal domain name.
+	DNSRecordInternalName = "internal"
+	// DNSRecordExternalName is a constant for DNSRecord objects used for the external domain name.
+	DNSRecordExternalName = "external"
+	// DNSRecordOwnerName is a constant for DNSRecord objects used for the owner domain name.
+	DNSRecordOwnerName = "owner"
 )
 
 // ControlPlaneSecretRoles contains all role values used for control plane secrets synced to the Garden cluster.

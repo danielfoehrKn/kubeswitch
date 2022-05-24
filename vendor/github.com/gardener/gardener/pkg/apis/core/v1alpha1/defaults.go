@@ -19,7 +19,7 @@ import (
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/timewindow"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	corev1 "k8s.io/api/core/v1"
@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
 )
 
@@ -141,10 +140,6 @@ func SetDefaults_SeedSettingDependencyWatchdog(obj *SeedSettingDependencyWatchdo
 
 // SetDefaults_Shoot sets default values for Shoot objects.
 func SetDefaults_Shoot(obj *Shoot) {
-	k8sVersionLessThan116, _ := versionutils.CompareVersions(obj.Spec.Kubernetes.Version, "<", "1.16")
-	// Error is ignored here because we cannot do anything meaningful with it.
-	// k8sVersionLessThan116 will default to `false`.
-
 	if obj.Spec.Kubernetes.AllowPrivilegedContainers == nil {
 		obj.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(true)
 	}
@@ -153,11 +148,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 		obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{}
 	}
 	if obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication == nil {
-		if k8sVersionLessThan116 {
-			obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.Bool(true)
-		} else {
-			obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.Bool(false)
-		}
+		obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.Bool(false)
 	}
 	if obj.Spec.Kubernetes.KubeAPIServer.Requests == nil {
 		obj.Spec.Kubernetes.KubeAPIServer.Requests = &KubeAPIServerRequests{}
@@ -194,6 +185,10 @@ func SetDefaults_Shoot(obj *Shoot) {
 	}
 	if obj.Spec.Kubernetes.KubeProxy.Enabled == nil {
 		obj.Spec.Kubernetes.KubeProxy.Enabled = pointer.Bool(true)
+	}
+
+	if obj.Spec.Kubernetes.EnableStaticTokenKubeconfig == nil {
+		obj.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
 	}
 
 	if obj.Spec.Addons == nil {
@@ -287,6 +282,19 @@ func SetDefaults_Shoot(obj *Shoot) {
 
 		obj.Spec.Provider.Workers[i].CRI = &CRI{Name: CRINameContainerD}
 	}
+
+	if obj.Spec.SystemComponents == nil {
+		obj.Spec.SystemComponents = &SystemComponents{}
+	}
+	if obj.Spec.SystemComponents.CoreDNS == nil {
+		obj.Spec.SystemComponents.CoreDNS = &CoreDNS{}
+	}
+	if obj.Spec.SystemComponents.CoreDNS.Autoscaling == nil {
+		obj.Spec.SystemComponents.CoreDNS.Autoscaling = &CoreDNSAutoscaling{}
+	}
+	if obj.Spec.SystemComponents.CoreDNS.Autoscaling.Mode != CoreDNSAutoscalingModeHorizontal && obj.Spec.SystemComponents.CoreDNS.Autoscaling.Mode != CoreDNSAutoscalingModeClusterProportional {
+		obj.Spec.SystemComponents.CoreDNS.Autoscaling.Mode = CoreDNSAutoscalingModeHorizontal
+	}
 }
 
 // SetDefaults_Maintenance sets default values for Maintenance objects.
@@ -299,7 +307,7 @@ func SetDefaults_Maintenance(obj *Maintenance) {
 	}
 
 	if obj.TimeWindow == nil {
-		mt := utils.RandomMaintenanceTimeWindow()
+		mt := timewindow.RandomMaintenanceTimeWindow()
 		obj.TimeWindow = &MaintenanceTimeWindow{
 			Begin: mt.Begin().Formatted(),
 			End:   mt.End().Formatted(),
@@ -430,16 +438,16 @@ func calculateDefaultNodeCIDRMaskSize(kubelet *KubeletConfig, workers []Worker) 
 }
 
 func addTolerations(tolerations *[]Toleration, additionalTolerations ...Toleration) {
-	existingTolerations := sets.NewString()
+	existingTolerations := map[Toleration]struct{}{}
 	for _, toleration := range *tolerations {
-		existingTolerations.Insert(utils.IDForKeyWithOptionalValue(toleration.Key, toleration.Value))
+		existingTolerations[toleration] = struct{}{}
 	}
 
 	for _, toleration := range additionalTolerations {
-		if existingTolerations.Has(toleration.Key) {
+		if _, ok := existingTolerations[Toleration{Key: toleration.Key}]; ok {
 			continue
 		}
-		if existingTolerations.Has(utils.IDForKeyWithOptionalValue(toleration.Key, toleration.Value)) {
+		if _, ok := existingTolerations[toleration]; ok {
 			continue
 		}
 		*tolerations = append(*tolerations, toleration)

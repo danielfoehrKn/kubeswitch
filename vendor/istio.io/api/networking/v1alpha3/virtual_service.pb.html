@@ -6,7 +6,7 @@ layout: protoc-gen-docs
 generator: protoc-gen-docs
 schema: istio.networking.v1alpha3.VirtualService
 aliases: [/docs/reference/config/networking/v1alpha3/virtual-service]
-number_of_entries: 24
+number_of_entries: 25
 ---
 <p>Configuration affecting traffic routing. Here are a few terms useful to define
 in the context of traffic routing.</p>
@@ -298,9 +298,6 @@ namespaces by default.</p>
 the virtual service is declared in. Similarly the value &ldquo;*&rdquo; is reserved and
 defines an export to all namespaces.</p>
 
-<p>NOTE: in the current release, the <code>exportTo</code> value is restricted to
-&ldquo;.&rdquo; or &ldquo;*&rdquo; (i.e., the current namespace or all namespaces).</p>
-
 </td>
 <td>
 No
@@ -543,7 +540,7 @@ spec:
     protocol: HTTP
   resolution: DNS
 ---
-apiVersion: networking.istio.io/v1alpha3
+apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
   name: my-wiki-rule
@@ -812,19 +809,6 @@ No
 <td><code><a href="#Headers">Headers</a></code></td>
 <td>
 <p>Header manipulation rules</p>
-
-</td>
-<td>
-No
-</td>
-</tr>
-<tr id="HTTPRoute-mirror_percent" class="deprecated ">
-<td><code>mirrorPercent</code></td>
-<td><code><a href="#google-protobuf-UInt32Value">UInt32Value</a></code></td>
-<td>
-<p>Percentage of the traffic to be mirrored by the <code>mirror</code> field.
-Use of integer <code>mirror_percent</code> value is deprecated. Use the
-double <code>mirror_percentage</code> field instead</p>
 
 </td>
 <td>
@@ -1332,7 +1316,7 @@ values are case-sensitive and formatted as follows:</p>
 
 <li><p><code>prefix: &quot;value&quot;</code> for prefix-based match</p></li>
 
-<li><p><code>regex: &quot;value&quot;</code> for ECMAscript style regex-based match</p></li>
+<li><p><code>regex: &quot;value&quot;</code> for RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).</p></li>
 </ul>
 
 <p><strong>Note:</strong> Case-insensitive matching could be enabled via the
@@ -1355,7 +1339,7 @@ values are case-sensitive and formatted as follows:</p>
 
 <li><p><code>prefix: &quot;value&quot;</code> for prefix-based match</p></li>
 
-<li><p><code>regex: &quot;value&quot;</code> for ECMAscript style regex-based match</p></li>
+<li><p><code>regex: &quot;value&quot;</code> for RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).</p></li>
 </ul>
 
 </td>
@@ -1375,7 +1359,7 @@ values are case-sensitive and formatted as follows:</p>
 
 <li><p><code>prefix: &quot;value&quot;</code> for prefix-based match</p></li>
 
-<li><p><code>regex: &quot;value&quot;</code> for ECMAscript style regex-based match</p></li>
+<li><p><code>regex: &quot;value&quot;</code> for RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).</p></li>
 </ul>
 
 </td>
@@ -1395,7 +1379,7 @@ values are case-sensitive and formatted as follows:</p>
 
 <li><p><code>prefix: &quot;value&quot;</code> for prefix-based match</p></li>
 
-<li><p><code>regex: &quot;value&quot;</code> for ECMAscript style regex-based match</p></li>
+<li><p><code>regex: &quot;value&quot;</code> for RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).</p></li>
 </ul>
 
 </td>
@@ -1417,7 +1401,7 @@ e.g. <em>x-request-id</em>.</p>
 
 <li><p><code>prefix: &quot;value&quot;</code> for prefix-based match</p></li>
 
-<li><p><code>regex: &quot;value&quot;</code> for ECMAscript style regex-based match</p></li>
+<li><p><code>regex: &quot;value&quot;</code> for RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).</p></li>
 </ul>
 
 <p>If the value is empty and only the name of header is specfied, presence of the header is checked.
@@ -1445,9 +1429,9 @@ No
 <td><code>sourceLabels</code></td>
 <td><code>map&lt;string,&nbsp;string&gt;</code></td>
 <td>
-<p>One or more labels that constrain the applicability of a rule to
-workloads with the given labels. If the VirtualService has a list of
-gateways specified in the top-level <code>gateways</code> field, it must include the reserved gateway
+<p>One or more labels that constrain the applicability of a rule to source (client) workloads
+with the given labels. If the VirtualService has a list of gateways specified
+in the top-level <code>gateways</code> field, it must include the reserved gateway
 <code>mesh</code> for this field to be applicable.</p>
 
 </td>
@@ -2043,6 +2027,44 @@ this value.</p>
 No
 </td>
 </tr>
+<tr id="HTTPRedirect-port" class="oneof oneof-start">
+<td><code>port</code></td>
+<td><code>uint32 (oneof)</code></td>
+<td>
+<p>On a redirect, overwrite the port portion of the URL with this value.</p>
+
+</td>
+<td>
+No
+</td>
+</tr>
+<tr id="HTTPRedirect-derive_port" class="oneof">
+<td><code>derivePort</code></td>
+<td><code><a href="#HTTPRedirect-RedirectPortSelection">RedirectPortSelection (oneof)</a></code></td>
+<td>
+<p>On a redirect, dynamically set the port:
+* FROM<em>PROTOCOL</em>DEFAULT: automatically set to 80 for HTTP and 443 for HTTPS.
+* FROM<em>REQUEST</em>PORT: automatically use the port of the request.</p>
+
+</td>
+<td>
+No
+</td>
+</tr>
+<tr id="HTTPRedirect-scheme">
+<td><code>scheme</code></td>
+<td><code>string</code></td>
+<td>
+<p>On a redirect, overwrite the scheme portion of the URL with this value.
+For example, <code>http</code> or <code>https</code>.
+If unset, the original scheme will be used.
+If <code>derivePort</code> is set to <code>FROM_PROTOCOL_DEFAULT</code>, this will impact the port used as well</p>
+
+</td>
+<td>
+No
+</td>
+</tr>
 <tr id="HTTPRedirect-redirect_code">
 <td><code>redirectCode</code></td>
 <td><code>uint32</code></td>
@@ -2206,7 +2228,9 @@ No
 <section>
 <p>Describes the retry policy to use when a HTTP request fails. For
 example, the following rule sets the maximum number of retries to 3 when
-calling ratings:v1 service, with a 2s timeout per retry attempt.</p>
+calling ratings:v1 service, with a 2s timeout per retry attempt.
+A retry will be attempted if there is a connect-failure, refused_stream
+or when the upstream server responds with Service Unavailable(503).</p>
 
 <p>{{<tabset category-name="example">}}
 {{<tab name="v1alpha3" category-value="v1alpha3">}}</p>
@@ -2226,7 +2250,7 @@ spec:
     retries:
       attempts: 3
       perTryTimeout: 2s
-      retryOn: gateway-error,connect-failure,refused-stream
+      retryOn: connect-failure,refused-stream,503
 </code></pre>
 
 <p>{{</tab>}}</p>
@@ -2299,6 +2323,7 @@ No
 <td>
 <p>Specifies the conditions under which retry takes place.
 One or more policies can be specified using a ‘,’ delimited list.
+If <code>retry_on</code> specifies a valid HTTP status, it will be added to retriable<em>status</em>codes retry policy.
 See the <a href="https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#x-envoy-retry-on">retry policies</a>
 and <a href="https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#x-envoy-retry-grpc-on">gRPC retry policies</a> for more details.</p>
 
@@ -2621,7 +2646,7 @@ No
 <td><code>remove</code></td>
 <td><code>string[]</code></td>
 <td>
-<p>Remove a the specified headers</p>
+<p>Remove the specified headers</p>
 
 </td>
 <td>
@@ -2864,6 +2889,29 @@ No
 </td>
 <td>
 No
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<h2 id="HTTPRedirect-RedirectPortSelection">HTTPRedirect.RedirectPortSelection</h2>
+<section>
+<table class="enum-values">
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr id="HTTPRedirect-RedirectPortSelection-FROM_PROTOCOL_DEFAULT">
+<td><code>FROM_PROTOCOL_DEFAULT</code></td>
+<td>
+</td>
+</tr>
+<tr id="HTTPRedirect-RedirectPortSelection-FROM_REQUEST_PORT">
+<td><code>FROM_REQUEST_PORT</code></td>
+<td>
 </td>
 </tr>
 </tbody>

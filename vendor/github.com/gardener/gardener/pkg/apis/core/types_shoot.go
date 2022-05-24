@@ -35,6 +35,7 @@ type Shoot struct {
 	// Standard object metadata.
 	metav1.ObjectMeta
 	// Specification of the Shoot cluster.
+	// If the object's deletion timestamp is set, this field is immutable.
 	Spec ShootSpec
 	// Most recently observed status of the Shoot cluster.
 	Status ShootStatus
@@ -63,7 +64,7 @@ type ShootTemplate struct {
 type ShootSpec struct {
 	// Addons contains information about enabled/disabled addons and their configuration.
 	Addons *Addons
-	// CloudProfileName is a name of a CloudProfile object.
+	// CloudProfileName is a name of a CloudProfile object. This field is immutable.
 	CloudProfileName string
 	// DNS contains information about the DNS settings of the Shoot.
 	DNS *DNS
@@ -84,12 +85,14 @@ type ShootSpec struct {
 	Provider Provider
 	// Purpose is the purpose class for this cluster.
 	Purpose *ShootPurpose
-	// Region is a name of a region.
+	// Region is a name of a region. This field is immutable.
 	Region string
 	// SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
 	// The credentials inside the provider secret will be used to create the shoot in the respective account.
+	// This field is immutable.
 	SecretBindingName string
 	// SeedName is the name of the seed cluster that runs the control plane of the Shoot.
+	// This field is immutable when the SeedChange feature gate is disabled.
 	SeedName *string
 	// SeedSelector is an optional selector which must match a seed's labels for the shoot to be scheduled on that seed.
 	SeedSelector *SeedSelector
@@ -98,7 +101,10 @@ type ShootSpec struct {
 	// Tolerations contains the tolerations for taints on seed clusters.
 	Tolerations []Toleration
 	// ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.
+	// This field is immutable.
 	ExposureClassName *string
+	// SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.
+	SystemComponents *SystemComponents
 }
 
 // GetProviderType gets the type of the provider.
@@ -130,16 +136,78 @@ type ShootStatus struct {
 	// after a successful create/reconcile operation. It will be used when control planes are moved between Seeds.
 	SeedName *string
 	// TechnicalID is the name that is used for creating the Seed namespace, the infrastructure resources, and
-	// basically everything that is related to this particular Shoot.
+	// basically everything that is related to this particular Shoot. This field is immutable.
 	TechnicalID string
 	// UID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters.
-	// It is used to compute unique hashes.
+	// It is used to compute unique hashes. This field is immutable.
 	UID types.UID
-	// ClusterIdentity is the identity of the Shoot cluster
+	// ClusterIdentity is the identity of the Shoot cluster. This field is immutable.
 	ClusterIdentity *string
 	// List of addresses on which the Kube API server can be reached.
 	AdvertisedAddresses []ShootAdvertisedAddress
+	// MigrationStartTime is the time when a migration to a different seed was initiated.
+	MigrationStartTime *metav1.Time
+	// Credentials contains information about the shoot credentials.
+	Credentials *ShootCredentials
 }
+
+// ShootCredentials contains information about the shoot credentials.
+type ShootCredentials struct {
+	// Rotation contains information about the credential rotations.
+	Rotation *ShootCredentialsRotation
+}
+
+// ShootCredentialsRotation contains information about the rotation of credentials.
+type ShootCredentialsRotation struct {
+	// CertificateAuthorities contains information about the certificate authority credential rotation.
+	CertificateAuthorities *ShootCARotation
+	// Kubeconfig contains information about the kubeconfig credential rotation.
+	Kubeconfig *ShootKubeconfigRotation
+	// SSHKeypair contains information about the ssh-keypair credential rotation.
+	SSHKeypair *ShootSSHKeypairRotation
+}
+
+// ShootCARotation contains information about the certificate authority credential rotation.
+type ShootCARotation struct {
+	// Phase describes the phase of the certificate authority credential rotation.
+	Phase ShootCredentialsRotationPhase
+	// LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
+	LastInitiationTime *metav1.Time
+	// LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully
+	// completed.
+	LastCompletionTime *metav1.Time
+}
+
+// ShootKubeconfigRotation contains information about the kubeconfig credential rotation.
+type ShootKubeconfigRotation struct {
+	// LastInitiationTime is the most recent time when the kubeconfig credential rotation was initiated.
+	LastInitiationTime *metav1.Time
+	// LastCompletionTime is the most recent time when the kubeconfig credential rotation was successfully completed.
+	LastCompletionTime *metav1.Time
+}
+
+// ShootSSHKeypairRotation contains information about the ssh-keypair credential rotation.
+type ShootSSHKeypairRotation struct {
+	// LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
+	LastInitiationTime *metav1.Time
+	// LastCompletionTime is the most recent time when the ssh-keypair credential rotation was successfully completed.
+	LastCompletionTime *metav1.Time
+}
+
+// ShootCredentialsRotationPhase is a string alias.
+type ShootCredentialsRotationPhase string
+
+const (
+	// RotationPreparing is a constant for the credentials rotation phase describing that the procedure is being prepared.
+	RotationPreparing ShootCredentialsRotationPhase = "Preparing"
+	// RotationPrepared is a constant for the credentials rotation phase describing that the procedure was prepared.
+	RotationPrepared ShootCredentialsRotationPhase = "Prepared"
+	// RotationCompleting is a constant for the credentials rotation phase describing that the procedure is being
+	// completed.
+	RotationCompleting ShootCredentialsRotationPhase = "Completing"
+	// RotationCompleted is a constant for the credentials rotation phase describing that the procedure was completed.
+	RotationCompleted ShootCredentialsRotationPhase = "Completed"
+)
 
 // ShootAdvertisedAddress contains information for the shoot's Kube API server.
 type ShootAdvertisedAddress struct {
@@ -201,7 +269,7 @@ type NginxIngress struct {
 // DNS holds information about the provider, the hosted zone id and the domain.
 type DNS struct {
 	// Domain is the external available domain of the Shoot cluster. This domain will be written into the
-	// kubeconfig that is handed out to end-users. Once set it is immutable.
+	// kubeconfig that is handed out to end-users. This field is immutable.
 	Domain *string
 	// Providers is a list of DNS providers that shall be enabled for this shoot cluster. Only relevant if
 	// not a default domain is used.
@@ -270,7 +338,7 @@ type NamedResourceReference struct {
 // Hibernation contains information whether the Shoot is suspended or not.
 type Hibernation struct {
 	// Enabled specifies whether the Shoot needs to be hibernated or not. If it is true, the Shoot's desired state is to be hibernated.
-	// If it is false or nil, the Shoot's desired state is to be awaken.
+	// If it is false or nil, the Shoot's desired state is to be awakened.
 	Enabled *bool
 	// Schedules determine the hibernation schedules.
 	Schedules []HibernationSchedule
@@ -312,6 +380,8 @@ type Kubernetes struct {
 	Version string
 	// VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.
 	VerticalPodAutoscaler *VerticalPodAutoscaler
+	// EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret will be created for shoot (default: true).
+	EnableStaticTokenKubeconfig *bool
 }
 
 // ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.
@@ -335,6 +405,8 @@ type ClusterAutoscaler struct {
 	MaxNodeProvisionTime *metav1.Duration
 	// MaxGracefulTerminationSeconds is the number of seconds CA waits for pod termination when trying to scale down a node (default: 600).
 	MaxGracefulTerminationSeconds *int32
+	// IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
+	IgnoreTaints []string
 }
 
 // ExpanderMode is type used for Expander values
@@ -440,8 +512,8 @@ type KubeAPIServerRequests struct {
 // ServiceAccountConfig is the kube-apiserver configuration for service accounts.
 type ServiceAccountConfig struct {
 	// Issuer is the identifier of the service account token issuer. The issuer will assert this
-	// identifier in "iss" claim of issued tokens. This value is a string or URI.
-	// Defaults to URI of the API server.
+	// identifier in "iss" claim of issued tokens. This value is used to generate new service account tokens.
+	// This value is a string or URI. Defaults to URI of the API server.
 	Issuer *string
 	// SigningKeySecret is a reference to a secret that contains an optional private key of the
 	// service account token issuer. The issuer will sign issued ID tokens with this private key.
@@ -455,7 +527,14 @@ type ServiceAccountConfig struct {
 	// MaxTokenExpiration is the maximum validity duration of a token created by the service account token issuer. If an
 	// otherwise valid TokenRequest with a validity duration larger than this value is requested, a token will be issued
 	// with a validity duration of this value.
+	// This field must be within [30d,90d] when the ShootMaxTokenExpirationValidation feature gate is enabled.
+	// This field will be overwritten to be within [30d,90d] when the ShootMaxTokenExpirationOverwrite feature gate is enabled.
 	MaxTokenExpiration *metav1.Duration
+	// AcceptedIssuers is an additional set of issuers that are used to determine which service account tokens are accepted.
+	// These values are not used to generate new service account tokens. Only useful when service account tokens are also
+	// issued by another external system or a change of the current issuer that is used for generating tokens is being performed.
+	// This field is only available for Kubernetes v1.22 or later.
+	AcceptedIssuers []string
 }
 
 // AuditConfig contains settings for audit of the api server
@@ -542,7 +621,7 @@ type KubeControllerManagerConfig struct {
 	KubernetesConfig
 	// HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager.
 	HorizontalPodAutoscalerConfig *HorizontalPodAutoscalerConfig
-	// NodeCIDRMaskSize defines the mask size for node cidr in cluster (default is 24)
+	// NodeCIDRMaskSize defines the mask size for node cidr in cluster (default is 24). This field is immutable.
 	NodeCIDRMaskSize *int32
 	// PodEvictionTimeout defines the grace period for deleting pods on failed nodes.
 	PodEvictionTimeout *metav1.Duration
@@ -727,15 +806,15 @@ type KubeletConfigReserved struct {
 
 // Networking defines networking parameters for the shoot cluster.
 type Networking struct {
-	// Type identifies the type of the networking plugin.
+	// Type identifies the type of the networking plugin. This field is immutable.
 	Type string
 	// ProviderConfig is the configuration passed to network resource.
 	ProviderConfig *runtime.RawExtension
-	// Pods is the CIDR of the pod network.
+	// Pods is the CIDR of the pod network. This field is immutable.
 	Pods *string
-	// Nodes is the CIDR of the entire node network.
+	// Nodes is the CIDR of the entire node network. This field is immutable.
 	Nodes *string
-	// Services is the CIDR of the service network.
+	// Services is the CIDR of the service network. This field is immutable.
 	Services *string
 }
 
@@ -811,7 +890,7 @@ type Alerting struct {
 // Provider contains provider-specific information that are handed-over to the provider-specific
 // extension controller.
 type Provider struct {
-	// Type is the type of the provider.
+	// Type is the type of the provider. This field is immutable.
 	Type string
 	// ControlPlaneConfig contains the provider-specific control plane config blob. Please look up the concrete
 	// definition in the documentation of your provider extension.
@@ -975,6 +1054,39 @@ var (
 	DefaultWorkerMaxSurge = intstr.FromInt(1)
 	// DefaultWorkerMaxUnavailable is the default value for Worker MaxUnavailable.
 	DefaultWorkerMaxUnavailable = intstr.FromInt(0)
+)
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// System components relevant types                                                             //
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+// SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.
+type SystemComponents struct {
+	// CoreDNS contains the settings of the Core DNS components running in the data plane of the Shoot cluster.
+	CoreDNS *CoreDNS
+}
+
+// CoreDNS contains the settings of the Core DNS components running in the data plane of the Shoot cluster.
+type CoreDNS struct {
+	// Autoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.
+	Autoscaling *CoreDNSAutoscaling
+}
+
+// CoreDNSAutoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.
+type CoreDNSAutoscaling struct {
+	// The mode of the autoscaling to be used for the Core DNS components running in the data plane of the Shoot cluster.
+	// Supported values are `horizontal` and `cluster-proportional`.
+	Mode CoreDNSAutoscalingMode
+}
+
+// CoreDNSAutoscalingMode is a type alias for the Core DNS autoscaling mode string.
+type CoreDNSAutoscalingMode string
+
+const (
+	// CoreDNSAutoscalingModeHorizontal is a constant for horizontal Core DNS autoscaling mode.
+	CoreDNSAutoscalingModeHorizontal CoreDNSAutoscalingMode = "horizontal"
+	// CoreDNSAutoscalingModeClusterProportional is a constant for cluster-proportional Core DNS autoscaling mode.
+	CoreDNSAutoscalingModeClusterProportional CoreDNSAutoscalingMode = "cluster-proportional"
 )
 
 //////////////////////////////////////////////////////////////////////////////////////////////////

@@ -338,13 +338,42 @@ spec:
         name: my-wasm-extension # This must match the name above
         config_discovery:
           config_source:
-            api_config_source:
-              api_type: GRPC
-              transport_api_version: V3
-              grpc_services:
-              - envoy_grpc:
-                  cluster_name: xds-grpc
+            ads: {}
           type_urls: [&quot;envoy.extensions.filters.http.wasm.v3.Wasm&quot;]
+</code></pre>
+
+<p>The following example adds a Wasm service extension for all proxies using a locally available Wasm file.
+The singleton Wasm extension is used to maintain a shared state between workers executing Wasm filters.
+For example, a local rate limit extension would rely on a singleton to limit requests across all workers.
+As another example, an authorization Wasm extension can use a singleton to maintain a database of accounts.</p>
+
+<pre><code class="language-yaml">apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: wasm-service
+  namespace: myns
+spec:
+  configPatches:
+  - applyTo: BOOTSTRAP
+    patch:
+      operation: MERGE
+      value:
+        bootstrap_extensions:
+        - name: envoy.bootstrap.wasm
+          typed_config:
+            &quot;@type&quot;: type.googleapis.com/envoy.extensions.wasm.v3.WasmService
+            singleton: true
+            config:
+              name: my_plugin
+              configuration:
+                &quot;@type&quot;: type.googleapis.com/google.protobuf.StringValue
+                value: |
+                  {}
+              vm_config:
+                runtime: &quot;envoy.wasm.runtime.v8&quot;
+                code:
+                  local:
+                    filename: &quot;/etc/envoy_filter_http_wasm_example.wasm&quot;
 </code></pre>
 
 <h2 id="EnvoyFilter">EnvoyFilter</h2>
@@ -389,6 +418,32 @@ No
 </td>
 <td>
 Yes
+</td>
+</tr>
+<tr id="EnvoyFilter-priority">
+<td><code>priority</code></td>
+<td><code>int32</code></td>
+<td>
+<p>Priority defines the order in which patch sets are applied within a context.
+When one patch depends on another patch, the order of patch application
+is significant. The API provides two primary ways to order patches.
+Patch sets in the root namespace are applied before the patch sets in the
+workload namespace. Patches within a patch set are processed in the order
+that they appear in the <code>configPatches</code> list.</p>
+
+<p>The default value for priority is 0 and the range is [ min-int32, max-int32 ].
+A patch set with a negative priority is processed before the default. A patch
+set with a positive priority is processed after the default.</p>
+
+<p>It is recommended to start with priority values that are multiples of 10
+to leave room for further insertion.</p>
+
+<p>Patch sets are sorted in the following ascending key order:
+priority, creation time, fully qualified resource name.</p>
+
+</td>
+<td>
+No
 </td>
 </tr>
 </tbody>
@@ -465,7 +520,8 @@ to be applied to a cluster.</p>
 <td><code>uint32</code></td>
 <td>
 <p>The service port for which this cluster was generated.  If
-omitted, applies to clusters for any port.</p>
+omitted, applies to clusters for any port.
+<strong>Note:</strong> for inbound cluster, it is the service target port.</p>
 
 </td>
 <td>
@@ -479,7 +535,8 @@ No
 <p>The fully qualified service name for this cluster. If omitted,
 applies to clusters for any service. For services defined
 through service entries, the service name is same as the hosts
-defined in the service entry.</p>
+defined in the service entry.
+<strong>Note:</strong> for inbound cluster, this is ignored.</p>
 
 </td>
 <td>
@@ -1395,6 +1452,13 @@ host in a route configuration.</p>
 <td>
 <p>Applies the patch to or adds an extension config in ECDS output. Note that ECDS
 is only supported by HTTP filters.</p>
+
+</td>
+</tr>
+<tr id="EnvoyFilter-ApplyTo-BOOTSTRAP">
+<td><code>BOOTSTRAP</code></td>
+<td>
+<p>Applies the patch to bootstrap configuration.</p>
 
 </td>
 </tr>

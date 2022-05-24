@@ -42,7 +42,8 @@ type Worker struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-
+	// Specification of the Worker.
+	// If the object's deletion timestamp is set, this field is immutable.
 	Spec WorkerSpec `json:"spec"`
 	// +optional
 	Status WorkerStatus `json:"status"`
@@ -81,7 +82,7 @@ type WorkerSpec struct {
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +optional
 	InfrastructureProviderStatus *runtime.RawExtension `json:"infrastructureProviderStatus,omitempty"`
-	// Region is the name of the region where the worker pool should be deployed to.
+	// Region is the name of the region where the worker pool should be deployed to. This field is immutable.
 	Region string `json:"region"`
 	// SecretRef is a reference to a secret that contains the cloud provider specific credentials.
 	SecretRef corev1.SecretReference `json:"secretRef"`
@@ -147,6 +148,15 @@ type WorkerPool struct {
 	// KubernetesVersion is the kubernetes version in this worker pool
 	// +optional
 	KubernetesVersion *string `json:"kubernetesVersion,omitempty"`
+	// NodeTemplate contains resource information of the machine which is used by Cluster Autoscaler to generate nodeTemplate during scaling a nodeGroup from zero
+	// +optional
+	NodeTemplate *NodeTemplate `json:"nodeTemplate,omitempty"`
+}
+
+// NodeTemplate contains information about the expected node properties.
+type NodeTemplate struct {
+	// Capacity represents the expected Node capacity.
+	Capacity corev1.ResourceList `json:"capacity"`
 }
 
 // MachineImage contains logical information about the name and the version of the machie image that

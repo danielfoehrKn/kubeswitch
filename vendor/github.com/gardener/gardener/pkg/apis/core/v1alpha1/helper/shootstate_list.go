@@ -18,6 +18,7 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 // ExtensionResourceStateList is a list of ExtensionResourceStates
@@ -86,12 +87,26 @@ func (g *GardenerResourceDataList) Get(name string) *gardencorev1alpha1.Gardener
 	return nil
 }
 
+// Select uses the provided label selector to find data entries with matching labels.
+func (g *GardenerResourceDataList) Select(labelSelector labels.Selector) []*gardencorev1alpha1.GardenerResourceData {
+	var results []*gardencorev1alpha1.GardenerResourceData
+
+	for _, resourceDataEntry := range *g {
+		if labelSelector.Matches(labels.Set(resourceDataEntry.Labels)) {
+			results = append(results, resourceDataEntry.DeepCopy())
+		}
+	}
+
+	return results
+}
+
 // Upsert inserts a new element or updates an existing one
 func (g *GardenerResourceDataList) Upsert(data *gardencorev1alpha1.GardenerResourceData) {
 	for i, obj := range *g {
 		if obj.Name == data.Name {
 			(*g)[i].Type = data.Type
 			(*g)[i].Data = data.Data
+			(*g)[i].Labels = data.Labels
 			return
 		}
 	}

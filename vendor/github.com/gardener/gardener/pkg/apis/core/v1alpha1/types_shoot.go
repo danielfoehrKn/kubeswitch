@@ -37,6 +37,7 @@ type Shoot struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// Specification of the Shoot cluster.
+	// If the object's deletion timestamp is set, this field is immutable.
 	// +optional
 	Spec ShootSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 	// Most recently observed status of the Shoot cluster.
@@ -61,7 +62,7 @@ type ShootSpec struct {
 	// Addons contains information about enabled/disabled addons and their configuration.
 	// +optional
 	Addons *Addons `json:"addons,omitempty" protobuf:"bytes,1,opt,name=addons"`
-	// CloudProfileName is a name of a CloudProfile object.
+	// CloudProfileName is a name of a CloudProfile object. This field is immutable.
 	CloudProfileName string `json:"cloudProfileName" protobuf:"bytes,2,opt,name=cloudProfileName"`
 	// DNS contains information about the DNS settings of the Shoot.
 	// +optional
@@ -88,12 +89,14 @@ type ShootSpec struct {
 	// Purpose is the purpose class for this cluster.
 	// +optional
 	Purpose *ShootPurpose `json:"purpose,omitempty" protobuf:"bytes,11,opt,name=purpose"`
-	// Region is a name of a region.
+	// Region is a name of a region. This field is immutable.
 	Region string `json:"region" protobuf:"bytes,12,opt,name=region"`
 	// SecretBindingName is the name of the a SecretBinding that has a reference to the provider secret.
 	// The credentials inside the provider secret will be used to create the shoot in the respective account.
+	// This field is immutable.
 	SecretBindingName string `json:"secretBindingName" protobuf:"bytes,13,opt,name=secretBindingName"`
 	// SeedName is the name of the seed cluster that runs the control plane of the Shoot.
+	// This field is immutable when the SeedChange feature gate is disabled.
 	// +optional
 	SeedName *string `json:"seedName,omitempty" protobuf:"bytes,14,opt,name=seedName"`
 	// SeedSelector is an optional selector which must match a seed's labels for the shoot to be scheduled on that seed.
@@ -108,8 +111,12 @@ type ShootSpec struct {
 	// +optional
 	Tolerations []Toleration `json:"tolerations,omitempty" patchStrategy:"merge" patchMergeKey:"key" protobuf:"bytes,17,rep,name=tolerations"`
 	// ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.
+	// This field is immutable.
 	// +optional
 	ExposureClassName *string `json:"exposureClassName,omitempty" protobuf:"bytes,18,opt,name=exposureClassName"`
+	// SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.
+	// +optional
+	SystemComponents *SystemComponents `json:"systemComponents" protobuf:"bytes,19,opt,name=systemComponents"`
 }
 
 // ShootStatus holds the most recently observed status of the Shoot cluster.
@@ -150,12 +157,12 @@ type ShootStatus struct {
 	// +optional
 	Seed *string `json:"seed,omitempty" protobuf:"bytes,10,opt,name=seed"`
 	// TechnicalID is the name that is used for creating the Seed namespace, the infrastructure resources, and
-	// basically everything that is related to this particular Shoot.
+	// basically everything that is related to this particular Shoot. This field is immutable.
 	TechnicalID string `json:"technicalID" protobuf:"bytes,11,opt,name=technicalID"`
 	// UID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters.
-	// It is used to compute unique hashes.
+	// It is used to compute unique hashes. This field is immutable.
 	UID types.UID `json:"uid" protobuf:"bytes,12,opt,name=uid"`
-	// ClusterIdentity is the identity of the Shoot cluster
+	// ClusterIdentity is the identity of the Shoot cluster. This field is immutable.
 	// +optional
 	ClusterIdentity *string `json:"clusterIdentity,omitempty" protobuf:"bytes,13,opt,name=clusterIdentity"`
 	// List of addresses on which the Kube API server can be reached.
@@ -163,7 +170,81 @@ type ShootStatus struct {
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	AdvertisedAddresses []ShootAdvertisedAddress `json:"advertisedAddresses,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,14,rep,name=advertisedAddresses"`
+	// MigrationStartTime is the time when a migration to a different seed was initiated.
+	// +optional
+	MigrationStartTime *metav1.Time `json:"migrationStartTime,omitempty" protobuf:"bytes,15,opt,name=migrationStartTime"`
+	// Credentials contains information about the shoot credentials.
+	// +optional
+	Credentials *ShootCredentials `json:"credentials,omitempty" protobuf:"bytes,16,opt,name=credentials"`
 }
+
+// ShootCredentials contains information about the shoot credentials.
+type ShootCredentials struct {
+	// Rotation contains information about the credential rotations.
+	// +optional
+	Rotation *ShootCredentialsRotation `json:"rotation,omitempty" protobuf:"bytes,1,opt,name=rotation"`
+}
+
+// ShootCredentialsRotation contains information about the rotation of credentials.
+type ShootCredentialsRotation struct {
+	// CertificateAuthorities contains information about the certificate authority credential rotation.
+	// +optional
+	CertificateAuthorities *ShootCARotation `json:"certificateAuthorities,omitempty" protobuf:"bytes,1,opt,name=certificateAuthorities"`
+	// Kubeconfig contains information about the kubeconfig credential rotation.
+	// +optional
+	Kubeconfig *ShootKubeconfigRotation `json:"kubeconfig,omitempty" protobuf:"bytes,2,opt,name=kubeconfig"`
+	// SSHKeypair contains information about the ssh-keypair credential rotation.
+	// +optional
+	SSHKeypair *ShootSSHKeypairRotation `json:"sshKeypair,omitempty" protobuf:"bytes,3,opt,name=sshKeypair"`
+}
+
+// ShootCARotation contains information about the certificate authority credential rotation.
+type ShootCARotation struct {
+	// Phase describes the phase of the certificate authority credential rotation.
+	Phase ShootCredentialsRotationPhase `json:"phase" protobuf:"bytes,1,opt,name=phase"`
+	// LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
+	// +optional
+	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,3,opt,name=lastInitiationTime"`
+	// LastCompletionTime is the most recent time when the certificate authority credential rotation was successfully
+	// completed.
+	// +optional
+	LastCompletionTime *metav1.Time `json:"lastCompletionTime,omitempty" protobuf:"bytes,2,opt,name=lastCompletionTime"`
+}
+
+// ShootKubeconfigRotation contains information about the kubeconfig credential rotation.
+type ShootKubeconfigRotation struct {
+	// LastInitiationTime is the most recent time when the kubeconfig credential rotation was initiated.
+	// +optional
+	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,1,opt,name=lastInitiationTime"`
+	// LastCompletionTime is the most recent time when the kubeconfig credential rotation was successfully completed.
+	// +optional
+	LastCompletionTime *metav1.Time `json:"lastCompletionTime,omitempty" protobuf:"bytes,2,opt,name=lastCompletionTime"`
+}
+
+// ShootSSHKeypairRotation contains information about the ssh-keypair credential rotation.
+type ShootSSHKeypairRotation struct {
+	// LastInitiationTime is the most recent time when the certificate authority credential rotation was initiated.
+	// +optional
+	LastInitiationTime *metav1.Time `json:"lastInitiationTime,omitempty" protobuf:"bytes,1,opt,name=lastInitiationTime"`
+	// LastCompletionTime is the most recent time when the ssh-keypair credential rotation was successfully completed.
+	// +optional
+	LastCompletionTime *metav1.Time `json:"lastCompletionTime,omitempty" protobuf:"bytes,2,opt,name=lastCompletionTime"`
+}
+
+// ShootCredentialsRotationPhase is a string alias.
+type ShootCredentialsRotationPhase string
+
+const (
+	// RotationPreparing is a constant for the credentials rotation phase describing that the procedure is being prepared.
+	RotationPreparing ShootCredentialsRotationPhase = "Preparing"
+	// RotationPrepared is a constant for the credentials rotation phase describing that the procedure was prepared.
+	RotationPrepared ShootCredentialsRotationPhase = "Prepared"
+	// RotationCompleting is a constant for the credentials rotation phase describing that the procedure is being
+	// completed.
+	RotationCompleting ShootCredentialsRotationPhase = "Completing"
+	// RotationCompleted is a constant for the credentials rotation phase describing that the procedure was completed.
+	RotationCompleted ShootCredentialsRotationPhase = "Completed"
+)
 
 // ShootAdvertisedAddress contains information for the shoot's Kube API server.
 type ShootAdvertisedAddress struct {
@@ -231,7 +312,7 @@ type NginxIngress struct {
 // DNS holds information about the provider, the hosted zone id and the domain.
 type DNS struct {
 	// Domain is the external available domain of the Shoot cluster. This domain will be written into the
-	// kubeconfig that is handed out to end-users. Once set it is immutable.
+	// kubeconfig that is handed out to end-users. This field is immutable.
 	// +optional
 	Domain *string `json:"domain,omitempty" protobuf:"bytes,1,opt,name=domain"`
 	// Providers is a list of DNS providers that shall be enabled for this shoot cluster. Only relevant if
@@ -312,7 +393,7 @@ type NamedResourceReference struct {
 // Hibernation contains information whether the Shoot is suspended or not.
 type Hibernation struct {
 	// Enabled specifies whether the Shoot needs to be hibernated or not. If it is true, the Shoot's desired state is to be hibernated.
-	// If it is false or nil, the Shoot's desired state is to be awaken.
+	// If it is false or nil, the Shoot's desired state is to be awakened.
 	// +optional
 	Enabled *bool `json:"enabled,omitempty" protobuf:"varint,1,opt,name=enabled"`
 	// Schedules determine the hibernation schedules.
@@ -367,6 +448,10 @@ type Kubernetes struct {
 	// VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.
 	// +optional
 	VerticalPodAutoscaler *VerticalPodAutoscaler `json:"verticalPodAutoscaler,omitempty" protobuf:"bytes,9,opt,name=verticalPodAutoscaler"`
+	// EnableStaticTokenKubeconfig indicates whether static token kubeconfig secret should be present in garden cluster
+	// (default: true).
+	// +optional
+	EnableStaticTokenKubeconfig *bool `json:"enableStaticTokenKubeconfig,omitempty" protobuf:"varint,10,opt,name=enableStaticTokenKubeconfig"`
 }
 
 // ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.
@@ -399,6 +484,9 @@ type ClusterAutoscaler struct {
 	// MaxGracefulTerminationSeconds is the number of seconds CA waits for pod termination when trying to scale down a node (default: 600).
 	// +optional
 	MaxGracefulTerminationSeconds *int32 `json:"maxGracefulTerminationSeconds,omitempty" protobuf:"varint,9,opt,name=maxGracefulTerminationSeconds"`
+	// IgnoreTaints specifies a list of taint keys to ignore in node templates when considering to scale a node group.
+	// +optional
+	IgnoreTaints []string `json:"ignoreTaints,omitempty" protobuf:"bytes,10,opt,name=ignoreTaints"`
 }
 
 // ExpanderMode is type used for Expander values
@@ -548,8 +636,8 @@ type KubeAPIServerRequests struct {
 // ServiceAccountConfig is the kube-apiserver configuration for service accounts.
 type ServiceAccountConfig struct {
 	// Issuer is the identifier of the service account token issuer. The issuer will assert this
-	// identifier in "iss" claim of issued tokens. This value is a string or URI.
-	// Defaults to URI of the API server.
+	// identifier in "iss" claim of issued tokens. This value is used to generate new service account tokens.
+	// This value is a string or URI. Defaults to URI of the API server.
 	// +optional
 	Issuer *string `json:"issuer,omitempty" protobuf:"bytes,1,opt,name=issuer"`
 	// SigningKeySecret is a reference to a secret that contains an optional private key of the
@@ -566,8 +654,16 @@ type ServiceAccountConfig struct {
 	// MaxTokenExpiration is the maximum validity duration of a token created by the service account token issuer. If an
 	// otherwise valid TokenRequest with a validity duration larger than this value is requested, a token will be issued
 	// with a validity duration of this value.
+	// This field must be within [30d,90d] when the ShootMaxTokenExpirationValidation feature gate is enabled.
+	// This field will be overwritten to be within [30d,90d] when the ShootMaxTokenExpirationOverwrite feature gate is enabled.
 	// +optional
 	MaxTokenExpiration *metav1.Duration `json:"maxTokenExpiration,omitempty" protobuf:"bytes,4,opt,name=maxTokenExpiration"`
+	// AcceptedIssuers is an additional set of issuers that are used to determine which service account tokens are accepted.
+	// These values are not used to generate new service account tokens. Only useful when service account tokens are also
+	// issued by another external system or a change of the current issuer that is used for generating tokens is being performed.
+	// This field is only available for Kubernetes v1.22 or later.
+	// +optional
+	AcceptedIssuers []string `json:"acceptedIssuers,omitempty" protobuf:"bytes,5,opt,name=acceptedIssuers"`
 }
 
 // AuditConfig contains settings for audit of the api server
@@ -673,7 +769,7 @@ type KubeControllerManagerConfig struct {
 	// HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager.
 	// +optional
 	HorizontalPodAutoscalerConfig *HorizontalPodAutoscalerConfig `json:"horizontalPodAutoscaler,omitempty" protobuf:"bytes,2,opt,name=horizontalPodAutoscaler"`
-	// NodeCIDRMaskSize defines the mask size for node cidr in cluster (default is 24)
+	// NodeCIDRMaskSize defines the mask size for node cidr in cluster (default is 24). This field is immutable.
 	// +optional
 	NodeCIDRMaskSize *int32 `json:"nodeCIDRMaskSize,omitempty" protobuf:"varint,3,opt,name=nodeCIDRMaskSize"`
 	// PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.
@@ -921,18 +1017,18 @@ type KubeletConfigReserved struct {
 
 // Networking defines networking parameters for the shoot cluster.
 type Networking struct {
-	// Type identifies the type of the networking plugin.
+	// Type identifies the type of the networking plugin. This field is immutable.
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
 	// ProviderConfig is the configuration passed to network resource.
 	// +optional
 	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
-	// Pods is the CIDR of the pod network.
+	// Pods is the CIDR of the pod network. This field is immutable.
 	// +optional
 	Pods *string `json:"pods,omitempty" protobuf:"bytes,3,opt,name=pods"`
-	// Nodes is the CIDR of the entire node network.
+	// Nodes is the CIDR of the entire node network. This field is immutable.
 	// +optional
 	Nodes *string `json:"nodes,omitempty" protobuf:"bytes,4,opt,name=nodes"`
-	// Services is the CIDR of the service network.
+	// Services is the CIDR of the service network. This field is immutable.
 	// +optional
 	Services *string `json:"services,omitempty" protobuf:"bytes,5,opt,name=services"`
 }
@@ -1014,7 +1110,7 @@ type Alerting struct {
 // Provider contains provider-specific information that are handed-over to the provider-specific
 // extension controller.
 type Provider struct {
-	// Type is the type of the provider.
+	// Type is the type of the provider. This field is immutable.
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
 	// ControlPlaneConfig contains the provider-specific control plane config blob. Please look up the concrete
 	// definition in the documentation of your provider extension.
@@ -1216,6 +1312,40 @@ var (
 	DefaultWorkerMaxUnavailable = intstr.FromInt(0)
 	// DefaultWorkerSystemComponentsAllow is the default value for Worker AllowSystemComponents
 	DefaultWorkerSystemComponentsAllow = true
+)
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// System components relevant types                                                             //
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+// SystemComponents contains the settings of system components in the control or data plane of the Shoot cluster.
+type SystemComponents struct {
+	// CoreDNS contains the settings of the Core DNS components running in the data plane of the Shoot cluster.
+	// +optional
+	CoreDNS *CoreDNS `json:"coreDNS" protobuf:"bytes,1,opt,name=coreDNS"`
+}
+
+// CoreDNS contains the settings of the Core DNS components running in the data plane of the Shoot cluster.
+type CoreDNS struct {
+	// Autoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.
+	Autoscaling *CoreDNSAutoscaling `json:"autoscaling" protobuf:"bytes,1,opt,name=autoscaling"`
+}
+
+// CoreDNSAutoscaling contains the settings related to autoscaling of the Core DNS components running in the data plane of the Shoot cluster.
+type CoreDNSAutoscaling struct {
+	// The mode of the autoscaling to be used for the Core DNS components running in the data plane of the Shoot cluster.
+	// Supported values are `horizontal` and `cluster-proportional`.
+	Mode CoreDNSAutoscalingMode `json:"mode" protobuf:"bytes,1,opt,name=mode"`
+}
+
+// CoreDNSAutoscalingMode is a type alias for the Core DNS autoscaling mode string.
+type CoreDNSAutoscalingMode string
+
+const (
+	// CoreDNSAutoscalingModeHorizontal is a constant for horizontal Core DNS autoscaling mode.
+	CoreDNSAutoscalingModeHorizontal CoreDNSAutoscalingMode = "horizontal"
+	// CoreDNSAutoscalingModeClusterProportional is a constant for cluster-proportional Core DNS autoscaling mode.
+	CoreDNSAutoscalingModeClusterProportional CoreDNSAutoscalingMode = "cluster-proportional"
 )
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
