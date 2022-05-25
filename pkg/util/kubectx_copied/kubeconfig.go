@@ -101,6 +101,27 @@ func (k *Kubeconfig) SetKubeswitchContext(context string) error {
 	return nil
 }
 
+// SetGardenerStoreMetaInformation is a function to add meta information to kubeconfig which is required for subsequent runs of kubeswitch
+// Only relevant to the Gardener store
+func (k *Kubeconfig) SetGardenerStoreMetaInformation(landscapeIdentity, clusterType, namespace, name string) error {
+	if err := k.ModifyGardenerLandscapeIdentity(landscapeIdentity); err != nil {
+		return fmt.Errorf("failed to set Gardener meta information (Landscape Identity): %v", err)
+	}
+
+	if err := k.ModifyGardenerClusterType(clusterType); err != nil {
+		return fmt.Errorf("failed to set Gardener meta information (Cluster Type): %v", err)
+	}
+
+	if err := k.ModifyGardenerClusterNamespace(namespace); err != nil {
+		return fmt.Errorf("failed to set Gardener meta information (Shoot/Seed namespace): %v", err)
+	}
+
+	if err := k.ModifyGardenerClusterName(name); err != nil {
+		return fmt.Errorf("failed to set Gardener meta information (Shoot/Seed name): %v", err)
+	}
+	return nil
+}
+
 func (k *Kubeconfig) SetNamespaceForCurrentContext(namespace string) error {
 	currentContext := k.GetCurrentContext()
 	if len(currentContext) == 0 {

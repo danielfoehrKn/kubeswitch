@@ -400,6 +400,12 @@ func (s *GardenerStore) GetKubeconfigForPath(path string) ([]byte, error) {
 		}
 	}
 
+	// add meta information to kubeconfig (ignored by kubectl)
+	// this allows the "controlplane" command to unambiguously determine the Shoot for this Gardener store
+	if err := config.SetGardenerStoreMetaInformation(landscape, string(resource), name, namespace); err != nil {
+		return nil, err
+	}
+
 	return config.GetBytes()
 }
 

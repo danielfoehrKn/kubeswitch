@@ -23,8 +23,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils/secrets"
-	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -94,11 +92,6 @@ func GetGardenKubeconfigPath(landscapeIdentity string) string {
 	return fmt.Sprintf("%s-garden", landscapeIdentity)
 }
 
-// GetSecretIdentifier returns the Secret identifier in the form <namespace>-<name>
-func GetSecretIdentifier(namespace string, shootName string) string {
-	return fmt.Sprintf("%s/%s", namespace, shootName)
-}
-
 // GetSeedIdentifier returns the Seed identifier in the form <landscape>--seed--<seed-name>
 func GetSeedIdentifier(landscape, seedName string) string {
 	return fmt.Sprintf("%s--seed--%s", landscape, seedName)
@@ -141,34 +134,6 @@ func ParseIdentifier(path string) (string, GardenerResource, string, string, str
 	default:
 		return "", "", "", "", "", fmt.Errorf("cannot parse kubeconfig path: %q", path)
 	}
-}
-
-// GetShootToConfigMap returns a mapping Shoot <namespace>-<name> -> kubeconfig config map
-func GetShootToConfigMap(log *logrus.Entry, objectLists []client.ObjectList) map[string]corev1.ConfigMap {
-	shootNameToSecret := make(map[string]corev1.ConfigMap)
-	// we have a list of lists
-	for _, objectList := range objectLists {
-		list := objectList.(*corev1.ConfigMapList)
-		for _, secret := range list.Items {
-			if _, exists := secret.Data[secrets.DataKeyKubeconfig]; !exists {
-				log.Warnf("Config Map %s/%s does not contain a kubeconfig. Skipping.", secret.Namespace, secret.Name)
-				continue
-			}
-
-			var shootName string
-			if len(secret.ObjectMeta.OwnerReferences) == 0 || secret.ObjectMeta.OwnerReferences[0].Kind != "Shoot" {
-				if !strings.Contains(secret.Namespace, ".kubeconfig") {
-					log.Warnf("Config Map %s/%s could not be associated with any Shoot. Skipping.", secret.Namespace, secret.Name)
-					continue
-				}
-				shootName = strings.Split(secret.Namespace, ".kubeconfig")[0]
-			} else {
-				shootName = secret.ObjectMeta.OwnerReferences[0].Name
-			}
-			shootNameToSecret[GetSecretIdentifier(secret.Namespace, shootName)] = secret
-		}
-	}
-	return shootNameToSecret
 }
 
 // IsShootedSeed determines if this Shoot is a Shooted seed based on an annotation

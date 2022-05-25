@@ -45,6 +45,98 @@ func (k *Kubeconfig) ModifyKubeswitchContext(context string) error {
 	return nil
 }
 
+// ModifyGardenerLandscapeIdentity add a top-level field with the following identifiers to the kubeconfig file.
+// - "landscape-identity"
+// Only relevant for Gardener stores
+func (k *Kubeconfig) ModifyGardenerLandscapeIdentity(gardenerLandscapeIdentity string) error {
+	identityNode := valueOf(k.rootNode, "gardener-landscape-identity")
+	if identityNode != nil {
+		identityNode.Value = gardenerLandscapeIdentity
+		return nil
+	}
+
+	// if kubeswitch-context field doesn't exist, create new field
+	keyNode := &yaml.Node{
+		Kind:  yaml.ScalarNode,
+		Value: "gardener-landscape-identity",
+		Tag:   "!!str"}
+	valueNode := &yaml.Node{
+		Kind:  yaml.ScalarNode,
+		Value: gardenerLandscapeIdentity,
+		Tag:   "!!str"}
+	k.rootNode.Content = append(k.rootNode.Content, keyNode, valueNode)
+	return nil
+}
+
+// ModifyGardenerClusterNamespace adds top-level fields with the following identifiers to the kubeconfig file.
+// - "shoot-namespace"
+// Only relevant for Gardener stores
+func (k *Kubeconfig) ModifyGardenerClusterNamespace(namespace string) error {
+	nsNode := valueOf(k.rootNode, "gardener-cluster-namespace")
+	if nsNode != nil {
+		nsNode.Value = namespace
+		return nil
+	}
+
+	// if kubeswitch-context field doesn't exist, create new field
+	keyNode := &yaml.Node{
+		Kind:  yaml.ScalarNode,
+		Value: "gardener-cluster-namespace",
+		Tag:   "!!str"}
+	valueNode := &yaml.Node{
+		Kind:  yaml.ScalarNode,
+		Value: namespace,
+		Tag:   "!!str"}
+	k.rootNode.Content = append(k.rootNode.Content, keyNode, valueNode)
+	return nil
+}
+
+// ModifyGardenerClusterName adds top-level fields with the following identifiers to the kubeconfig file.
+// - "shoot-name"
+// Only relevant for Gardener stores
+func (k *Kubeconfig) ModifyGardenerClusterName(name string) error {
+	nameNode := valueOf(k.rootNode, "gardener-cluster-name")
+	if nameNode != nil {
+		nameNode.Value = name
+		return nil
+	}
+
+	// if kubeswitch-context field doesn't exist, create new field
+	keyNode := &yaml.Node{
+		Kind:  yaml.ScalarNode,
+		Value: "gardener-cluster-name",
+		Tag:   "!!str"}
+	valueNode := &yaml.Node{
+		Kind:  yaml.ScalarNode,
+		Value: name,
+		Tag:   "!!str"}
+	k.rootNode.Content = append(k.rootNode.Content, keyNode, valueNode)
+	return nil
+}
+
+// ModifyGardenerClusterType adds top-level fields with the following identifiers to the kubeconfig file.
+// - "gardener-cluster-type"  (e.g "Shoot" or "Seed")
+// Only relevant for Gardener stores
+func (k *Kubeconfig) ModifyGardenerClusterType(clusterType string) error {
+	typeNode := valueOf(k.rootNode, "gardener-cluster-type")
+	if typeNode != nil {
+		typeNode.Value = clusterType
+		return nil
+	}
+
+	// if kubeswitch-context field doesn't exist, create new field
+	keyNode := &yaml.Node{
+		Kind:  yaml.ScalarNode,
+		Value: "gardener-cluster-type",
+		Tag:   "!!str"}
+	valueNode := &yaml.Node{
+		Kind:  yaml.ScalarNode,
+		Value: clusterType,
+		Tag:   "!!str"}
+	k.rootNode.Content = append(k.rootNode.Content, keyNode, valueNode)
+	return nil
+}
+
 func (k *Kubeconfig) ModifyCurrentContext(name string) error {
 	currentCtxNode := valueOf(k.rootNode, "current-context")
 	if currentCtxNode != nil {

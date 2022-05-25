@@ -171,7 +171,7 @@ func getClient(kubeconfigPath string) (client.Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf(fmt.Sprintf("unable to create rest config: %v", err))
 	}
-	// TODO: kubectl returns status code 1 for kubeonfig with exec provider!
+
 	client, err := client.New(restConfig, client.Options{
 		Scheme: scheme,
 	})
