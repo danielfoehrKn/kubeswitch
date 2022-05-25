@@ -129,7 +129,8 @@ func ParseIdentifier(path string) (string, GardenerResource, string, string, str
 		if !strings.Contains(path, "seed") {
 			return "", "", "", "", "", fmt.Errorf("cannot parse kubeconfig path: %q", path)
 		}
-		return split[0], GardenerResourceSeed, split[2], "", "", nil
+		// this assumption is only valid if all managed seeds can only exist in the garden ns
+		return split[0], GardenerResourceSeed, split[2], "garden", "garden", nil
 
 	default:
 		return "", "", "", "", "", fmt.Errorf("cannot parse kubeconfig path: %q", path)
@@ -142,4 +143,25 @@ func IsShootedSeed(shoot gardencorev1beta1.Shoot) bool {
 		return shoot.Annotations[v1beta1constants.AnnotationShootUseAsSeed] != ""
 	}
 	return false
+}
+
+// ClientConfigWithNamespace sets a namespace to a kubeconfig client config
+func ClientConfigWithNamespace(clientConfig clientcmd.ClientConfig, namespace string) (clientcmd.ClientConfig, error) {
+	rawConfig, err := clientConfig.RawConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get raw client configuration: %w", err)
+	}
+
+	err = clientcmd.Validate(rawConfig)
+	if err != nil {
+		return nil, fmt.Errorf("validation of client configuration failed: %w", err)
+	}
+
+	for _, context := range rawConfig.Contexts {
+		context.Namespace = namespace
+	}
+
+	overrides := &clientcmd.ConfigOverrides{}
+
+	return clientcmd.NewDefaultClientConfig(rawConfig, overrides), nil
 }

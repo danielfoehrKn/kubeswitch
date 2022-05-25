@@ -20,6 +20,7 @@ import (
 	"runtime"
 	"strings"
 
+	gardenercontrolplane "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/gardener"
 	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/history"
 	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/ns"
 	"github.com/sirupsen/logrus"
@@ -203,6 +204,28 @@ func init() {
 		},
 	}
 
+	gardenerCmd := &cobra.Command{
+		Use:   "gardener",
+		Short: "gardener specific commands",
+		Long:  `Commands that can only be used if a Gardener store is configured.`,
+	}
+
+	controlplaneCmd := &cobra.Command{
+		Use:   "controlplane",
+		Short: "Switch to the Shoot's controlplane",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			stores, _, err := initialize()
+			if err != nil {
+				return err
+			}
+
+			_, err = gardenercontrolplane.SwitchToControlplane(stores, getKubeconfigPathFromFlag())
+			return err
+		},
+	}
+
+	gardenerCmd.AddCommand(controlplaneCmd)
+
 	listContextsCmd := &cobra.Command{
 		Use:     "list-contexts",
 		Short:   "List all available contexts without fuzzy search",
@@ -308,6 +331,7 @@ func init() {
 	rootCommand.AddCommand(lastContextCmd)
 	rootCommand.AddCommand(aliasContextCmd)
 	rootCommand.AddCommand(versionCmd)
+	rootCommand.AddCommand(gardenerCmd)
 
 	setContextCmd.SilenceUsage = true
 	aliasContextCmd.SilenceErrors = true
@@ -322,6 +346,7 @@ func init() {
 	setFlagsForContextCommands(aliasContextCmd)
 
 	setCommonFlags(namespaceCommand)
+	setControlplaneCommandFlags(controlplaneCmd)
 }
 
 func NewCommandStartSwitcher() *cobra.Command {
@@ -384,6 +409,15 @@ func setCommonFlags(command *cobra.Command) {
 		"state-directory",
 		os.ExpandEnv("$HOME/.kube/switch-state"),
 		"path to the local directory used for storing internal state.")
+}
+
+func setControlplaneCommandFlags(cmd *cobra.Command) {
+	setCommonFlags(cmd)
+	cmd.Flags().StringVar(
+		&configPath,
+		"config-path",
+		os.ExpandEnv("$HOME/.kube/switch-config.yaml"),
+		"path on the local filesystem to the configuration file.")
 }
 
 func initialize() ([]store.KubeconfigStore, *types.Config, error) {

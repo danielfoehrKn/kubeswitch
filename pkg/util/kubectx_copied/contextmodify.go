@@ -68,11 +68,11 @@ func (k *Kubeconfig) ModifyGardenerLandscapeIdentity(gardenerLandscapeIdentity s
 	return nil
 }
 
-// ModifyGardenerClusterNamespace adds top-level fields with the following identifiers to the kubeconfig file.
-// - "shoot-namespace"
+// ModifyGardenerProject adds top-level fields with the following identifiers to the kubeconfig file.
+// - "gardener-project"
 // Only relevant for Gardener stores
-func (k *Kubeconfig) ModifyGardenerClusterNamespace(namespace string) error {
-	nsNode := valueOf(k.rootNode, "gardener-cluster-namespace")
+func (k *Kubeconfig) ModifyGardenerProject(namespace string) error {
+	nsNode := valueOf(k.rootNode, "gardener-project")
 	if nsNode != nil {
 		nsNode.Value = namespace
 		return nil
@@ -81,7 +81,7 @@ func (k *Kubeconfig) ModifyGardenerClusterNamespace(namespace string) error {
 	// if kubeswitch-context field doesn't exist, create new field
 	keyNode := &yaml.Node{
 		Kind:  yaml.ScalarNode,
-		Value: "gardener-cluster-namespace",
+		Value: "gardener-project",
 		Tag:   "!!str"}
 	valueNode := &yaml.Node{
 		Kind:  yaml.ScalarNode,

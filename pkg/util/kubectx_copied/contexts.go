@@ -81,6 +81,56 @@ func (k *Kubeconfig) GetKubeswitchContext() string {
 	return v.Value
 }
 
+// IsGardenerKubeconfig returns if this kubeconfig is a kubeconfig created by a kubeswitch Gardener Store
+// i.e needs to contain meta information added previously by the gardener store
+func (k *Kubeconfig) IsGardenerKubeconfig() bool {
+	v := valueOf(k.rootNode, "gardener-landscape-identity")
+	if v == nil {
+		return false
+	}
+	return true
+}
+
+// GetGardenerLandscapeIdentity returns the "gardener-landscape-identity" value in given
+// kubeconfig object Node, or returns "" if not found.
+func (k *Kubeconfig) GetGardenerLandscapeIdentity() string {
+	v := valueOf(k.rootNode, "gardener-landscape-identity")
+	if v == nil {
+		return ""
+	}
+	return v.Value
+}
+
+// GetGardenerProject returns the "gardener-project" value in given
+// kubeconfig object Node, or returns "" if not found.
+func (k *Kubeconfig) GetGardenerProject() string {
+	v := valueOf(k.rootNode, "gardener-project")
+	if v == nil {
+		return ""
+	}
+	return v.Value
+}
+
+// GetGardenerClusterName returns the "gardener-cluster-name" value in given
+// kubeconfig object Node, or returns "" if not found.
+func (k *Kubeconfig) GetGardenerClusterName() string {
+	v := valueOf(k.rootNode, "gardener-cluster-name")
+	if v == nil {
+		return ""
+	}
+	return v.Value
+}
+
+// GetGardenerClusterType returns the "gardener-cluster-type" value in given
+// kubeconfig object Node, or returns "" if not found.
+func (k *Kubeconfig) GetGardenerClusterType() string {
+	v := valueOf(k.rootNode, "gardener-cluster-type")
+	if v == nil {
+		return ""
+	}
+	return v.Value
+}
+
 func valueOf(mapNode *yaml.Node, key string) *yaml.Node {
 	if mapNode.Kind != yaml.MappingNode {
 		return nil

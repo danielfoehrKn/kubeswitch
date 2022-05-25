@@ -318,6 +318,92 @@ func (s *GardenerStore) GetLogger() *logrus.Entry {
 	return s.Logger
 }
 
+func (s *GardenerStore) GetControlplaneKubeconfigForShoot(shootName, project string) ([]byte, *string, error) {
+	if !s.IsInitialized() {
+		if err := s.InitializeGardenerStore(); err != nil {
+			return nil, nil, fmt.Errorf("failed to initialize Gardener store: %w", err)
+		}
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	shootNamespace := "garden"
+
+	// for possible private seeds that exist outside the "garden" namespace
+	if project != "garden" {
+		shootNamespace = fmt.Sprintf("garden-%s", project)
+	}
+
+	// we get the Shoot for the managed Seed
+	shoot, err := s.GardenClient.GetShoot(ctx, shootNamespace, shootName)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if shoot.Spec.SeedName == nil || *shoot.Spec.SeedName == "" {
+		return nil, nil, fmt.Errorf("shoot %q has not yet been assigned to a seed", shootName)
+	}
+
+	if shoot.Status.TechnicalID == "" {
+		return nil, nil, fmt.Errorf("no technicalID has been assigned to the shoot %q yet", shootName)
+	}
+
+	// this actually tries to find a ManagedSeed with the given name in the garden ns
+	// then uses the Shoot referenced in the Managed seed to obtain the kubeconfig for the managed seed's Shoot
+	clientConfig, err := s.GardenClient.GetSeedClientConfig(ctx, *shoot.Spec.SeedName)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// the shoot.Status.TechnicalID is the same as this shoot's controlplane namespace in the seed
+	clientConfig, err = gardenerstore.ClientConfigWithNamespace(clientConfig, shoot.Status.TechnicalID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	rawConfig, err := clientConfig.RawConfig()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	bytes, err := clientcmd.Write(rawConfig)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	config, err := kubeconfigutil.NewKubeconfig(bytes)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	contextNames, err := config.GetContextNames()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for _, name := range contextNames {
+		if strings.HasSuffix(name, "-internal") {
+			if err := config.RemoveContext(name); err != nil {
+				return nil, nil, fmt.Errorf("unable to remove internal kubeconfig context: %v", err)
+			}
+			break
+		}
+	}
+
+	// add meta information to kubeconfig (ignored by kubectl)
+	if err := config.SetGardenerStoreMetaInformation(s.LandscapeIdentity, string(gardenerstore.GardenerResourceSeed), "garden", *shoot.Spec.SeedName); err != nil {
+		return nil, nil, err
+	}
+
+	bytes, err = config.GetBytes()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return bytes, shoot.Spec.SeedName, nil
+}
+
 func (s *GardenerStore) GetKubeconfigForPath(path string) ([]byte, error) {
 	if !s.IsInitialized() {
 		if err := s.InitializeGardenerStore(); err != nil {
@@ -332,7 +418,7 @@ func (s *GardenerStore) GetKubeconfigForPath(path string) ([]byte, error) {
 		return ioutil.ReadFile(s.Config.GardenerAPIKubeconfigPath)
 	}
 
-	landscape, resource, name, namespace, _, err := gardenerstore.ParseIdentifier(path)
+	landscape, resource, name, namespace, gardenerProjectName, err := gardenerstore.ParseIdentifier(path)
 	if err != nil {
 		return nil, err
 	}
@@ -402,7 +488,7 @@ func (s *GardenerStore) GetKubeconfigForPath(path string) ([]byte, error) {
 
 	// add meta information to kubeconfig (ignored by kubectl)
 	// this allows the "controlplane" command to unambiguously determine the Shoot for this Gardener store
-	if err := config.SetGardenerStoreMetaInformation(landscape, string(resource), name, namespace); err != nil {
+	if err := config.SetGardenerStoreMetaInformation(s.LandscapeIdentity, string(resource), gardenerProjectName, name); err != nil {
 		return nil, err
 	}
 
