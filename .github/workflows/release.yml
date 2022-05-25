@@ -20,7 +20,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install make -y
           export PATH=${PATH}:`go env GOPATH`/bin
-          make install-requirements
           make check
           make build-switcher
           echo ::set-output name=latest_release_filtered_tag::${GITHUB_REF##*/}

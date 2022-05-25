@@ -9,6 +9,7 @@
 .DS_Store
 .cache_ggshield
 *~
+hack/tools/bin/
 
 /hack/switch/switch.tar.gz
 
