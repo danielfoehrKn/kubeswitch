@@ -185,6 +185,10 @@ func init() {
 		Short:   "Change the current namespace",
 		Long:    `Search namespaces in the current cluster and change to it.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 1 && len(args[0]) > 0 {
+				return ns.SwitchToNamespace(args[0], getKubeconfigPathFromFlag())
+			}
+
 			return ns.SwitchNamespace(getKubeconfigPathFromFlag(), stateDirectory, noIndex)
 		},
 	}
@@ -336,6 +340,7 @@ func init() {
 	setContextCmd.SilenceUsage = true
 	aliasContextCmd.SilenceErrors = true
 	aliasRmCmd.SilenceErrors = true
+	namespaceCommand.SilenceErrors = true
 
 	setFlagsForContextCommands(setContextCmd)
 	setFlagsForContextCommands(listContextsCmd)

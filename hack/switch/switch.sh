@@ -141,6 +141,7 @@ function switch(){
   CLEAN=''
   SET_CONTEXT=''
   NAMESPACE=''
+  NAMESPACE_ARGUMENT=''
   HISTORY=''
   PREV_HISTORY=''
   LAST_HISTORY=''
@@ -214,6 +215,7 @@ function switch(){
                       ;;
                   ns)
                       NAMESPACE=$1
+                      NAMESPACE_ARGUMENT=$2
                       shift
                       ;;
                   history)
@@ -497,6 +499,7 @@ function switch(){
   if [ -n "$NAMESPACE" ]
   then
      $EXECUTABLE_PATH ns \
+     "$NAMESPACE_ARGUMENT" \
      $KUBECONFIG_PATH_FLAG ${KUBECONFIG_PATH} \
      $DEBUG_FLAG ${DEBUG} \
      $NO_INDEX_FLAG ${NO_INDEX}

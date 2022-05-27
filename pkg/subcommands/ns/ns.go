@@ -26,6 +26,7 @@ import (
 	"github.com/ktr0731/go-fuzzyfinder"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -48,21 +49,59 @@ var (
 	allNamespaces []string
 )
 
-func SwitchNamespace(kubeconfigPathFromFlag, stateDir string, noIndex bool) error {
-	cachedNamespaces := sets.NewString()
-	kubeconfigPath := kubeconfigPathFromFlag
-
-	// kubeconfig path from flag is preferred over env (just not if it is only the default)
-	if (len(kubeconfigPath) == 0 || kubeconfigPath == os.ExpandEnv(defaultKubeconfigPath)) && len(kubeconfigPathFromEnv) > 0 {
-		if len(strings.Split(kubeconfigPathFromEnv, linuxEnvKubeconfigSeperator)) > 1 {
-			return fmt.Errorf("providing multiple kubeconfig files via environemnt varibale KUBECONFIG is not supported for namespace switching")
-		}
-
-		kubeconfigPath = os.ExpandEnv(kubeconfigPathFromEnv)
+// SwitchToNamespace takes a target namespace and - given that the namespace exists - sets it on the current kubeconfig file
+func SwitchToNamespace(targetNamespace, kubeconfigPathFromFlag string) error {
+	kubeconfigPath, err := getKubeconfigPath(kubeconfigPathFromFlag)
+	if err != nil {
+		return err
 	}
 
-	if _, err := os.Stat(kubeconfigPath); err != nil {
-		return fmt.Errorf("unable to list namespaces. The kubeconfig file %q does not exist", kubeconfigPath)
+	c, err := getClient(kubeconfigPath)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve current namespaces: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	ns := corev1.Namespace{}
+	if err := c.Get(ctx, client.ObjectKey{Name: targetNamespace}, &ns); err != nil {
+		if apierrors.IsNotFound(err) {
+			return fmt.Errorf("namespace %q not found", targetNamespace)
+		}
+		return fmt.Errorf("failed to find namespace %q: %v", targetNamespace, err)
+	}
+
+	kubeconfig, err := kubeconfigutil.NewKubeconfigForPath(kubeconfigPath)
+	if err != nil {
+		return err
+	}
+
+	if err := kubeconfig.SetNamespaceForCurrentContext(targetNamespace); err != nil {
+		return fmt.Errorf("failed to set namespace %q: %v", targetNamespace, err)
+	}
+
+	// this updates the actual kubeconfif file (does not create a new tmp. kubeconfig to set namespace)
+	if _, err := kubeconfig.WriteKubeconfigFile(); err != nil {
+		return fmt.Errorf("failed to write kubeconfig file: %v", err)
+	}
+
+	kubeswitchContext := kubeconfig.GetKubeswitchContext()
+	if err := historyutil.AppendToHistory(kubeswitchContext, targetNamespace); err != nil {
+		return fmt.Errorf("failed to write namespace history: %v", err)
+	}
+
+	return nil
+}
+
+// SwitchNamespace retrieves all available namespaces (either via API call or from local cache)
+// Then sets the selected namespace on the current kubeconfig file (does not create a new tmp. kubeconfig to set namespace)
+func SwitchNamespace(kubeconfigPathFromFlag, stateDir string, noIndex bool) error {
+	cachedNamespaces := sets.NewString()
+
+	kubeconfigPath, err := getKubeconfigPath(kubeconfigPathFromFlag)
+	if err != nil {
+		return err
 	}
 
 	kubeconfig, err := kubeconfigutil.NewKubeconfigForPath(kubeconfigPath)
@@ -157,6 +196,24 @@ func SwitchNamespace(kubeconfigPathFromFlag, stateDir string, noIndex bool) erro
 	}
 
 	return cache.Write(allNamespaces)
+}
+
+func getKubeconfigPath(kubeconfigPathFromFlag string) (string, error) {
+	kubeconfigPath := kubeconfigPathFromFlag
+
+	// kubeconfig path from flag is preferred over env (just not if it is only the default)
+	if (len(kubeconfigPath) == 0 || kubeconfigPath == os.ExpandEnv(defaultKubeconfigPath)) && len(kubeconfigPathFromEnv) > 0 {
+		if len(strings.Split(kubeconfigPathFromEnv, linuxEnvKubeconfigSeperator)) > 1 {
+			return "", fmt.Errorf("providing multiple kubeconfig files via environemnt varibale KUBECONFIG is not supported for namespace switching")
+		}
+
+		kubeconfigPath = os.ExpandEnv(kubeconfigPathFromEnv)
+	}
+
+	if _, err := os.Stat(kubeconfigPath); err != nil {
+		return "", fmt.Errorf("unable to list namespaces. The kubeconfig file %q does not exist", kubeconfigPath)
+	}
+	return kubeconfigPath, nil
 }
 
 func getClient(kubeconfigPath string) (client.Client, error) {
