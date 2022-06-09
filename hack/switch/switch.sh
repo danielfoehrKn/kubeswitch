@@ -218,6 +218,11 @@ function switch(){
                       NAMESPACE_ARGUMENT=$2
                       shift
                       ;;
+                  namespace)
+                      NAMESPACE=$1
+                      NAMESPACE_ARGUMENT=$2
+                      shift
+                      ;;
                   history)
                       HISTORY=$1
                       shift
