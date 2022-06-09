@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	gardenclient "github.com/danielfoehrkn/kubeswitch/pkg/store/gardener/copied_gardenctlv2"
@@ -84,11 +85,14 @@ func NewGardenerStore(store types.KubeconfigStore, stateDir string) (*GardenerSt
 	}
 
 	return &GardenerStore{
-		Logger:          logrus.New().WithField("store", types.StoreKindGardener),
-		KubeconfigStore: store,
-		Config:          config,
-		LandscapeName:   landscapeName,
-		StateDirectory:  stateDir,
+		Logger:                   logrus.New().WithField("store", types.StoreKindGardener),
+		KubeconfigStore:          store,
+		Config:                   config,
+		LandscapeName:            landscapeName,
+		StateDirectory:           stateDir,
+		PathToShootLock:          sync.RWMutex{},
+		PathToManagedSeedLock:    sync.RWMutex{},
+		CaSecretNameToSecretLock: sync.RWMutex{},
 	}, nil
 }
 
@@ -272,7 +276,7 @@ func (s *GardenerStore) StartSearch(channel chan SearchResult) {
 	// for memoization
 	s.CacheCaSecretNameToSecret = make(map[string]corev1.Secret, len(secretList))
 	for _, secret := range secretList {
-		s.CacheCaSecretNameToSecret[fmt.Sprintf("%s:%s", secret.Namespace, secret.Name)] = secret
+		s.writeCacheCaSecretNameToSecretLock(fmt.Sprintf("%s:%s", secret.Namespace, secret.Name), secret)
 	}
 
 	s.sendKubeconfigPaths(channel, shootList, managedSeeds.Items)
@@ -433,7 +437,7 @@ func (s *GardenerStore) GetKubeconfigForPath(path string) ([]byte, error) {
 	var clientConfig clientcmd.ClientConfig
 	switch resource {
 	case gardenerstore.GardenerResourceSeed:
-		managedSeed, ok := s.CachePathToManagedSeed[path]
+		managedSeed, ok := s.readFromCachePathToManagedSeed(path)
 
 		// we know the namespace and name for the Shoot for the ManagedSeed
 		// so we can use that knowledge to get the correct index to get the corresponding Shoot from the cache
@@ -445,9 +449,9 @@ func (s *GardenerStore) GetKubeconfigForPath(path string) ([]byte, error) {
 	case gardenerstore.GardenerResourceShoot:
 		s.Logger.Debugf("getting kubeconfig for %s (%s/%s)", resource, namespace, name)
 
-		shoot, _ := s.CachePathToShoot[path]
+		shoot, _ := s.readFromCachePathToShoot(path)
 		caClusterSecretName := fmt.Sprintf("%s:%s.%s", namespace, name, gardenclient.ShootProjectSecretSuffixCACluster)
-		caSecret, _ := s.CacheCaSecretNameToSecret[caClusterSecretName]
+		caSecret, _ := s.readFromCacheCaSecretNameToSecretLock(caClusterSecretName)
 
 		clientConfig, err = s.GardenClient.GetShootClientConfig(ctx, namespace, name, shoot, caSecret)
 		if err != nil {
@@ -588,7 +592,7 @@ func (s *GardenerStore) sendKubeconfigPaths(channel chan SearchResult, shoots []
 		kubeconfigPath := gardenerstore.GetSeedIdentifier(landscapeName, managedSeed.Name)
 
 		// for memoization
-		s.CachePathToManagedSeed[kubeconfigPath] = managedSeed
+		s.writeCachePathToManagedSeed(kubeconfigPath, managedSeed)
 	}
 
 	// loop over all Shoots/ShootedSeeds and construct and send their kubeconfig paths as search result
@@ -625,7 +629,7 @@ func (s *GardenerStore) sendKubeconfigPaths(channel chan SearchResult, shoots []
 		}
 
 		// for memoization
-		s.CachePathToShoot[kubeconfigPath] = shoot
+		s.writeCachePathToShoot(kubeconfigPath, shoot)
 
 		_, isAlreadyReferencedByManagedSeed := shootNamesManagedSeed[fmt.Sprintf("%s:%s", shoot.Namespace, shoot.Name)]
 		if isAlreadyReferencedByManagedSeed {
@@ -641,12 +645,14 @@ func (s *GardenerStore) sendKubeconfigPaths(channel chan SearchResult, shoots []
 	// the reason why the paths for managed seeds are populated here in the end (even though they are available before),
 	// is so that the corresponding Shoot resource for the ManagedSeed is already available the cache s.CachePathToShoot[]
 	// when populating the path. This avoids cache misses.
+	s.PathToManagedSeedLock.RLock()
 	for pathForSeed, _ := range s.CachePathToManagedSeed {
 		channel <- SearchResult{
 			KubeconfigPath: pathForSeed,
 			Error:          nil,
 		}
 	}
+	s.PathToManagedSeedLock.RUnlock()
 }
 
 func (s *GardenerStore) createGardenKubeconfigAlias(gardenKubeconfigPath string) error {
@@ -685,4 +691,43 @@ func (s *GardenerStore) VerifyKubeconfigPaths() error {
 	// NOOP as we do not allow any paths to be configured for the Gardener store
 	// searches through all namespaces
 	return nil
+}
+
+func (s *GardenerStore) writeCachePathToShoot(key string, value gardencorev1beta1.Shoot) {
+	s.PathToShootLock.Lock()
+	defer s.PathToShootLock.Unlock()
+	s.CachePathToShoot[key] = value
+}
+
+func (s *GardenerStore) readFromCachePathToShoot(key string) (gardencorev1beta1.Shoot, bool) {
+	s.PathToShootLock.RLock()
+	defer s.PathToShootLock.RUnlock()
+	shoot, ok := s.CachePathToShoot[key]
+	return shoot, ok
+}
+
+func (s *GardenerStore) writeCachePathToManagedSeed(key string, value seedmanagementv1alpha1.ManagedSeed) {
+	s.PathToManagedSeedLock.Lock()
+	defer s.PathToManagedSeedLock.Unlock()
+	s.CachePathToManagedSeed[key] = value
+}
+
+func (s *GardenerStore) readFromCachePathToManagedSeed(key string) (seedmanagementv1alpha1.ManagedSeed, bool) {
+	s.PathToManagedSeedLock.RLock()
+	defer s.PathToManagedSeedLock.RUnlock()
+	managedSeed, ok := s.CachePathToManagedSeed[key]
+	return managedSeed, ok
+}
+
+func (s *GardenerStore) writeCacheCaSecretNameToSecretLock(key string, value corev1.Secret) {
+	s.CaSecretNameToSecretLock.Lock()
+	defer s.CaSecretNameToSecretLock.Unlock()
+	s.CacheCaSecretNameToSecret[key] = value
+}
+
+func (s *GardenerStore) readFromCacheCaSecretNameToSecretLock(key string) (corev1.Secret, bool) {
+	s.CaSecretNameToSecretLock.RLock()
+	defer s.CaSecretNameToSecretLock.RUnlock()
+	secret, ok := s.CacheCaSecretNameToSecret[key]
+	return secret, ok
 }

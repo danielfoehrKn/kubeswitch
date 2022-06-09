@@ -104,8 +104,11 @@ type GardenerStore struct {
 	LandscapeName             string
 	StateDirectory            string
 	CachePathToShoot          map[string]gardencorev1beta1.Shoot
+	PathToShootLock           sync.RWMutex
 	CachePathToManagedSeed    map[string]seedmanagementv1alpha1.ManagedSeed
+	PathToManagedSeedLock     sync.RWMutex
 	CacheCaSecretNameToSecret map[string]corev1.Secret
+	CaSecretNameToSecretLock  sync.RWMutex
 }
 
 type EKSStore struct {
