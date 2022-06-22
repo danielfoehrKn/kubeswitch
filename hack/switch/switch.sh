@@ -580,7 +580,7 @@ function setKubeconfigEnvironmentVariable() {
      then
         switchTmpDirectory="$HOME/.kube/.switch_tmp/config"
         if [[ $KUBECONFIG == *"$switchTmpDirectory"* ]]; then
-          rm $KUBECONFIG
+          rm -f $KUBECONFIG
         fi
      fi
 
