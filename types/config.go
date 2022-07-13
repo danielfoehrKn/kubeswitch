@@ -24,7 +24,7 @@ import (
 type StoreKind string
 
 // ValidStoreKinds contains all valid store kinds
-var ValidStoreKinds = sets.NewString(string(StoreKindVault), string(StoreKindFilesystem), string(StoreKindGardener), string(StoreKindGKE), string(StoreKindAzure), string(StoreKindEKS))
+var ValidStoreKinds = sets.NewString(string(StoreKindVault), string(StoreKindFilesystem), string(StoreKindGardener), string(StoreKindGKE), string(StoreKindAzure), string(StoreKindEKS), string(StoreKindRancher))
 
 // ValidConfigVersions contains all valid config versions
 var ValidConfigVersions = sets.NewString("v1alpha1")
@@ -42,6 +42,8 @@ const (
 	StoreKindAzure StoreKind = "azure"
 	// StoreKindEKS is an identifier for the EKS store
 	StoreKindEKS StoreKind = "eks"
+	// StoreKindEKS is an identifier for the Rancher store
+	StoreKindRancher StoreKind = "rancher"
 )
 
 type Config struct {
@@ -203,4 +205,11 @@ type GKEAuthentication struct {
 	// the GCP service account used to authenticate against the Google Kubernetes Engine API
 	// + optional
 	ServiceAccountFilePath *string `yaml:"serviceAccountFilePath"`
+}
+
+type StoreConfigRancher struct {
+	// RancherAPIAddress is the URL of the Rancher Server, e.g. https://rancher.example.com
+	RancherAddress string `yaml:"rancherAPIAddress"`
+	// RancherAPIToken is the token used to authenticate against the Rancher API, format: token-12abc:bmjlzslas......x4hv5ptc29wt4sfk
+	RancherToken string `yaml:"rancherToken"`
 }

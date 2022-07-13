@@ -1,0 +1,19 @@
+# Rancher store
+
+To use Rancher as a Kubeconfig store, please first [setup Rancher](setup_rancher.md).
+Searching over multiple Rancher instances is supported but in this case `showPrefix` must be true to prevent conflicts.
+
+# Configure Rancher in the SwitchConfig file
+
+Below there is an example configuration for Rancher in the `SwitchConfig` file.
+
+```
+kind: SwitchConfig
+version: v1alpha1
+kubeconfigStores:
+- kind: Rancher
+  id: rancher
+  config:
+    rancherAddress: https://rancher.yourdomain.com/v3
+    rancherToken: token-12abc:bmjlzslas......x4hv5ptc29wt4sfk
+```

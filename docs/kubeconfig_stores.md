@@ -12,6 +12,7 @@ Please check the documentation for each kubeconfig store on how to use it
  - [Filesystem](stores/filesystem/filesystem.md)
  - [Vault](stores/vault/use_vault_store.md)
  - [Gardener](stores/gardener/gardener.md)
+ - [Rancher](stores/rancher/rancher.md)
 
 Please note that, to search over **multiple** directories and kubeconfig stores,
 you need to use the `SwitchConfig` file.
