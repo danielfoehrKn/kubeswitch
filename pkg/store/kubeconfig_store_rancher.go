@@ -18,53 +18,45 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/rancher/norman/clientbase"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 
 	"github.com/danielfoehrkn/kubeswitch/types"
-	"github.com/rancher/norman/clientbase"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 )
 
 func NewRancherStore(store types.KubeconfigStore) (*RancherStore, error) {
-	RancherStoreConfig := &types.StoreConfigRancher{}
+	rancherStoreConfig := &types.StoreConfigRancher{}
 	if store.Config != nil {
 		buf, err := yaml.Marshal(store.Config)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		err = yaml.Unmarshal(buf, RancherStoreConfig)
+		err = yaml.Unmarshal(buf, rancherStoreConfig)
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal Rancher config: %w", err)
 		}
 	}
 
-	RancherAddress := RancherStoreConfig.RancherAddress
-
-	if len(RancherAddress) == 0 {
+	rancherAddress := rancherStoreConfig.RancherAddress
+	if len(rancherAddress) == 0 {
 		return nil, fmt.Errorf("when using the Rancher kubeconfig store, the address of Rancher has to be provided via SwitchConfig file")
 	}
 
-	RancherToken := RancherStoreConfig.RancherToken
-
-	if len(RancherToken) == 0 {
+	rancherToken := rancherStoreConfig.RancherToken
+	if len(rancherToken) == 0 {
 		return nil, fmt.Errorf("when using the Rancher kubeconfig store, a Rancher API token must be provided via SwitchConfig file")
-	}
-
-	client, err := managementClient.NewClient(&clientbase.ClientOpts{
-		URL:      RancherAddress,
-		TokenKey: RancherToken,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Rancher client: %w", err)
 	}
 
 	return &RancherStore{
 		Logger:          logrus.New().WithField("store", types.StoreKindRancher),
 		KubeconfigStore: store,
-		RancherConfig:   *RancherStoreConfig,
-		Client:          client,
+		ClientOpts: &clientbase.ClientOpts{
+			URL:      rancherAddress,
+			TokenKey: rancherToken,
+		},
 	}, nil
 }
 
@@ -95,8 +87,33 @@ func (r *RancherStore) GetLogger() *logrus.Entry {
 	return r.Logger
 }
 
+//initClient initializes the Rancher client
+// It is called once at the beginning of the search and every time a kubenfig is requested
+// It is a NOOP if the client is already initialized
+func (r *RancherStore) initClient() error {
+	if r.Client != nil { // already initialized
+		return nil
+	}
+
+	client, err := managementClient.NewClient(r.ClientOpts)
+	if err != nil {
+		return fmt.Errorf("failed to create Rancher client: %w", err)
+	}
+
+	r.Client = client
+	return nil
+}
+
 func (r *RancherStore) StartSearch(channel chan SearchResult) {
 	r.Logger.Debug("Rancher: start search")
+
+	if err := r.initClient(); err != nil {
+		channel <- SearchResult{
+			KubeconfigPath: "",
+			Error:          fmt.Errorf("failed to initialize Rancher client: %w", err),
+		}
+		return
+	}
 
 	cluster, err := r.Client.Cluster.ListAll(nil)
 	if err != nil {
@@ -123,6 +140,10 @@ func (r *RancherStore) StartSearch(channel chan SearchResult) {
 
 func (r *RancherStore) GetKubeconfigForPath(path string) ([]byte, error) {
 	r.Logger.Debugf("Rancher: getting secret for path %q", path)
+
+	if err := r.initClient(); err != nil {
+		return nil, fmt.Errorf("failed to initialize Rancher client: %w", err)
+	}
 
 	clusterID := path
 	if clusterID == r.GetID() {

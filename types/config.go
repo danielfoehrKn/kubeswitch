@@ -42,7 +42,7 @@ const (
 	StoreKindAzure StoreKind = "azure"
 	// StoreKindEKS is an identifier for the EKS store
 	StoreKindEKS StoreKind = "eks"
-	// StoreKindEKS is an identifier for the Rancher store
+	// StoreKindRancher is an identifier for the Rancher store
 	StoreKindRancher StoreKind = "rancher"
 )
 
@@ -208,8 +208,8 @@ type GKEAuthentication struct {
 }
 
 type StoreConfigRancher struct {
-	// RancherAPIAddress is the URL of the Rancher Server, e.g. https://rancher.example.com
+	// RancherAddress is the URL of the Rancher API, e.g. https://rancher.example.com/v3
 	RancherAddress string `yaml:"rancherAPIAddress"`
-	// RancherAPIToken is the token used to authenticate against the Rancher API, format: token-12abc:bmjlzslas......x4hv5ptc29wt4sfk
+	// RancherToken is the token used to authenticate against the Rancher API, format: token-12abc:bmjlzslas......x4hv5ptc29wt4sfk
 	RancherToken string `yaml:"rancherToken"`
 }
