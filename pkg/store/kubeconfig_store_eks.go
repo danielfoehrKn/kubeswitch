@@ -259,7 +259,7 @@ func (s *EKSStore) GetKubeconfigForPath(path string) ([]byte, error) {
 				Name: contextName,
 				User: types.User{
 					ExecProvider: &types.ExecProvider{
-						APIVersion: "client.authentication.k8s.io/v1alpha1",
+						APIVersion: "client.authentication.k8s.io/v1beta1",
 						Command:    "aws",
 						Args: []string{
 							"--region",
