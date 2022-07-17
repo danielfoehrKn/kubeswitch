@@ -1,7 +1,7 @@
 # Rancher store
 
-To use Rancher as a Kubeconfig store, please first [setup Rancher](setup_rancher.md).
-Searching over multiple Rancher instances is supported but in this case `showPrefix` must be true to prevent conflicts.
+To use Rancher as a Kubeconfig store, please create an API token from the rancher UI first.
+Searching over multiple Rancher instances is supported but in this case `showPrefix` must be set to true to prevent conflicts.
 
 # Configure Rancher in the SwitchConfig file
 

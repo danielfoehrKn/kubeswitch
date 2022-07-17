@@ -16,7 +16,6 @@ package store
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/rancher/norman/clientbase"
 	"github.com/sirupsen/logrus"
@@ -31,7 +30,7 @@ func NewRancherStore(store types.KubeconfigStore) (*RancherStore, error) {
 	if store.Config != nil {
 		buf, err := yaml.Marshal(store.Config)
 		if err != nil {
-			log.Fatal(err)
+			return nil, fmt.Errorf("failed to process Rancher store config: %w", err)
 		}
 
 		err = yaml.Unmarshal(buf, rancherStoreConfig)
