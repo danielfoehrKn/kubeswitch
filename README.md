@@ -20,6 +20,7 @@ Designed as a [drop-in replacement](#difference-to-kubectx) for [kubectx](https:
   - [Google Kubernetes Engine (GKE)](docs/stores/gke/gke.md)
   - [Hashicorp Vault](docs/stores/vault/use_vault_store.md)
   - [Local filesystem](docs/stores/filesystem/filesystem.md)
+  - [Rancher](docs/stores/rancher/rancher.md)
   - Your favorite Cloud Provider or Managed Kubernetes Platform is not supported yet? Looking for contributions!
 - **Change the namespace**
 - **Change to any context and namespace from the history**
