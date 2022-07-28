@@ -20,6 +20,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/danielfoehrkn/kubeswitch/pkg/cache"
 	gardenercontrolplane "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/gardener"
 	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/history"
 	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/ns"
@@ -525,7 +526,19 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 		default:
 			return nil, nil, fmt.Errorf("unknown store %q", kubeconfigStoreFromConfig.Kind)
 		}
-		logrus.Debugf("Added store with kind %s and ID %s", s.GetKind(), s.GetID())
+
+		// Add cache to the store
+		// defaults to in-memory cache
+		if cacheCfg := kubeconfigStoreFromConfig.Cache; cacheCfg == nil {
+			if s, err = cache.New("memory", s, nil); err != nil {
+				return nil, nil, err
+			}
+		} else {
+			if s, err = cache.New(cacheCfg.Kind, s, cacheCfg.Config); err != nil {
+				return nil, nil, err
+			}
+		}
+
 		stores = append(stores, s)
 	}
 	return stores, config, nil
