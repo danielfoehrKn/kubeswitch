@@ -116,6 +116,7 @@ type KubeconfigStore struct {
 type Cache struct {
 	Kind string `yaml:"kind"`
 	// Config is store-specific configuration for the cache
+	// Check the documentation for each cache to see configuration options
 	Config interface{} `yaml:"config"`
 }
 
