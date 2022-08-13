@@ -19,16 +19,32 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/danielfoehrkn/kubeswitch/pkg/cache"
+	"github.com/danielfoehrkn/kubeswitch/pkg/store"
 	kubeconfigutil "github.com/danielfoehrkn/kubeswitch/pkg/util/kubectx_copied"
 )
 
-func Clean() error {
+func Clean(stores []store.KubeconfigStore) error {
+	// cleanup temporary kubeconfig files
 	tempDir := os.ExpandEnv(kubeconfigutil.TemporaryKubeconfigDir)
 	files, _ := ioutil.ReadDir(tempDir)
 	err := os.RemoveAll(tempDir)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Cleaned %d files.", len(files))
+	fmt.Printf("Cleaned %d files.\n", len(files))
+
+	//cleanup the caches of the stores
+	for _, store := range stores {
+		c, flushable := store.(cache.Flushable)
+		if !flushable {
+			continue
+		}
+		deleted, err := c.Flush()
+		fmt.Printf("Cleaned %d files of %s cache\n", deleted, store.GetID())
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }

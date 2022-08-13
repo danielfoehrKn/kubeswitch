@@ -9,6 +9,7 @@ import (
 
 	"github.com/danielfoehrkn/kubeswitch/pkg/cache"
 	"github.com/danielfoehrkn/kubeswitch/pkg/store"
+	"github.com/danielfoehrkn/kubeswitch/pkg/util"
 	kubeconfigutil "github.com/danielfoehrkn/kubeswitch/pkg/util/kubectx_copied"
 	"github.com/danielfoehrkn/kubeswitch/types"
 	"github.com/sirupsen/logrus"
@@ -22,9 +23,11 @@ func init() {
 	cache.Register(cacheKey, New)
 }
 
-// TODO: pass CacheConfig to constructor instead of rawCfg
-func New(upstream store.KubeconfigStore, rawCfg interface{}) (store.KubeconfigStore, error) {
-	cfg, err := unmarshalFileCacheCfg(rawCfg)
+func New(upstream store.KubeconfigStore, ccfg *types.Cache) (store.KubeconfigStore, error) {
+	if ccfg == nil {
+		return nil, fmt.Errorf("cache config must be provided for file cache")
+	}
+	cfg, err := unmarshalFileCacheCfg(ccfg.Config)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +39,6 @@ func New(upstream store.KubeconfigStore, rawCfg interface{}) (store.KubeconfigSt
 	cfgStore.Paths = []string{cfg.Path}
 
 	log := logrus.New().WithField("store", types.StoreKindFilesystem).WithField("cache", cacheKey)
-	log.Logger.SetLevel(logrus.DebugLevel)
 
 	return &fileCache{
 		upstream: upstream,
@@ -72,28 +74,28 @@ type fileCacheCfg struct {
 	Path string `yaml:"path"`
 }
 
-// create a filename for provided path
-// the filename does not contain any folders or special characters
-// As suffix the UID of the Upstream store is added and ".cache"
-func (c *fileCache) filename(path string) string {
+// hash for provided path
+// the hash does not contain any folders or special characters and is safe to use as filename
+func (c *fileCache) hash(path string) string {
 	filename := md5.Sum([]byte(path))
-	return fmt.Sprintf("%x.%s.%s", filename, c.upstream.GetID(), kubeconfigSuffix)
-
+	return fmt.Sprintf("%x%s", filename, c.suffix())
 }
 
-// fileCache implements the store.KubeconfigStore interface and intercepts calls to the
-// upstream store.
-// First, it checks if the kubeconfig is already available.
-// If not, it is loaded from the upstream store and stored.
+// suffix contains the UID of the Upstream store with a suffix kubeconfigSuffix"
+func (c *fileCache) suffix() string {
+	return fmt.Sprintf(".%s.%s", c.upstream.GetID(), kubeconfigSuffix)
+}
+
+// GetKubeconfigForPath returns the kubeconfig for the given path.
+// First, it checks if the kubeconfig is already available in cache.
+// If not, it is loaded from the upstream store and stored in cache
 func (c *fileCache) GetKubeconfigForPath(path string) ([]byte, error) {
 	c.logger.Debugf("Looking for '%s'", path)
 
 	// check if kubeconfig is already available in the cache
-	cachedFile := c.filename(path)
-	file := filepath.Join(c.cfg.Path, cachedFile)
-	//TODO: Why is this needed????e
-	file = strings.ReplaceAll(file, "~", "$HOME")
-	file = os.ExpandEnv(file)
+	cacheFilename := fmt.Sprintf("%s%s", c.hash(path), c.suffix())
+	file := filepath.Join(c.cfg.Path, cacheFilename)
+	file = util.ExpandEnv(file)
 
 	k, err := kubeconfigutil.NewKubeconfigForPath(file)
 	if err == nil { // return cached kubeconfig if found
@@ -108,7 +110,6 @@ func (c *fileCache) GetKubeconfigForPath(path string) ([]byte, error) {
 	}
 
 	// store the kubeconfig in the cache
-
 	k, err = kubeconfigutil.New(kubeconfig, file, false)
 	if err != nil {
 		c.logger.Debugf("failure '%s' , %s", path, err)
@@ -116,6 +117,27 @@ func (c *fileCache) GetKubeconfigForPath(path string) ([]byte, error) {
 	}
 	_, err = k.WriteKubeconfigFile()
 	return kubeconfig, err
+}
+
+// Flush cache by deleting all files in the cache directory
+func (c *fileCache) Flush() (int, error) {
+	path := util.ExpandEnv(c.cfg.Path)
+	files, _ := os.ReadDir(path)
+	deleted := 0
+	for _, f := range files {
+		if f.IsDir() {
+			continue
+		}
+		if !strings.HasSuffix(f.Name(), c.suffix()) {
+			continue
+		}
+		err := os.Remove(filepath.Join(path, f.Name()))
+		if err != nil {
+			return deleted, fmt.Errorf("failed to delete file '%s': %w", f.Name(), err)
+		}
+		deleted++
+	}
+	return deleted, nil
 }
 
 // passthru requests to the upstream store
@@ -137,7 +159,6 @@ func (c *fileCache) VerifyKubeconfigPaths() error {
 }
 
 func (c *fileCache) StartSearch(channel chan store.SearchResult) {
-	c.logger.Debugf("StartSearch")
 	c.upstream.StartSearch(channel)
 }
 

@@ -114,7 +114,8 @@ type KubeconfigStore struct {
 // CacheConfig contains the configuration for the cache
 // A cache is defined once but can be used by multiple kubeconfig stores by referencing the cache ID
 type Cache struct {
-	Kind string `yaml:"kind"`
+	ID   *string `yaml:"id"`
+	Kind string  `yaml:"kind"`
 	// Config is store-specific configuration for the cache
 	// Check the documentation for each cache to see configuration options
 	Config interface{} `yaml:"config"`

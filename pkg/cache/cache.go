@@ -19,6 +19,7 @@ import (
 	"sync"
 
 	"github.com/danielfoehrkn/kubeswitch/pkg/store"
+	"github.com/danielfoehrkn/kubeswitch/types"
 )
 
 var (
@@ -26,7 +27,7 @@ var (
 	caches   = make(map[string]CacheFactory)
 )
 
-type CacheFactory func(store store.KubeconfigStore, cfg interface{}) (store.KubeconfigStore, error)
+type CacheFactory func(store store.KubeconfigStore, cfg *types.Cache) (store.KubeconfigStore, error)
 
 func Register(kind string, creator CacheFactory) {
 	cachesMu.Lock()
@@ -34,7 +35,7 @@ func Register(kind string, creator CacheFactory) {
 	caches[kind] = creator
 }
 
-func New(kind string, store store.KubeconfigStore, cfg interface{}) (store.KubeconfigStore, error) {
+func New(kind string, store store.KubeconfigStore, cfg *types.Cache) (store.KubeconfigStore, error) {
 	cachesMu.RLock()
 	create, ok := caches[kind]
 	cachesMu.RUnlock()
@@ -46,4 +47,8 @@ func New(kind string, store store.KubeconfigStore, cfg interface{}) (store.Kubec
 		return nil, err
 	}
 	return cache, nil
+}
+
+type Flushable interface {
+	Flush() (int, error)
 }

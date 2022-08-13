@@ -11,7 +11,7 @@ func init() {
 	cache.Register("memory", New)
 }
 
-func New(upstream store.KubeconfigStore, _ interface{}) (store.KubeconfigStore, error) {
+func New(upstream store.KubeconfigStore, _ *types.Cache) (store.KubeconfigStore, error) {
 	return &memoryCache{
 		upstream: upstream,
 		cache:    make(map[string][]byte),

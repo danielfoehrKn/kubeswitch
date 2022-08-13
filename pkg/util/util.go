@@ -16,6 +16,8 @@ package util
 
 import (
 	"fmt"
+	"os"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -67,4 +69,11 @@ func getContextNames(config *types.KubeConfig, prefix string) []string {
 		contextNames = append(contextNames, fmt.Sprintf("%s%s", prefix, context.Name))
 	}
 	return contextNames
+}
+
+// ExpandEnv takes a string and replaces all environment variables with their values
+// ~ is expanded to the user's home directory
+func ExpandEnv(path string) string {
+	path = strings.ReplaceAll(path, "~", "$HOME")
+	return os.ExpandEnv(path)
 }
