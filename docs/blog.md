@@ -44,7 +44,7 @@ Available Commands:
   alias           Create an alias for a context. Use <ALIAS>=<CONTEXT_NAME> (<ALIAS>=. to rename current-context to <ALIAS>). 
                   To list all use "alias ls" and to remove an alias use "alias rm <ALIAS>"
   list-contexts   List all available contexts without fuzzy search
-  clean           Cleans all temporary kubeconfig files
+  clean           Cleans all temporary and cached kubeconfig files
   -               Switch to the previous context from the history
   -d <NAME>       Delete context <NAME> ('.' for current-context) from the local kubeconfig file.
   -c, --current   Show the current context name

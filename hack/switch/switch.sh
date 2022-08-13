@@ -69,7 +69,7 @@ Usage:
 
 Available Commands:
   alias                Create an alias for a context. Use ALIAS=CONTEXT_NAME
-  clean                Cleans all temporary kubeconfig files
+  clean                Cleans all temporary and cached kubeconfig files
   completion           Generate the autocompletion script for the specified shell
   gardener             gardener specific commands
   help                 Help about any command

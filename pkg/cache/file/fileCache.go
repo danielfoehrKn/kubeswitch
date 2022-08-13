@@ -78,7 +78,7 @@ type fileCacheCfg struct {
 // the hash does not contain any folders or special characters and is safe to use as filename
 func (c *fileCache) hash(path string) string {
 	filename := md5.Sum([]byte(path))
-	return fmt.Sprintf("%x%s", filename, c.suffix())
+	return fmt.Sprintf("%x", filename)
 }
 
 // suffix contains the UID of the Upstream store with a suffix kubeconfigSuffix"

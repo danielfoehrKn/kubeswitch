@@ -32,7 +32,7 @@ func Clean(stores []store.KubeconfigStore) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Cleaned %d files.\n", len(files))
+	fmt.Printf("Cleaned %d files from temporary kubeconfig directory.\n", len(files))
 
 	//cleanup the caches of the stores
 	for _, store := range stores {

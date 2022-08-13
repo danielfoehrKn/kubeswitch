@@ -65,7 +65,7 @@ Available Commands:
   hooks           Runs configured hooks
   alias           Create an alias for a context. Use <ALIAS>=<CONTEXT_NAME> (<ALIAS>=. to rename current-context to <ALIAS>). To list all use "alias ls" and to remove an alias use "alias rm <ALIAS>"
   list-contexts   List all available contexts without fuzzy search
-  clean           Cleans all temporary kubeconfig files
+  clean           Cleans all temporary and cached kubeconfig files
   -               Switch to the previous context/namespace from the history
   -d <NAME>       Delete context <NAME> ('.' for current-context) from the local kubeconfig file.
   -c, --current   Show the current context name
@@ -116,6 +116,13 @@ However, if you intend to search for all Kubeconfig context/files in the `~/.kub
 please [first consider this](docs/kubeconfig_stores.md#additional-considerations).
 
 To search over multiple directories and setup Kubeconfig stores (such as Vault), [please see here](docs/kubeconfig_stores.md).
+
+## Kubeconfig cache
+
+An cache for kubeconfig files can be added to a store to prevent loading from remote on each invocation of `kubeswitch`.
+The kubeconfig file will be cached after first download.
+
+To see how to configure the cache, [please see here](docs/kubeconfig_cache.md).
 
 ## Transition from Kubectx
 
