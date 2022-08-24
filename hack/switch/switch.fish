@@ -18,10 +18,24 @@ function kubeswitch
         set -a opts unset-context
       case -d
         set -a opts delete-context
-      case hooks
+      case alias \
+        or clean \
+        or current-context \
+        or delete-context \
+        or gardener \
+        or help \
+        or history or h \
+        or hooks \
+        or list-contexts \
+        or namespace or ns \
+        or unset-context \
+        or version \
+        or -h or --help
+
         set -f REPORT_RESPONSE $i
-      case *
-        set -a opts $1
+        set -a opts $i
+      case '*'
+        set -a opts $i
     end
   end
 
@@ -29,26 +43,30 @@ function kubeswitch
     set -f EXECUTABLE_PATH $DEFAULT_EXECUTABLE_PATH
   end
 
-  set -f RESPONSE ($EXECUTABLE_PATH $opts)
-  if test $status -ne 0
-    return $status
+  set -f RESULT 0
+  set -f RESPONSE ($EXECUTABLE_PATH $opts; or set RESULT $status | string split0)
+  if test $RESULT -ne 0
+    printf "%s\n" $RESPONSE
+    return $RESULT
   end
 
   if test -n "$RESPONSE"
     if test -n "$REPORT_RESPONSE"
-      echo $RESPONSE
+      printf "%s\n" $RESPONSE
       return
     end
     
     # first, cleanup old temporary kubeconfig file
-    if test -n "$KUBECONFIG"
-      set switchTmpDirectory "$HOME/.kube/.switch_tmp/config"
-      if string match -q *"$switchTmpDirectory"* -- $KUBECONFIG
-        rm -f $KUBECONFIG
-      end
+    set -l switchTmpDirectory "$HOME/.kube/.switch_tmp/config"
+    if test -n "$KUBECONFIG"; and string match -q "*$switchTmpDirectory*" -- $KUBECONFIG
+      rm -f $KUBECONFIG
     end
 
-    set -x KUBECONFIG $RESPONSE
+    if test ! -e "$RESPONSE"
+      echo "ERROR: \"$RESPONSE\" does not exist"
+      return 1
+    end
+    set -x KUBECONFIG "$RESPONSE"
     set -l currentContext (kubectl config current-context)
     echo "switched to context \"$currentContext\"."
   end

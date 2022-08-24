@@ -220,7 +220,6 @@ func init() {
 		Long:  `Switch to context name provided as first argument. KubeContext name has to exist in any of the found Kubeconfig files.`,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			log := logrus.New().WithField("hook", "")
-			fmt.Println("configPath", configPath)
 			return hooks.Hooks(log, configPath, stateDirectory, "", false)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -391,6 +390,21 @@ func init() {
 			return nil
 		},
 	}
+
+	completionCmd := &cobra.Command{
+		Use:   "completion",
+		Short: "A brief description of your command",
+		Long: `A longer description that spans multiple lines and likely contains examples
+and usage of using your command. For example:
+
+Cobra is a CLI library for Go that empowers applications.
+This application is a tool to generate the needed files
+to quickly create a Cobra application.`,
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println("completion called")
+		},
+	}
+
 	rootCommand.AddCommand(currentContextCmd)
 	rootCommand.AddCommand(deleteContextCmd)
 	rootCommand.AddCommand(setContextCmd)
@@ -405,6 +419,7 @@ func init() {
 	rootCommand.AddCommand(aliasContextCmd)
 	rootCommand.AddCommand(versionCmd)
 	rootCommand.AddCommand(gardenerCmd)
+	rootCommand.AddCommand(completionCmd)
 
 	setContextCmd.SilenceUsage = true
 	aliasContextCmd.SilenceErrors = true
