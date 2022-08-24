@@ -29,7 +29,7 @@ function kubeswitch
         or list-contexts \
         or namespace or ns \
         or unset-context \
-        or version \
+        or version or -v or --version \
         or -h or --help
 
         set -f REPORT_RESPONSE $i
