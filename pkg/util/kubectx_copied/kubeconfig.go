@@ -16,8 +16,9 @@ package kubeconfigutil
 
 import (
 	"fmt"
-	"io/ioutil"
+	"github.com/pkg/errors"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -34,11 +35,20 @@ type Kubeconfig struct {
 	rootNode   *yaml.Node
 }
 
+// LoadCurrentKubeconfig loads the current kubeconfig
+func LoadCurrentKubeconfig() (*Kubeconfig, error) {
+	path, err := kubeconfigPath()
+	if err != nil {
+		return nil, err
+	}
+	return NewKubeconfigForPath(path)
+}
+
 // NewKubeconfigForPath creates a kubeconfig representation based on an existing kubeconfig
 // given by the path argument
 // This will overwrite the kubeconfig given by path when calling WriteKubeconfigFile()
 func NewKubeconfigForPath(path string) (*Kubeconfig, error) {
-	bytes, err := ioutil.ReadFile(path)
+	bytes, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read kubeconfig file: %v", err)
 	}
@@ -153,7 +163,7 @@ func (k *Kubeconfig) WriteKubeconfigFile() (string, error) {
 		}
 
 		// write temporary kubeconfig file
-		file, err = ioutil.TempFile(k.path, "config.*.tmp")
+		file, err = os.CreateTemp(k.path, "config.*.tmp")
 		if err != nil {
 			return "", err
 		}
@@ -176,4 +186,23 @@ func (k *Kubeconfig) WriteKubeconfigFile() (string, error) {
 
 func (k *Kubeconfig) GetBytes() ([]byte, error) {
 	return yaml.Marshal(k.rootNode)
+}
+
+func kubeconfigPath() (string, error) {
+	// KUBECONFIG env var
+	if v := os.Getenv("KUBECONFIG"); v != "" {
+		list := filepath.SplitList(v)
+		if len(list) > 1 {
+			// TODO KUBECONFIG=file1:file2 currently not supported
+			return "", errors.New("multiple files in KUBECONFIG are currently not supported")
+		}
+		return v, nil
+	}
+
+	// default path
+	home := os.Getenv("HOME")
+	if home == "" {
+		return "", errors.New("HOME environment variable not set")
+	}
+	return filepath.Join(home, ".kube", "config"), nil
 }

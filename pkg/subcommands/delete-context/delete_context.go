@@ -12,38 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package clean
+package setcontext
 
 import (
 	"fmt"
-	"os"
-
-	"github.com/danielfoehrkn/kubeswitch/pkg/cache"
-	"github.com/danielfoehrkn/kubeswitch/pkg/store"
 	kubeconfigutil "github.com/danielfoehrkn/kubeswitch/pkg/util/kubectx_copied"
+	"os"
 )
 
-func Clean(stores []store.KubeconfigStore) error {
-	// cleanup temporary kubeconfig files
-	tempDir := os.ExpandEnv(kubeconfigutil.TemporaryKubeconfigDir)
-	files, _ := os.ReadDir(tempDir)
-	err := os.RemoveAll(tempDir)
+func DeleteContext(desiredContext string) error {
+	kcPath := os.Getenv("KUBECONFIG")
+	kubeconfig, err := kubeconfigutil.NewKubeconfigForPath(kcPath)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Cleaned %d files from temporary kubeconfig directory.\n", len(files))
-
-	//cleanup the caches of the stores
-	for _, store := range stores {
-		c, flushable := store.(cache.Flushable)
-		if !flushable {
-			continue
-		}
-		deleted, err := c.Flush()
-		fmt.Printf("Cleaned %d files of %s cache\n", deleted, store.GetID())
-		if err != nil {
-			return err
-		}
+	if err := kubeconfig.RemoveContext(desiredContext); err != nil {
+		return err
 	}
+
+	if _, err := kubeconfig.WriteKubeconfigFile(); err != nil {
+		return fmt.Errorf("failed to write kubeconfig file: %v", err)
+	}
+
 	return nil
 }

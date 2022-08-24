@@ -16,6 +16,8 @@ package switcher
 
 import (
 	"fmt"
+	setcontext "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/set-context"
+	"github.com/danielfoehrkn/kubeswitch/pkg/util"
 	"os"
 	"runtime"
 	"strings"
@@ -35,9 +37,10 @@ import (
 	"github.com/danielfoehrkn/kubeswitch/pkg/store"
 	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/alias"
 	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/clean"
+	deletecontext "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/delete-context"
 	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/hooks"
 	list_contexts "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/list-contexts"
-	setcontext "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/set-context"
+	unsetcontext "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/unset-context"
 	"github.com/danielfoehrkn/kubeswitch/types"
 )
 
@@ -92,6 +95,17 @@ var (
 	}
 )
 
+func resolveContextName(contextName string) (string, error) {
+	if contextName == "." {
+		c, err := util.GetCurrentContext()
+		if err != nil {
+			return "", err
+		}
+		contextName = c
+	}
+	return contextName, nil
+}
+
 func init() {
 	aliasContextCmd := &cobra.Command{
 		Use:   "alias",
@@ -100,14 +114,19 @@ func init() {
 			if len(args) != 1 || !strings.Contains(args[0], "=") || len(strings.Split(args[0], "=")) != 2 {
 				return fmt.Errorf("please provide the alias in the form ALIAS=CONTEXT_NAME")
 			}
+
 			arguments := strings.Split(args[0], "=")
+			ctxName, err := resolveContextName(arguments[1])
+			if err != nil {
+				return err
+			}
 
 			stores, config, err := initialize()
 			if err != nil {
 				return err
 			}
 
-			return alias.Alias(arguments[0], arguments[1], stores, config, stateDirectory, noIndex)
+			return alias.Alias(arguments[0], ctxName, stores, config, stateDirectory, noIndex)
 		},
 	}
 
@@ -199,6 +218,11 @@ func init() {
 		Use:   "set-context",
 		Short: "Switch to context name provided as first argument",
 		Long:  `Switch to context name provided as first argument. KubeContext name has to exist in any of the found Kubeconfig files.`,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			log := logrus.New().WithField("hook", "")
+			fmt.Println("configPath", configPath)
+			return hooks.Hooks(log, configPath, stateDirectory, "", false)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			stores, config, err := initialize()
 			if err != nil {
@@ -207,6 +231,42 @@ func init() {
 
 			_, err = setcontext.SetContext(args[0], stores, config, stateDirectory, noIndex, true)
 			return err
+		},
+	}
+
+	deleteContextCmd := &cobra.Command{
+		Use:   "delete-context",
+		Short: "Delete context name provided as first argument",
+		Long:  `Delete context name provided as first argument. KubeContext name has to exist in the current Kubeconfig file.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctxName, err := resolveContextName(args[0])
+			if err != nil {
+				return err
+			}
+			return deletecontext.DeleteContext(ctxName)
+		},
+	}
+
+	unsetContextCmd := &cobra.Command{
+		Use:   "unset-context",
+		Short: "Unset current-context",
+		Long:  `Unset current-context in the current Kubeconfig file.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return unsetcontext.UnsetCurrentContext()
+		},
+	}
+
+	currentContextCmd := &cobra.Command{
+		Use:   "current-context",
+		Short: "Show current-context",
+		Long:  `Show current-context in the current Kubeconfig file.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx, err := util.GetCurrentContext()
+			if err != nil {
+				return err
+			}
+			fmt.Println(ctx)
+			return nil
 		},
 	}
 
@@ -331,8 +391,11 @@ func init() {
 			return nil
 		},
 	}
+	rootCommand.AddCommand(currentContextCmd)
+	rootCommand.AddCommand(deleteContextCmd)
 	rootCommand.AddCommand(setContextCmd)
 	rootCommand.AddCommand(listContextsCmd)
+	rootCommand.AddCommand(unsetContextCmd)
 	rootCommand.AddCommand(cleanCmd)
 	rootCommand.AddCommand(namespaceCommand)
 	rootCommand.AddCommand(hookCmd)
