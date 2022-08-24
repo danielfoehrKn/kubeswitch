@@ -22,8 +22,22 @@ function switch(){
     -d)
         opts+=( delete-context )
         ;;
-    hooks)
+    alias \
+    | clean \
+    | current-context \
+    | delete-context \
+    | gardener \
+    | help \
+    | history | h \
+    | hooks \
+    | list-contexts \
+    | namespace | ns \
+    | unset-context \
+    | version \
+    | -h | --help)
+
         REPORT_RESPONSE=$1
+        opts+=( $1 )
         ;;
     *)
         opts+=( $1 )
@@ -40,6 +54,7 @@ function switch(){
   RESPONSE=($EXECUTABLE_PATH ${opts[@]})
   if [ $? -ne 0 ]
   then
+    echo $RESPONSE
     return $?
   fi
 
@@ -48,6 +63,7 @@ function switch(){
     if [ -n "$REPORT_RESPONSE" ]
     then
       echo $RESPONSE
+      return
     fi
 
     # first, cleanup old temporary kubeconfig file
@@ -57,6 +73,11 @@ function switch(){
       rm -f $KUBECONFIG
     fi
 
+    if [ ! -e "$RESPONSE" ]
+    then
+      echo "ERROR: \"$RESPONSE\" does not exist"
+      return 1
+    fi
     export KUBECONFIG=$RESPONSE
     currentContext=$(kubectl config current-context)
     echo "switched to context \"$currentContext\"."
