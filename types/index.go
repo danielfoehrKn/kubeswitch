@@ -19,7 +19,7 @@ import "time"
 // Index defines how an index for a kubeconfig store is written
 type Index struct {
 	// Kind defines which store kind this Index belongs to
-	Kind                 StoreKind         `yaml:"kind"`
+	Kind StoreKind `yaml:"kind"`
 	// ContextToPathMapping contains the actual index, mapping the context name
 	// to the kubeconfig path in the backing store
 	ContextToPathMapping map[string]string `yaml:"contextToPathMapping"`
@@ -28,7 +28,7 @@ type Index struct {
 // IndexState defines how the state of an index for a kubeconfig store is written
 type IndexState struct {
 	// Kind defines which store kind this Index belongs to
-	Kind           StoreKind `yaml:"kind"`
+	Kind StoreKind `yaml:"kind"`
 	// LastUpdateTime is the last time the index has been updated
 	LastUpdateTime time.Time `yaml:"lastExecutionTime"`
 }
