@@ -26,24 +26,25 @@ func main() {
 
 	// if first argument is not found, assume it is a context name
 	// hence call default subcommand
-	if len(os.Args) > 1 {
-		cmd, _, err := rootCommand.Find(os.Args[1:])
-		if err != nil || cmd == nil {
-			args := append([]string{"set-context"}, os.Args[1:]...)
-			rootCommand.SetArgs(args)
-		}
-
-		// cobra somehow does  not recognize - as a valid command
-		if os.Args[1] == "-" {
-			args := append([]string{"set-previous-context"}, os.Args[1:]...)
-			rootCommand.SetArgs(args)
-		}
-
-		if os.Args[1] == "." {
-			args := append([]string{"set-last-context"}, os.Args[1:]...)
-			rootCommand.SetArgs(args)
-		}
-	}
+	//if len(os.Args) > 1 {
+	//	cmd, a, err := rootCommand.Find(os.Args[1:])
+	//	fmt.Println("Pre-cmd:", cmd.Name(), a, err)
+	//	if os.Args[1] != "__complete" && err != nil || cmd == nil {
+	//		args := append([]string{"set-context"}, os.Args[1:]...)
+	//		rootCommand.SetArgs(args)
+	//	}
+	//
+	//	// cobra somehow does  not recognize - as a valid command
+	//	if os.Args[1] == "-" {
+	//		args := append([]string{"set-previous-context"}, os.Args[1:]...)
+	//		rootCommand.SetArgs(args)
+	//	}
+	//
+	//	if os.Args[1] == "." {
+	//		args := append([]string{"set-last-context"}, os.Args[1:]...)
+	//		rootCommand.SetArgs(args)
+	//	}
+	//}
 
 	if err := rootCommand.Execute(); err != nil {
 		fmt.Print(err)
