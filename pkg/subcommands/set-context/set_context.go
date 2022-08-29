@@ -98,8 +98,6 @@ func SetContext(desiredContext string, stores []store.KubeconfigStore, config *t
 				}
 			}
 
-			// print kubeconfig path to std.out -> captured by calling bash script to set KUBECONFIG environment Variable
-			fmt.Print(tempKubeconfigPath)
 			return &tempKubeconfigPath, nil
 		}
 	}

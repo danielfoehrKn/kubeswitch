@@ -16,6 +16,7 @@ package list_contexts
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/danielfoehrkn/kubeswitch/pkg"
 	"github.com/danielfoehrkn/kubeswitch/pkg/store"
@@ -25,12 +26,13 @@ import (
 
 var logger = logrus.New()
 
-func ListContexts(stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) error {
+func ListContexts(stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool, prefix string) ([]string, error) {
 	c, err := pkg.DoSearch(stores, config, stateDir, noIndex)
 	if err != nil {
-		return fmt.Errorf("cannot list contexts: %v", err)
+		return nil, fmt.Errorf("cannot list contexts: %v", err)
 	}
 
+	lc := make([]string, 0)
 	for discoveredKubeconfig := range *c {
 		if discoveredKubeconfig.Error != nil {
 			logger.Warnf("cannot list contexts. Error returned from search: %v", discoveredKubeconfig.Error)
@@ -42,9 +44,10 @@ func ListContexts(stores []store.KubeconfigStore, config *types.Config, stateDir
 			name = discoveredKubeconfig.Alias
 		}
 
-		// write to STDIO
-		fmt.Println(name)
+		if prefix == "" || strings.HasPrefix(name, prefix) {
+			lc = append(lc, name)
+		}
 	}
 
-	return nil
+	return lc, nil
 }
