@@ -20,9 +20,11 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/danielfoehrkn/kubeswitch/pkg/cache"
 	gardenercontrolplane "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/gardener"
 	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/history"
 	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/ns"
+	"github.com/danielfoehrkn/kubeswitch/pkg/util"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"k8s.io/utils/pointer"
@@ -246,10 +248,14 @@ func init() {
 
 	cleanCmd := &cobra.Command{
 		Use:   "clean",
-		Short: "Cleans all temporary kubeconfig files",
-		Long:  `Cleans the temporary kubeconfig files created in the directory $HOME/.kube/switch_tmp`,
+		Short: "Cleans all temporary and cached kubeconfig files",
+		Long:  `Cleans the temporary kubeconfig files created in the directory $HOME/.kube/switch_tmp and flushes every cache`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return clean.Clean()
+			stores, _, err := initialize()
+			if err != nil {
+				return err
+			}
+			return clean.Clean(stores)
 		},
 	}
 
@@ -430,7 +436,7 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
 
-	config, err := switchconfig.LoadConfigFromFile(expandPath(configPath))
+	config, err := switchconfig.LoadConfigFromFile(util.ExpandEnv(configPath))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read switch config file: %v", err)
 	}
@@ -525,7 +531,17 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 		default:
 			return nil, nil, fmt.Errorf("unknown store %q", kubeconfigStoreFromConfig.Kind)
 		}
-		logrus.Debugf("Added store with kind %s and ID %s", s.GetKind(), s.GetID())
+
+		// Add cache to the store
+		// defaults to in-memory cache -> prevents duplicate reads of the same kubeconfig
+		if cacheCfg := kubeconfigStoreFromConfig.Cache; cacheCfg == nil {
+			s, err = cache.New("memory", s, nil)
+		} else {
+			s, err = cache.New(cacheCfg.Kind, s, cacheCfg)
+		}
+		if err != nil {
+			return nil, nil, err
+		}
 		stores = append(stores, s)
 	}
 	return stores, config, nil
@@ -550,7 +566,7 @@ func getStoreFromFlagAndEnv(config *types.Config) *types.KubeconfigStore {
 	for _, path := range pathsFromEnv {
 		if !isDuplicatePath(config.KubeconfigStores, path) && !strings.HasSuffix(path, ".tmp") && path != "" {
 			// the KUBECONFIG env sets a unique, non kubeswitch set, env variable to a kubeconfig.
-			paths = append(paths, expandPath(path))
+			paths = append(paths, util.ExpandEnv(path))
 			logrus.Debugf("Adding kubeconfig path from KUBECONFIG env %s", kubeconfigPathFromEnv)
 		}
 	}
@@ -604,9 +620,4 @@ func isDuplicatePath(kubeconfigStores []types.KubeconfigStore, newPath string) b
 		}
 	}
 	return false
-}
-
-func expandPath(path string) string {
-	path = strings.ReplaceAll(path, "~", "$HOME")
-	return os.ExpandEnv(path)
 }
