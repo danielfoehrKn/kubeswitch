@@ -11,29 +11,8 @@ function kubeswitch
     switch "$i"
       case --executable-path
         set -f EXECUTABLE_PATH $i
-      case -c or --current
-        set -a opts current-context
-        set -f REPORT_RESPONSE $i
-      case -u or --unset
-        set -a opts unset-context
-      case -d
-        set -a opts delete-context
-      case alias \
-        or clean \
-        or current-context \
-        or delete-context \
-        or gardener \
-        or help \
-        or history or h \
-        or hooks \
-        or list-contexts \
-        or namespace or ns \
-        or unset-context \
-        or version or -v or --version \
-        or -h or --help
-
-        set -f REPORT_RESPONSE $i
-        set -a opts $i
+      case completion
+        set -a opts $i --cmd kubeswitch
       case '*'
         set -a opts $i
     end
@@ -45,29 +24,27 @@ function kubeswitch
 
   set -f RESULT 0
   set -f RESPONSE ($EXECUTABLE_PATH $opts; or set RESULT $status | string split0)
-  if test $RESULT -ne 0
-    printf "%s\n" $RESPONSE
+  if test $RESULT -ne 0; or test -z "$RESPONSE"
+    printf "%s\n" "$RESPONSE"
     return $RESULT
   end
 
-  if test -n "$RESPONSE"
-    if test -n "$REPORT_RESPONSE"
-      printf "%s\n" $RESPONSE
-      return
-    end
-    
-    # first, cleanup old temporary kubeconfig file
-    set -l switchTmpDirectory "$HOME/.kube/.switch_tmp/config"
-    if test -n "$KUBECONFIG"; and string match -q "*$switchTmpDirectory*" -- $KUBECONFIG
-      rm -f $KUBECONFIG
-    end
+  set -l trim_left "switched to context \""
+  set -l trim_right "\"."
+  if string match -q "$trim_left*$trim_right" -- "$RESPONSE"
+    set -l new_config (string replace -r "$trim_left(.*)$trim_right\$" '$1' -- "$RESPONSE")
 
-    if test ! -e "$RESPONSE"
-      echo "ERROR: \"$RESPONSE\" does not exist"
+    if test ! -e "$new_config"
+      echo "ERROR: \"$new_config\" does not exist"
       return 1
     end
-    set -x KUBECONFIG "$RESPONSE"
-    set -l currentContext (kubectl config current-context)
-    echo "switched to context \"$currentContext\"."
+
+    set -l switchTmpDirectory "$HOME/.kube/.switch_tmp/config"
+    if test -n "$KUBECONFIG"; and string match -q "*$switchTmpDirectory*" -- "$KUBECONFIG"
+      rm -f "$KUBECONFIG"
+    end
+
+    set -gx KUBECONFIG "$new_config"
   end
+  printf "%s\n" "$RESPONSE"
 end

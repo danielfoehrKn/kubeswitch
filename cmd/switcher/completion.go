@@ -1,8 +1,10 @@
 package switcher
 
 import (
-	"github.com/spf13/cobra"
+	"fmt"
 	"os"
+
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -15,19 +17,20 @@ var (
 		DisableFlagsInUseLine: true,
 		ValidArgs:             []string{"bash", "zsh", "fish"},
 		Args:                  cobra.ExactArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			root := cmd.Root()
 			if setName != "" {
 				root.Use = setName
 			}
 			switch args[0] {
 			case "bash":
-				root.GenBashCompletion(os.Stdout)
+				return root.GenBashCompletion(os.Stdout)
 			case "zsh":
-				root.GenZshCompletion(os.Stdout)
+				return root.GenZshCompletion(os.Stdout)
 			case "fish":
-				root.GenFishCompletion(os.Stdout, true)
+				return root.GenFishCompletion(os.Stdout, true)
 			}
+			return fmt.Errorf("unsupported shell type: %s", args[0])
 		},
 	}
 )

@@ -3,44 +3,20 @@
 function switch(){
 #  if the executable path is not set, the switcher binary has to be on the path
 # this is the case when installing it via homebrew
-  DEFAULT_EXECUTABLE_PATH='switcher'
-  REPORT_RESPONSE=''
+
+  local DEFAULT_EXECUTABLE_PATH="switcher"
   declare -a opts
 
   while test $# -gt 0; do
     case "$1" in
     --executable-path)
-        EXECUTABLE_PATH=$1
+        EXECUTABLE_PATH="$1"
         ;;
-    -c | --current)
-        opts+=( current-context )
-        REPORT_RESPONSE=$1
-        ;;
-    -u | --unset)
-        opts+=( unset-context )
-        ;;
-    -d)
-        opts+=( delete-context )
-        ;;
-    alias \
-    | clean \
-    | current-context \
-    | delete-context \
-    | gardener \
-    | help \
-    | history | h \
-    | hooks \
-    | list-contexts \
-    | namespace | ns \
-    | unset-context \
-    | version \
-    | -h | --help)
-
-        REPORT_RESPONSE=$1
-        opts+=( $1 )
+    completion)
+        opts+=("$1" --cmd switch)
         ;;
     *)
-        opts+=( $1 )
+        opts+=( "$1" )
         ;;
     esac
     shift
@@ -48,38 +24,37 @@ function switch(){
 
   if [ -z "$EXECUTABLE_PATH" ]
   then
-    EXECUTABLE_PATH=$DEFAULT_EXECUTABLE_PATH
+    EXECUTABLE_PATH="$DEFAULT_EXECUTABLE_PATH"
   fi
 
-  RESPONSE=($EXECUTABLE_PATH ${opts[@]})
-  if [ $? -ne 0 ]
+  RESPONSE="$($EXECUTABLE_PATH "${opts[@]}")"
+  if [ $? -ne 0 -o -z "$RESPONSE" ]
   then
-    echo $RESPONSE
+    printf "%s\n" "$RESPONSE"
     return $?
   fi
 
-  if [ -n "$RESPONSE" ]
+  local trim_left="switched to context \""
+  local trim_right="\"."
+  if [[ "$RESPONSE" == "$trim_left"*"$trim_right" ]]
   then
-    if [ -n "$REPORT_RESPONSE" ]
-    then
-      echo $RESPONSE
-      return
-    fi
+    local new_config="${RESPONSE#$trim_left}"
+    new_config="${new_config%$trim_right}"
 
-    # first, cleanup old temporary kubeconfig file
-    switchTmpDirectory="$HOME/.kube/.switch_tmp/config"
-    if [[ -n "$KUBECONFIG" && $KUBECONFIG == *"$switchTmpDirectory"* ]]
+    if [ ! -e "$new_config" ]
     then
-      rm -f $KUBECONFIG
-    fi
-
-    if [ ! -e "$RESPONSE" ]
-    then
-      echo "ERROR: \"$RESPONSE\" does not exist"
+      echo "ERROR: \"$new_config\" does not exist"
       return 1
     fi
-    export KUBECONFIG=$RESPONSE
-    currentContext=$(kubectl config current-context)
-    echo "switched to context \"$currentContext\"."
+
+    # cleanup old temporary kubeconfig file
+    local switchTmpDirectory="$HOME/.kube/.switch_tmp/config"
+    if [[ -n "$KUBECONFIG" && "$KUBECONFIG" == *"$switchTmpDirectory"* ]]
+    then
+      rm -f "$KUBECONFIG"
+    fi
+
+    export KUBECONFIG="$new_config"
   fi
+  printf "%s\n" "$RESPONSE"
 }

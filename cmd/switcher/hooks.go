@@ -1,10 +1,11 @@
 package switcher
 
 import (
+	"os"
+
 	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/hooks"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 var (

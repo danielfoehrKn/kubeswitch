@@ -2,10 +2,11 @@ package switcher
 
 import (
 	"fmt"
-	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/alias"
-	"github.com/spf13/cobra"
 	"os"
 	"strings"
+
+	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/alias"
+	"github.com/spf13/cobra"
 )
 
 var (

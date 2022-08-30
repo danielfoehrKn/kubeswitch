@@ -2,6 +2,8 @@ package switcher
 
 import (
 	"fmt"
+	"os"
+
 	delete_context "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/delete-context"
 	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/history"
 	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/hooks"
@@ -9,8 +11,6 @@ import (
 	set_context "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/set-context"
 	unset_context "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/unset-context"
 	"github.com/danielfoehrkn/kubeswitch/pkg/util"
-	"os"
-
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -27,11 +27,8 @@ var (
 			}
 
 			kc, err := history.SetPreviousContext(stores, config, stateDirectory, noIndex)
-			if err != nil {
-				return err
-			}
-			reportNewContext(*kc)
-			return nil
+			reportNewContext(kc)
+			return err
 		},
 	}
 
@@ -46,11 +43,8 @@ var (
 			}
 
 			kc, err := history.SetLastContext(stores, config, stateDirectory, noIndex)
-			if err != nil {
-				return err
-			}
-			reportNewContext(*kc)
-			return nil
+			reportNewContext(kc)
+			return err
 		},
 	}
 
@@ -81,13 +75,13 @@ var (
 			return hooks.Hooks(log, configPath, stateDirectory, "", false)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("set-context", args)
 			stores, config, err := initialize()
 			if err != nil {
 				return err
 			}
 
-			_, err = set_context.SetContext(args[0], stores, config, stateDirectory, noIndex, true)
+			kc, err := set_context.SetContext(args[0], stores, config, stateDirectory, noIndex, true)
+			reportNewContext(kc)
 			return err
 		},
 		SilenceUsage: true,
@@ -204,6 +198,9 @@ func setFlagsForContextCommands(command *cobra.Command) {
 		"show preview of the selected kubeconfig. Possibly makes sense to disable when using vault as the kubeconfig store to prevent excessive requests against the API.")
 }
 
-func reportNewContext(ctxName string) {
-	fmt.Printf(`switched to context "%s".\n`, ctxName)
+func reportNewContext(ctxName *string) {
+	if ctxName == nil {
+		return
+	}
+	fmt.Printf("switched to context \"%s\".\n", *ctxName)
 }
