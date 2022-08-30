@@ -17,7 +17,9 @@ var (
 				return err
 			}
 
-			return history.SwitchToHistory(stores, config, stateDirectory, noIndex)
+			kc, err := history.SwitchToHistory(stores, config, stateDirectory, noIndex)
+			reportNewContext(kc)
+			return err
 		},
 	}
 )

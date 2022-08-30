@@ -1,9 +1,10 @@
 package switcher
 
 import (
+	"os"
+
 	gardenercontrolplane "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/gardener"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 var (

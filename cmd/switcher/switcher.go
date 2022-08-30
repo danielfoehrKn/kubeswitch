@@ -16,9 +16,10 @@ package switcher
 
 import (
 	"fmt"
-	"github.com/danielfoehrkn/kubeswitch/pkg"
 	"os"
 	"strings"
+
+	"github.com/danielfoehrkn/kubeswitch/pkg"
 
 	"github.com/danielfoehrkn/kubeswitch/pkg/cache"
 	"github.com/danielfoehrkn/kubeswitch/pkg/util"
@@ -99,6 +100,8 @@ var (
 					return previousContextCmd.RunE(cmd, args[1:])
 				case ".":
 					return lastContextCmd.RunE(cmd, args[1:])
+				default:
+					return setContextCmd.RunE(cmd, args)
 				}
 			}
 
@@ -112,7 +115,9 @@ var (
 				showPreview = false
 			}
 
-			return pkg.Switcher(stores, config, stateDirectory, noIndex, showPreview)
+			kc, err := pkg.Switcher(stores, config, stateDirectory, noIndex, showPreview)
+			reportNewContext(kc)
+			return err
 		},
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			lc, _ := listContexts(toComplete)
