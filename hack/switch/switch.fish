@@ -25,7 +25,7 @@ function kubeswitch
   set -f RESULT 0
   set -f RESPONSE ($EXECUTABLE_PATH $opts; or set RESULT $status | string split0)
   if test $RESULT -ne 0; or test -z "$RESPONSE"
-    printf "%s\n" "$RESPONSE"
+    printf "%s\n" $RESPONSE
     return $RESULT
   end
 
@@ -46,5 +46,5 @@ function kubeswitch
 
     set -gx KUBECONFIG "$new_config"
   end
-  printf "%s\n" "$RESPONSE"
+  printf "%s\n" $RESPONSE
 end
