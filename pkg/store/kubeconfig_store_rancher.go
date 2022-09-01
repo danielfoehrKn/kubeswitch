@@ -86,7 +86,7 @@ func (r *RancherStore) GetLogger() *logrus.Entry {
 	return r.Logger
 }
 
-//initClient initializes the Rancher client
+// initClient initializes the Rancher client
 // It is called once at the beginning of the search and every time a kubenfig is requested
 // It is a NOOP if the client is already initialized
 func (r *RancherStore) initClient() error {
