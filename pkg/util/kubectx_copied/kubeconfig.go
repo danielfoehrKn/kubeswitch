@@ -42,14 +42,17 @@ func NewKubeconfigForPath(path string) (*Kubeconfig, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read kubeconfig file: %v", err)
 	}
-	return newKubeconfig(bytes, path, false)
+	return New(bytes, path, false)
 }
 
+// Create kubeconfig file in the temporary directory
 func NewKubeconfig(kubeconfigData []byte) (*Kubeconfig, error) {
-	return newKubeconfig(kubeconfigData, os.ExpandEnv(TemporaryKubeconfigDir), true)
+	return New(kubeconfigData, os.ExpandEnv(TemporaryKubeconfigDir), true)
 }
 
-func newKubeconfig(kubeconfigData []byte, path string, useTmpFile bool) (*Kubeconfig, error) {
+// New creates a new Kubeconfig representation based on the given kubeconfig data
+// the format is validated
+func New(kubeconfigData []byte, path string, useTmpFile bool) (*Kubeconfig, error) {
 	n := &yaml.Node{}
 	if err := yaml.Unmarshal(kubeconfigData, n); err != nil {
 		return nil, err

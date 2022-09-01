@@ -66,4 +66,4 @@ This completes both the `kubeswitch` commands as well as the context names.
 To not alter the current shell session, `kubeswitch` does not spawn a new sub-shell.
 You need to configure a cleanup handler if you care to remove temporary kubeconfig files from `$HOME/.kube/.switch_tmp` when the shell session
 ends (close the terminal window, or `exit` is called).
-For `zsh`, please source [this script](scripts/cleanup_handler_zsh.sh) from your `.zshrc` file.
+For `zsh`, please source [this script](/scripts/cleanup_handler_zsh.sh) from your `.zshrc` file.

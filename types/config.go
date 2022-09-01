@@ -108,6 +108,17 @@ type KubeconfigStore struct {
 	// Please check the documentation for each backing provider to see what configuration is
 	// possible here
 	Config interface{} `yaml:"config"`
+	// Cache allows to cache the kubeconfigs in the backing store
+	// + optional
+	Cache *Cache `yaml:"cache"`
+}
+
+// CacheConfig contains the configuration for the cache
+type Cache struct {
+	Kind string `yaml:"kind"`
+	// Config is store-specific configuration for the cache
+	// Check the documentation for each cache to see configuration options
+	Config interface{} `yaml:"config"`
 }
 
 type StoreConfigVault struct {
