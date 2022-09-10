@@ -25,6 +25,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	vaultapi "github.com/hashicorp/vault/api"
+	"github.com/rancher/norman/clientbase"
+	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/sirupsen/logrus"
 	gkev1 "google.golang.org/api/container/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -152,4 +154,11 @@ type AzureStore struct {
 	// when not using a search index
 	DiscoveredClusters map[string]*armcontainerservice.ManagedCluster
 	StateDirectory     string
+}
+
+type RancherStore struct {
+	Logger          *logrus.Entry
+	KubeconfigStore types.KubeconfigStore
+	ClientOpts      *clientbase.ClientOpts
+	Client          *managementClient.Client
 }
