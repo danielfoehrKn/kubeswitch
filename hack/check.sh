@@ -4,6 +4,7 @@ set -e
 echo "> Check"
 
 echo "Executing golangci-lint"
+which golangci-lint
 golangci-lint run "${SOURCE_TREES[@]}" --timeout=10m0s --verbose --print-resources-usage --modules-download-mode=vendor
 
 echo "Executing go vet"

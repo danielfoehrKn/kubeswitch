@@ -30,7 +30,7 @@ GOLANGCI_LINT              := $(TOOLS_BIN_DIR)/golangci-lint
 ADDLICENSE                 := $(TOOLS_BIN_DIR)/addlicense
 
 # default tool versions
-GOLANGCI_LINT_VERSION ?= v1.45.2
+GOLANGCI_LINT_VERSION ?= v1.48.0
 
 export TOOLS_BIN_DIR := $(TOOLS_BIN_DIR)
 export PATH := $(abspath $(TOOLS_BIN_DIR)):$(PATH)
