@@ -1,6 +1,6 @@
 module github.com/danielfoehrkn/kubeswitch
 
-go 1.18
+go 1.19
 
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v0.19.0
