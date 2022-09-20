@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	historyutil "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/history/util"
@@ -43,8 +44,9 @@ const (
 var (
 	kubeconfigPathFromEnv = os.Getenv("KUBECONFIG")
 	// only use namespace cache for contexts switched to by the switch tool
-	cache  *NamespaceCache
-	logger = logrus.New()
+	cache         *NamespaceCache
+	logger        = logrus.New()
+	hotReloadLock sync.RWMutex
 
 	allNamespaces []string
 )
@@ -169,7 +171,7 @@ func SwitchNamespace(kubeconfigPathFromFlag, stateDir string, noIndex bool) erro
 		func(i int) string {
 			return allNamespaces[i]
 		},
-		fuzzyfinder.WithHotReload(),
+		fuzzyfinder.WithHotReloadLock(hotReloadLock.RLocker()),
 	)
 	if err != nil {
 		return err

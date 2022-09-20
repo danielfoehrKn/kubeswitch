@@ -52,6 +52,8 @@ var (
 	aliasToContext     = make(map[string]string)
 	aliasToContextLock = sync.RWMutex{}
 
+	hotReloadLock sync.RWMutex
+
 	// aggregated errors that were suppressed during the search
 	// are logged on exit
 	searchError error
@@ -216,7 +218,7 @@ func showFuzzySearch(storeIDToStore map[string]store.KubeconfigStore, showPrevie
 
 // getFuzzyFinderOptions returns a list of fuzzy finder options
 func getFuzzyFinderOptions(storeIDToStore map[string]store.KubeconfigStore, showPreview bool) []fuzzyfinder.Option {
-	options := []fuzzyfinder.Option{fuzzyfinder.WithHotReload()}
+	options := []fuzzyfinder.Option{fuzzyfinder.WithHotReloadLock(hotReloadLock.RLocker())}
 
 	if showPreview {
 		log := logrus.New()
@@ -226,7 +228,10 @@ func getFuzzyFinderOptions(storeIDToStore map[string]store.KubeconfigStore, show
 			}
 
 			// read the content of the kubeconfig here and display
+			hotReloadLock.RLock()
 			currentContextName := readFromAllKubeconfigContextNames(i)
+			hotReloadLock.RUnlock()
+
 			path := readFromContextToPathMapping(currentContextName)
 			storeID := readFromPathToStoreID(path)
 			kubeconfigStore := storeIDToStore[storeID]

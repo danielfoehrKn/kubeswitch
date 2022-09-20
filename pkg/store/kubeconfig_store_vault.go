@@ -17,7 +17,6 @@ package store
 import (
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -67,7 +66,7 @@ func NewVaultStore(vaultAPIAddressFromFlag, vaultTokenFileName, kubeconfigName s
 	var vaultToken string
 
 	// https://www.vaultproject.io/docs/commands/token-helper
-	tokenBytes, _ := ioutil.ReadFile(fmt.Sprintf("%s/%s", home, vaultTokenFileName))
+	tokenBytes, _ := os.ReadFile(fmt.Sprintf("%s/%s", home, vaultTokenFileName))
 	if tokenBytes != nil {
 		vaultToken = string(tokenBytes)
 	}

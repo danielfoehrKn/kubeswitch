@@ -16,7 +16,6 @@ package sync
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	vaultapi "github.com/hashicorp/vault/api"
@@ -70,7 +69,7 @@ var (
 				var vaultToken string
 
 				// https://www.vaultproject.io/docs/commands/token-helper
-				tokenBytes, _ := ioutil.ReadFile(fmt.Sprintf("%s/%s", home, vaultTokenFileName))
+				tokenBytes, _ := os.ReadFile(fmt.Sprintf("%s/%s", home, vaultTokenFileName))
 				if tokenBytes != nil {
 					vaultToken = string(tokenBytes)
 				}

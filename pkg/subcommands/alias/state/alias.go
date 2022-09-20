@@ -16,7 +16,6 @@ package state
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/danielfoehrkn/kubeswitch/types"
@@ -56,7 +55,7 @@ func (a *Alias) loadFromFile() error {
 		return err
 	}
 
-	bytes, err := ioutil.ReadFile(a.aliasFilepath)
+	bytes, err := os.ReadFile(a.aliasFilepath)
 	if err != nil {
 		return fmt.Errorf("failed to read alias file from %q. File corrupt?: %v", a.aliasFilepath, err)
 	}

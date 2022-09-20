@@ -16,7 +16,6 @@ package clean
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/danielfoehrkn/kubeswitch/pkg/cache"
@@ -27,7 +26,7 @@ import (
 func Clean(stores []store.KubeconfigStore) error {
 	// cleanup temporary kubeconfig files
 	tempDir := os.ExpandEnv(kubeconfigutil.TemporaryKubeconfigDir)
-	files, _ := ioutil.ReadDir(tempDir)
+	files, _ := os.ReadDir(tempDir)
 	err := os.RemoveAll(tempDir)
 	if err != nil {
 		return err

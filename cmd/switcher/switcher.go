@@ -442,7 +442,7 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 	}
 
 	if config != nil {
-		if errList := validation.ValidateConfig(config); errList != nil && len(errList) > 0 {
+		if errList := validation.ValidateConfig(config); len(errList) > 0 {
 			return nil, nil, fmt.Errorf("the switch configuration file contains errors: %s", errList.ToAggregate().Error())
 		}
 	} else {

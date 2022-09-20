@@ -16,7 +16,6 @@ package state
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"time"
 
@@ -36,7 +35,7 @@ func GetHookState(log *logrus.Entry, hookStateFilepath string) (*types.HookState
 		return nil, err
 	}
 
-	bytes, err := ioutil.ReadFile(hookStateFilepath)
+	bytes, err := os.ReadFile(hookStateFilepath)
 	if err != nil {
 		return nil, err
 	}

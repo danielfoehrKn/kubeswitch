@@ -16,7 +16,6 @@ package store
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -109,7 +108,7 @@ func (s *FilesystemStore) searchDirectory(wg *sync.WaitGroup, searchPath string,
 }
 
 func (s *FilesystemStore) GetKubeconfigForPath(path string) ([]byte, error) {
-	return ioutil.ReadFile(path)
+	return os.ReadFile(path)
 }
 
 func (s *FilesystemStore) VerifyKubeconfigPaths() error {

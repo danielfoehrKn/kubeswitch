@@ -16,7 +16,6 @@ package kubeconfigutil
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -38,7 +37,7 @@ type Kubeconfig struct {
 // given by the path argument
 // This will overwrite the kubeconfig given by path when calling WriteKubeconfigFile()
 func NewKubeconfigForPath(path string) (*Kubeconfig, error) {
-	bytes, err := ioutil.ReadFile(path)
+	bytes, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read kubeconfig file: %v", err)
 	}
@@ -153,7 +152,7 @@ func (k *Kubeconfig) WriteKubeconfigFile() (string, error) {
 		}
 
 		// write temporary kubeconfig file
-		file, err = ioutil.TempFile(k.path, "config.*.tmp")
+		file, err = os.CreateTemp(k.path, "config.*.tmp")
 		if err != nil {
 			return "", err
 		}

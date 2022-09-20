@@ -16,7 +16,6 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"gopkg.in/yaml.v2"
@@ -35,7 +34,7 @@ func LoadConfigFromFile(filepath string) (*types.Config, error) {
 		return nil, err
 	}
 
-	bytes, err := ioutil.ReadFile(filepath)
+	bytes, err := os.ReadFile(filepath)
 	if err != nil {
 		return nil, err
 	}

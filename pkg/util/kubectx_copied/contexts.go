@@ -85,10 +85,7 @@ func (k *Kubeconfig) GetKubeswitchContext() string {
 // i.e needs to contain meta information added previously by the gardener store
 func (k *Kubeconfig) IsGardenerKubeconfig() bool {
 	v := valueOf(k.rootNode, "gardener-landscape-identity")
-	if v == nil {
-		return false
-	}
-	return true
+	return v != nil
 }
 
 // GetGardenerLandscapeIdentity returns the "gardener-landscape-identity" value in given

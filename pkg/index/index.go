@@ -16,7 +16,6 @@ package index
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"time"
 
@@ -91,7 +90,7 @@ func (i *SearchIndex) loadFromFile() (*types.Index, error) {
 		return nil, err
 	}
 
-	bytes, err := ioutil.ReadFile(i.indexFilepath)
+	bytes, err := os.ReadFile(i.indexFilepath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read index file from %q. File corrupt?: %v", i.indexFilepath, err)
 	}
@@ -209,7 +208,7 @@ func (i *SearchIndex) getIndexState() (*types.IndexState, error) {
 		return nil, err
 	}
 
-	bytes, err := ioutil.ReadFile(i.indexStateFilepath)
+	bytes, err := os.ReadFile(i.indexStateFilepath)
 	if err != nil {
 		return nil, err
 	}

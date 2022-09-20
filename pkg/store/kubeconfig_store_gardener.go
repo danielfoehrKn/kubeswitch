@@ -17,7 +17,6 @@ package store
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"sync"
@@ -170,7 +169,7 @@ func (s *GardenerStore) InitializeGardenerStore() error {
 
 // getGardenloginConfig returns the GardenloginConfig from the provided filepath
 func getGardenloginConfig(path string) (*GardenloginConfig, error) {
-	bytes, err := ioutil.ReadFile(path)
+	bytes, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -419,7 +418,7 @@ func (s *GardenerStore) GetKubeconfigForPath(path string) ([]byte, error) {
 		if s.Config == nil || len(s.Config.GardenerAPIKubeconfigPath) == 0 {
 			return nil, fmt.Errorf("cannot get garden kubeconfig. Field 'gardenerAPIKubeconfigPath' is not configured in the Gardener store configuration in the SwitchConfig file")
 		}
-		return ioutil.ReadFile(s.Config.GardenerAPIKubeconfigPath)
+		return os.ReadFile(s.Config.GardenerAPIKubeconfigPath)
 	}
 
 	landscape, resource, name, namespace, gardenerProjectName, err := gardenerstore.ParseIdentifier(path)
@@ -646,7 +645,7 @@ func (s *GardenerStore) sendKubeconfigPaths(channel chan SearchResult, shoots []
 	// is so that the corresponding Shoot resource for the ManagedSeed is already available the cache s.CachePathToShoot[]
 	// when populating the path. This avoids cache misses.
 	s.PathToManagedSeedLock.RLock()
-	for pathForSeed, _ := range s.CachePathToManagedSeed {
+	for pathForSeed := range s.CachePathToManagedSeed {
 		channel <- SearchResult{
 			KubeconfigPath: pathForSeed,
 			Error:          nil,
