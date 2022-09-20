@@ -541,6 +541,10 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 			return nil, nil, fmt.Errorf("unknown store %q", kubeconfigStoreFromConfig.Kind)
 		}
 
+		if showDebugLogs {
+			s.GetLogger().Logger.SetLevel(logrus.DebugLevel)
+		}
+
 		// Add cache to the store
 		// defaults to in-memory cache -> prevents duplicate reads of the same kubeconfig
 		if cacheCfg := kubeconfigStoreFromConfig.Cache; cacheCfg == nil {
