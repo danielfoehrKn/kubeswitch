@@ -114,7 +114,7 @@ func (s *AzureStore) StartSearch(channel chan SearchResult) {
 
 			for pager.NextPage(ctx) {
 				s.Logger.Debugf("next page found for resource group %q", resourceGroup)
-				s.returnSearchResultsForClusters(channel, pager.PageResponse().ManagedClusterListResult.Value, &resourceGroup)
+				s.returnSearchResultsForClusters(channel, pager.PageResponse().ManagedClusterListResult.Value)
 			}
 
 			if pager.Err() != nil {
@@ -135,7 +135,7 @@ func (s *AzureStore) StartSearch(channel chan SearchResult) {
 
 	for pager.NextPage(ctx) {
 		s.Logger.Debugf("next page found")
-		s.returnSearchResultsForClusters(channel, pager.PageResponse().ManagedClusterListResult.Value, nil)
+		s.returnSearchResultsForClusters(channel, pager.PageResponse().ManagedClusterListResult.Value)
 	}
 	s.Logger.Debugf("search done for AKS")
 }
@@ -158,7 +158,7 @@ func handleAzureError(channel chan SearchResult, err error) {
 	}
 }
 
-func (s *AzureStore) returnSearchResultsForClusters(channel chan SearchResult, managedClusters []*armcontainerservice.ManagedCluster, resourceGroup *string) {
+func (s *AzureStore) returnSearchResultsForClusters(channel chan SearchResult, managedClusters []*armcontainerservice.ManagedCluster) {
 	for _, cluster := range managedClusters {
 		s.Logger.Debugf("Found cluster with name %q and id %q", *cluster.Name, *cluster.ID)
 		if cluster.Name == nil {
@@ -170,24 +170,22 @@ func (s *AzureStore) returnSearchResultsForClusters(channel chan SearchResult, m
 			continue
 		}
 
-		if resourceGroup == nil {
-			if cluster.ID == nil {
-				// this should not happen
-				continue
-			}
-
-			// This is a hack: parse the resource group from the ID
-			// there is unfortunately currently no easy way to get the resource group of an AKS cluster as the go-sdk does not expose that field :/
-			//  - /subscriptions/<subscription-id>/resourcegroups/kubeswitch/providers/Microsoft.ContainerService/managedClusters/kubeswitch_test
-			split := strings.Split(*cluster.ID, "/")
-			if len(split) <= 4 {
-				s.Logger.Debugf("Unable to obtain resource group for cluster %q from cluster ID  %q", *cluster.Resource.Name, *cluster.ID)
-				continue
-			}
-
-			resourceGroup = &split[4]
-			s.Logger.Debugf("Obtained resource group %s", *resourceGroup)
+		if cluster.ID == nil {
+			// this should not happen
+			continue
 		}
+
+		// This is a hack: parse the resource group from the ID
+		// there is unfortunately currently no easy way to get the resource group of an AKS cluster as the go-sdk does not expose that field :/
+		//  - /subscriptions/<subscription-id>/resourcegroups/kubeswitch/providers/Microsoft.ContainerService/managedClusters/kubeswitch_test
+		split := strings.Split(*cluster.ID, "/")
+		if len(split) <= 4 {
+			s.Logger.Debugf("Unable to obtain resource group for cluster %q from cluster ID  %q", *cluster.Resource.Name, *cluster.ID)
+			continue
+		}
+
+		resourceGroup := &split[4]
+		s.Logger.Debugf("Obtained resource group %s", *resourceGroup)
 
 		kubeconfigPath := getAzureKubeconfigPath(*resourceGroup, *cluster.Name)
 		s.insertIntoClusterCache(kubeconfigPath, cluster)
