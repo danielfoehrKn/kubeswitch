@@ -16,7 +16,7 @@ can be called directly via `$ switch hooks --hook-name=<name>`.
 
 The default location for the config file is at `~/.kube/switch-config.yaml` or can be set with `--hook-config-path`.
  
-You can find several demo configuration files [here](https://github.com/danielfoehrkn/kubeswitch/tree/master/resources/demo-configs).
+You can find several demo configuration files [here](https://github.com/danielfoehrkn/kubeswitch/tree/master/resources/demo-config-files).
 
 ### See configured Hooks
 
