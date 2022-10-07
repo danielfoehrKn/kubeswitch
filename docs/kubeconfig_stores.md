@@ -5,7 +5,7 @@ If you neither provide a flag or a `SwitchConfig` file, it will default to the f
 
 The `SwitchConfig` file is expected to be in the default location
 on the local filesystem at `~/.kube/switch-config.yaml` or set via flag `--config-path`.
-Example config files can be found [here](../resources/demo-config-files) but also in 
+Example config files can be found [here](../resources/demo-config-files) but also in
 the documentation for each store (see below).
 
 Please check the documentation for each kubeconfig store on how to use it
@@ -16,6 +16,10 @@ Please check the documentation for each kubeconfig store on how to use it
 
 Please note that, to search over **multiple** directories and kubeconfig stores,
 you need to use the `SwitchConfig` file.
+
+Also, if you do not have a default `~/.kube/config` file, kubeswitch will fail
+with `Error: you need to point kubeswitch to a kubeconfig file`, so you need
+to specify in the `SwitchConfig` file where to look.
 
 ## General Store configuration
 
@@ -39,6 +43,19 @@ kubeconfigStores:
   kubeconfigName: "*.myconfig"
   paths:
   - ~/.kube/my-other-kubeconfigs/
+```
+
+If you have several existing kubeconfig files in the directory `~/.kube`, the
+following simple configuration may work for you:
+
+```yaml
+kind: SwitchConfig
+version: v1alpha1
+kubeconfigStores:
+ - kind: filesystem
+   kubeconfigName: "config*"
+   paths:
+     - ~/.kube
 ```
 
 ### Disable kubeconfig previews
@@ -121,7 +138,7 @@ This is useful when
 - some search paths of a kubeconfig store (e.g., filesystem) should have a different index refresh interval
 - there are multiple Vault instances or Gardener landscapes to read from.
 
-A unique id is required to create a different index file per store, so that 
+A unique id is required to create a different index file per store, so that
 the index of each store can be refreshed individually.
 
 In the example below, two filesystem stores are configured.
@@ -164,4 +181,3 @@ that have to be filtered out and thus slowing down the search.
 
 To do this, create a `kubeswitch` alias via `--Kubeconfig-path` pointing
 to this directory or setup the kubeconfig path in the `SwitchConfig`.
-
