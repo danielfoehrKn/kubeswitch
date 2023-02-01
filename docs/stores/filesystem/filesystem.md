@@ -9,7 +9,7 @@ kubeconfig files by only specifying the flag  --kubeconfig-path.
 
 ## Configuration
 
-Tge filesystem store can be configured using [CLI flags](#cli-flags) as well as the [with the `SwitchConfig` file](#set-up-the-configuration-file-switchconfig).
+The filesystem store can be configured using [CLI flags](#cli-flags) as well as the [with the `SwitchConfig` file](#set-up-the-configuration-file-switchconfig).
 
 ## CLI flags
 
