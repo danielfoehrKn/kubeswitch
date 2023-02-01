@@ -14,7 +14,7 @@ kubeconfigStores:
 - kind: rancher
   id: rancher
   config:
-    rancherAddress: https://rancher.yourdomain.com/v3
+    rancherAPIAddress: https://rancher.yourdomain.com/v3
     rancherToken: token-12abc:bmjlzslas......x4hv5ptc29wt4sfk
   cache:
     kind: filesystem
