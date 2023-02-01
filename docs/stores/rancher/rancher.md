@@ -1,11 +1,11 @@
 # Rancher store
 
-To use Rancher as a Kubeconfig store, please create an API token from the rancher UI first.
-Searching over multiple Rancher instances is supported but in this case `showPrefix` must be set to true to prevent conflicts.
+To use the Rancher store an API token is required. The token can be created in the Rancher UI.
+Searching over multiple Rancher instances is supported, but may require `showPrefix` to be set to `true` in the `SwitchConfig` file to avoid name collisions.
 
-# Configure Rancher in the SwitchConfig file
+## Configuration
 
-Below there is an example configuration for Rancher in the `SwitchConfig` file.
+The Rancher store configuration is defined in the `kubeswitch` configuration file. An example configuration is shown below:
 
 ```yaml
 kind: SwitchConfig
@@ -22,4 +22,5 @@ kubeconfigStores:
       path: ~/.kube/cache
 ```
 
-The rancher store can work without filesystem cache but rancher api will create by default a new kubeconfig file everytime the context is selected without invalidating the old one. Therefore it is recommended to activate the filesystem [cache](../../kubeconfig_cache.md). 
+The Rancher store can be used without a filesystem cache but the Rancher API will create a new Kubeconfig file (and token) every time you switch to one of the Rancher contexts.
+Therefore, it is recommended to use a filesystem cache.
