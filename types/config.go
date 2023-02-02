@@ -219,8 +219,8 @@ type GKEAuthentication struct {
 }
 
 type StoreConfigRancher struct {
-	// RancherAddress is the URL of the Rancher API, e.g. https://rancher.example.com/v3
-	RancherAddress string `yaml:"rancherAPIAddress"`
+	// RancherAPIAddress is the URL of the Rancher API, e.g. https://rancher.example.com/v3
+	RancherAPIAddress string `yaml:"rancherAPIAddress"`
 	// RancherToken is the token used to authenticate against the Rancher API, format: token-12abc:bmjlzslas......x4hv5ptc29wt4sfk
 	RancherToken string `yaml:"rancherToken"`
 }

@@ -39,8 +39,8 @@ func NewRancherStore(store types.KubeconfigStore) (*RancherStore, error) {
 		}
 	}
 
-	rancherAddress := rancherStoreConfig.RancherAddress
-	if len(rancherAddress) == 0 {
+	rancherAPIAddress := rancherStoreConfig.RancherAPIAddress
+	if len(rancherAPIAddress) == 0 {
 		return nil, fmt.Errorf("when using the Rancher kubeconfig store, the address of Rancher has to be provided via SwitchConfig file")
 	}
 
@@ -53,7 +53,7 @@ func NewRancherStore(store types.KubeconfigStore) (*RancherStore, error) {
 		Logger:          logrus.New().WithField("store", types.StoreKindRancher),
 		KubeconfigStore: store,
 		ClientOpts: &clientbase.ClientOpts{
-			URL:      rancherAddress,
+			URL:      rancherAPIAddress,
 			TokenKey: rancherToken,
 		},
 	}, nil
