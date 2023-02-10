@@ -312,6 +312,10 @@ function switch(){
                      VERSION=$1
                      shift
                      ;;
+                  --version)
+                     VERSION=$1
+                     shift
+                     ;;
                   *)
                      SET_CONTEXT=$1
                      shift
@@ -352,7 +356,7 @@ function switch(){
 
   if [ -n "$VERSION" ]
   then
-    $EXECUTABLE_PATH version
+    $EXECUTABLE_PATH "$VERSION"
     return
   fi
 
