@@ -143,7 +143,7 @@ func getKubeconfig(kubeconfigPathFromFlag string) (*kubeconfigutil.Kubeconfig, e
 	// kubeconfig path from flag is preferred over env (just not if it is only the default)
 	if (len(kubeconfigPath) == 0 || kubeconfigPath == os.ExpandEnv(defaultKubeconfigPath)) && len(kubeconfigPathFromEnv) > 0 {
 		if len(strings.Split(kubeconfigPathFromEnv, linuxEnvKubeconfigSeperator)) > 1 {
-			return nil, fmt.Errorf("providing multiple kubeconfig files via environemnt varibale KUBECONFIG is not supported")
+			return nil, fmt.Errorf("providing multiple kubeconfig files via environment variable KUBECONFIG is not supported")
 		}
 
 		kubeconfigPath = os.ExpandEnv(kubeconfigPathFromEnv)
