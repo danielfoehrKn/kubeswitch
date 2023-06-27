@@ -50,6 +50,11 @@ func New(upstream store.KubeconfigStore, ccfg *types.Cache) (store.KubeconfigSto
 	if len(cfg.Path) == 0 {
 		return nil, fmt.Errorf("path for filesystem cache was not configured")
 	}
+	if _, err := os.Stat(cfg.Path); os.IsNotExist(err) {
+		if err := os.MkdirAll(cfg.Path, os.ModePerm); err != nil {
+			return nil, fmt.Errorf("path: %s was not able to be created", cfg.Path)
+		}
+	}
 	cfgStore.Paths = []string{cfg.Path}
 
 	log := logrus.New().WithField("store", types.StoreKindFilesystem).WithField("cache", cacheKey)
