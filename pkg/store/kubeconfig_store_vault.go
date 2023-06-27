@@ -207,7 +207,6 @@ func (s *VaultStore) recursivePathTraversal(wg *sync.WaitGroup, ctx context.Cont
 			}
 		}
 	}
-	return
 }
 
 func (s *VaultStore) StartSearch(channel chan SearchResult) {
