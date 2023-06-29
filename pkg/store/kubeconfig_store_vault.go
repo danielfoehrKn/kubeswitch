@@ -157,7 +157,10 @@ func (s *VaultStore) recursivePathTraversal(wg *sync.WaitGroup, ctx context.Cont
 	}
 
 	if resp == nil || resp.Data == nil {
-		s.Logger.Errorf("no value found at %q: %s", path, err)
+		// Check if we're already at a leaf
+		if err := visit(shimKVv2Metadata(path), false); err != nil {
+			return
+		}
 		return
 	}
 
