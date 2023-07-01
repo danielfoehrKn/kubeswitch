@@ -27,10 +27,10 @@ import (
 
 var logger = logrus.New()
 
-func ListContexts(pattern string, stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) error {
+func ListContexts(pattern string, stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) ([]string, error) {
 	c, err := pkg.DoSearch(stores, config, stateDir, noIndex)
 	if err != nil {
-		return fmt.Errorf("cannot list contexts: %v", err)
+		return nil, fmt.Errorf("cannot list contexts: %v", err)
 	}
 
 	m := wildmatch.NewWildMatch(pattern)
@@ -45,17 +45,13 @@ func ListContexts(pattern string, stores []store.KubeconfigStore, config *types.
 		if len(discoveredKubeconfig.Alias) > 0 {
 			name = discoveredKubeconfig.Alias
 		}
-		contexts = append(contexts, name)
+		result := m.IsMatch(name)
+		if result {
+			contexts = append(contexts, name)
+		}
 	}
 	// Sort alphabetically
 	sort.Strings(contexts)
 
-	for _, context := range contexts {
-		result := m.IsMatch(context)
-		if result {
-			// write to STDIO
-			fmt.Println(context)
-		}
-	}
-	return nil
+	return contexts, nil
 }

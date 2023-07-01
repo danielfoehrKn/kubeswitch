@@ -18,11 +18,9 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"sort"
 
-	"github.com/becheran/wildmatch-go"
-	"github.com/danielfoehrkn/kubeswitch/pkg"
 	"github.com/danielfoehrkn/kubeswitch/pkg/store"
+	list_contexts "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/list-contexts"
 	setcontext "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/set-context"
 	"github.com/danielfoehrkn/kubeswitch/types"
 	"github.com/sirupsen/logrus"
@@ -31,30 +29,10 @@ import (
 var logger = logrus.New()
 
 func ExecuteCommand(pattern string, command []string, stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) error {
-	c, err := pkg.DoSearch(stores, config, stateDir, noIndex)
+	contexts, err := list_contexts.ListContexts(pattern, stores, config, stateDir, noIndex)
 	if err != nil {
-		return fmt.Errorf("cannot list contexts: %v", err)
+		return err
 	}
-
-	m := wildmatch.NewWildMatch(pattern)
-	var contexts []string
-	for discoveredKubeconfig := range *c {
-		if discoveredKubeconfig.Error != nil {
-			logger.Warnf("cannot list contexts. Error returned from search: %v", discoveredKubeconfig.Error)
-			continue
-		}
-
-		name := discoveredKubeconfig.Name
-		if len(discoveredKubeconfig.Alias) > 0 {
-			name = discoveredKubeconfig.Alias
-		}
-		result := m.IsMatch(name)
-		if result {
-			contexts = append(contexts, name)
-		}
-	}
-	// Sort alphabetically
-	sort.Strings(contexts)
 
 	for _, context := range contexts {
 		tmpKubeconfigFile, err := setcontext.SetContext(context, stores, config, stateDir, noIndex, false, false)

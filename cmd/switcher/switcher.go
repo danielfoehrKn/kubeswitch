@@ -242,10 +242,16 @@ func init() {
 			if err != nil {
 				return err
 			}
+			var contexts []string
 			if len(args) == 1 && len(args[0]) > 0 {
-				return list_contexts.ListContexts(args[0], stores, config, stateDirectory, noIndex)
+				contexts, err = list_contexts.ListContexts(args[0], stores, config, stateDirectory, noIndex)
+			} else {
+				contexts, err = list_contexts.ListContexts("*", stores, config, stateDirectory, noIndex)
 			}
-			return list_contexts.ListContexts("*", stores, config, stateDirectory, noIndex)
+			for _, context := range contexts {
+				fmt.Println(context)
+			}
+			return nil
 		},
 	}
 
