@@ -35,6 +35,7 @@ import (
 	"github.com/danielfoehrkn/kubeswitch/pkg/store"
 	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/alias"
 	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/clean"
+	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/exec"
 	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/hooks"
 	list_contexts "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/list-contexts"
 	setcontext "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/set-context"
@@ -205,7 +206,7 @@ func init() {
 				return err
 			}
 
-			_, err = setcontext.SetContext(args[0], stores, config, stateDirectory, noIndex, true)
+			_, err = setcontext.SetContext(args[0], stores, config, stateDirectory, noIndex, true, true)
 			return err
 		},
 	}
@@ -241,8 +242,10 @@ func init() {
 			if err != nil {
 				return err
 			}
-
-			return list_contexts.ListContexts(stores, config, stateDirectory, noIndex)
+			if len(args) == 1 && len(args[0]) > 0 {
+				return list_contexts.ListContexts(args[0], stores, config, stateDirectory, noIndex)
+			}
+			return list_contexts.ListContexts("*", stores, config, stateDirectory, noIndex)
 		},
 	}
 
@@ -256,6 +259,22 @@ func init() {
 				return err
 			}
 			return clean.Clean(stores)
+		},
+	}
+
+	execCmd := &cobra.Command{
+		Use: "exec",
+		//Aliases: []string{"h"},
+		Short: "Execute any command towards the matching cluster contexts from the indexed context list",
+		Long:  `Lists the context history with the ability to switch to a previous context.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			//TODO: Sanitisation of input arguments
+			stores, config, err := initialize()
+			if err != nil {
+				return err
+			}
+
+			return exec.ExecuteCommand(args[0], args[1:], stores, config, stateDirectory, noIndex)
 		},
 	}
 
@@ -334,6 +353,7 @@ func init() {
 	rootCommand.AddCommand(setContextCmd)
 	rootCommand.AddCommand(listContextsCmd)
 	rootCommand.AddCommand(cleanCmd)
+	rootCommand.AddCommand(execCmd)
 	rootCommand.AddCommand(namespaceCommand)
 	rootCommand.AddCommand(hookCmd)
 	rootCommand.AddCommand(historyCmd)
