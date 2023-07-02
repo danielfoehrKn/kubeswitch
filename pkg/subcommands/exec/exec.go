@@ -23,10 +23,7 @@ import (
 	list_contexts "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/list-contexts"
 	setcontext "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/set-context"
 	"github.com/danielfoehrkn/kubeswitch/types"
-	"github.com/sirupsen/logrus"
 )
-
-var logger = logrus.New()
 
 func ExecuteCommand(pattern string, command []string, stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) error {
 	contexts, err := list_contexts.ListContexts(pattern, stores, config, stateDir, noIndex)

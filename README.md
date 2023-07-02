@@ -109,6 +109,27 @@ In addition, use
 - `switch .` to change to the last used context and namespace (handy for new terminals)
 - `switch -` to change to the previous history entry
 
+## List and search for contexts
+
+You can list all your indexed contexts by issuing the following command: `switch list-commands`. And if you want to search for only parts of those contexts, you can use wildcard search:
+
+```sh
+switch list-commands "*-dev-*"
+```
+
+Wildcard search supports [matching wildcards](https://en.wikipedia.org/wiki/Matching_wildcards) notation also known as globbing:
+
+- `?` matches exactly one occurrence of any character.
+- `*` matches arbitrary many (including zero) occurrences of any character.
+
+## Execute commands
+
+You can use the above wildcard search to execute any commands towards those clusters. This makes it powerful for quickly running a command through a given set of clusters and see the output of these commands:
+
+```sh
+switch exec "*-dev-*" kubectl get ns
+```
+
 ## Kubeconfig stores
 
 Multiple Kubeconfig stores are supported.

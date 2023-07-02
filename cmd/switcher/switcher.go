@@ -236,17 +236,23 @@ func init() {
 	listContextsCmd := &cobra.Command{
 		Use:     "list-contexts",
 		Short:   "List all available contexts without fuzzy search",
+		Long:    `List all available contexts - give a second parameter to do wildcard search`,
 		Aliases: []string{"ls"},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			stores, config, err := initialize()
 			if err != nil {
 				return err
 			}
-			var contexts []string
+			var pattern string
 			if len(args) == 1 && len(args[0]) > 0 {
-				contexts, err = list_contexts.ListContexts(args[0], stores, config, stateDirectory, noIndex)
+				pattern = args[0]
 			} else {
-				contexts, err = list_contexts.ListContexts("*", stores, config, stateDirectory, noIndex)
+				// Get all contexts
+				pattern = "*"
+			}
+			contexts, err := list_contexts.ListContexts(pattern, stores, config, stateDirectory, noIndex)
+			if err != nil {
+				return err
 			}
 			for _, context := range contexts {
 				fmt.Println(context)
@@ -269,18 +275,19 @@ func init() {
 	}
 
 	execCmd := &cobra.Command{
-		Use: "exec",
-		//Aliases: []string{"h"},
-		Short: "Execute any command towards the matching cluster contexts from the indexed context list",
-		Long:  `Lists the context history with the ability to switch to a previous context.`,
+		Use:     "exec",
+		Aliases: []string{"e"},
+		Short:   "Execute any command towards the matching contexts from the indexed context list",
+		Long:    `Execute any command to all the matching cluster contexts given by the search parameter`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			//TODO: Sanitisation of input arguments
 			stores, config, err := initialize()
 			if err != nil {
 				return err
 			}
-
-			return exec.ExecuteCommand(args[0], args[1:], stores, config, stateDirectory, noIndex)
+			if len(args) >= 2 && len(args[0]) > 0 {
+				return exec.ExecuteCommand(args[0], args[1:], stores, config, stateDirectory, noIndex)
+			}
+			return fmt.Errorf("please provide a search string and the command to execute on each cluster")
 		},
 	}
 
