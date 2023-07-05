@@ -243,12 +243,10 @@ func init() {
 			if err != nil {
 				return err
 			}
-			var pattern string
+			// Get all contexts by default
+			pattern := "*"
 			if len(args) == 1 && len(args[0]) > 0 {
 				pattern = args[0]
-			} else {
-				// Get all contexts
-				pattern = "*"
 			}
 			contexts, err := list_contexts.ListContexts(pattern, stores, config, stateDirectory, noIndex)
 			if err != nil {
