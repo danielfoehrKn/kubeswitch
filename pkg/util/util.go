@@ -77,3 +77,32 @@ func ExpandEnv(path string) string {
 	path = strings.ReplaceAll(path, "~", "$HOME")
 	return os.ExpandEnv(path)
 }
+
+func SliceFindIndex[T string | int](slice []T, search T) int {
+	for k, v := range slice {
+		if v == search {
+			return k
+		}
+	}
+	return -1
+}
+
+func getAdditionalArgs() []string {
+	additionalArgsIndex := SliceFindIndex(os.Args, "--")
+	var additionalArgs []string
+	if additionalArgsIndex > 0 {
+		additionalArgs = os.Args[additionalArgsIndex+1:]
+	}
+	return additionalArgs
+}
+
+func SplitAdditionalArgs(args *[]string) []string {
+	additionalArgs := getAdditionalArgs()
+	length := len(additionalArgs)
+	if length > 0 {
+		tmp := *args
+		tmp = tmp[0 : len(*args)-length]
+		*args = tmp
+	}
+	return additionalArgs
+}

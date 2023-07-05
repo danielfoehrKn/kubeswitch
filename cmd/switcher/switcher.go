@@ -234,9 +234,9 @@ func init() {
 	gardenerCmd.AddCommand(controlplaneCmd)
 
 	listContextsCmd := &cobra.Command{
-		Use:     "list-contexts",
-		Short:   "List all available contexts without fuzzy search",
-		Long:    `List all available contexts - give a second parameter to do wildcard search`,
+		Use:     "list-contexts [wildcard-search]",
+		Short:   "List all available contexts",
+		Long:    `List all available contexts - give a second parameter to do a wildcard search. Eg: switch list-contexts "*-dev*"`,
 		Aliases: []string{"ls"},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			stores, config, err := initialize()
@@ -273,17 +273,19 @@ func init() {
 	}
 
 	execCmd := &cobra.Command{
-		Use:     "exec",
+		Use:     "exec wildcard-search -- command",
 		Aliases: []string{"e"},
-		Short:   "Execute any command towards the matching contexts from the indexed context list",
-		Long:    `Execute any command to all the matching cluster contexts given by the search parameter`,
+		Short:   "Execute any command towards the matching contexts from the wildcard search",
+		Long:    `Execute any command to all the matching cluster contexts given by the search parameter. Eg: switch exec "*-dev-?" -- kubectl get namespaces"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			stores, config, err := initialize()
 			if err != nil {
 				return err
 			}
-			if len(args) >= 2 && len(args[0]) > 0 {
-				return exec.ExecuteCommand(args[0], args[1:], stores, config, stateDirectory, noIndex)
+			// split additional args from the command and populate args after "--"
+			cmdArgs := util.SplitAdditionalArgs(&args)
+			if len(cmdArgs) >= 1 && len(args[0]) > 0 {
+				return exec.ExecuteCommand(args[0], cmdArgs, stores, config, stateDirectory, noIndex)
 			}
 			return fmt.Errorf("please provide a search string and the command to execute on each cluster")
 		},
