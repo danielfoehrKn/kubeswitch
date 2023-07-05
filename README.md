@@ -54,34 +54,42 @@ Please [see the documentation](docs/installation.md).
 
 ```
 $ switch -h
+The kubectx for operators.
 
 Usage:
   switch [flags]
   switch [command]
 
 Available Commands:
-  <context-name>  Switch to context name provided as first argument
-  ns              Change the current namespace
-  history, h      Switch to any previous context/namespace from the history (short: h)
-  hooks           Runs configured hooks
-  alias           Create an alias for a context. Use <ALIAS>=<CONTEXT_NAME> (<ALIAS>=. to rename current-context to <ALIAS>). To list all use "alias ls" and to remove an alias use "alias rm <ALIAS>"
-  list-contexts   List all available contexts without fuzzy search
-  clean           Cleans all temporary and cached kubeconfig files
-  -               Switch to the previous context/namespace from the history
-  -d <NAME>       Delete context <NAME> ('.' for current-context) from the local kubeconfig file.
-  -c, --current   Show the current context name
-  -u, --unset     Unset the current context from the local kubeconfig file
+  alias                Create an alias for a context. Use ALIAS=CONTEXT_NAME
+  clean                Cleans all temporary and cached kubeconfig files
+  completion           Generate the autocompletion script for the specified shell
+  exec                 Execute any command towards the matching contexts from the wildcard search
+  gardener             gardener specific commands
+  help                 Help about any command
+  history              Switch to any previous tuple {context,namespace} from the history
+  hooks                Run configured hooks
+  list-contexts        List all available contexts
+  namespace            Change the current namespace
+  set-context          Switch to context name provided as first argument
+  set-last-context     Switch to the last used context from the history
+  set-previous-context Switch to the previous context from the history
+  version              show Switch Version info
 
 Flags:
-      --config-path string         path on the local filesystem to the configuration file. (default "~/.kube/switch-config.yaml")
-      --kubeconfig-name string     only shows Kubeconfig files with this name. Accepts wilcard arguments "*" and "?". Defaults to "config". (default "config")
-      --kubeconfig-path string     path to be recursively searched for Kubeconfig files. Can be a file or directory on the local filesystem or a path in Vault. (default "~/.kube/config")
-      --show-preview               show preview of the selected Kubeconfig. Possibly makes sense to disable when using vault as the Kubeconfig store to prevent excessive requests against the API. (default true)
-      --state-directory string     path to the local directory used for storing internal state. (default "~/.kube/switch-state")
-      --store string               the backing store to be searched for Kubeconfig files. Can be either "filesystem" or "vault" (default "filesystem")
-      --vault-api-address string   the API address of the Vault store. Overrides the default "vaultAPIAddress" field in the SwitchConfig. This flag is overridden by the environment variable "VAULT_ADDR".
+      --config-path string         path on the local filesystem to the configuration file. (default "/Users/tommyolsen/.kube/switch-config.yaml")
+      --debug                      show debug logs
+  -h, --help                       help for switch
+      --kubeconfig-name string     only shows kubeconfig files with this name. Accepts wilcard arguments '*' and '?'. Defaults to 'config'. (default "config")
+      --kubeconfig-path string     path to be recursively searched for kubeconfigs. Can be a file or a directory on the local filesystem or a path in Vault. (default "$HOME/.kube/config")
       --no-index                   stores do not read from index files. The index is refreshed.
-      -h, --help                   help about any command
+      --show-preview               show preview of the selected kubeconfig. Possibly makes sense to disable when using vault as the kubeconfig store to prevent excessive requests against the API. (default true)
+      --state-directory string     path to the local directory used for storing internal state. (default "/Users/tommyolsen/.kube/switch-state")
+      --store string               the backing store to be searched for kubeconfig files. Can be either "filesystem" or "vault" (default "filesystem")
+      --vault-api-address string   the API address of the Vault store. Overrides the default "vaultAPIAddress" field in the SwitchConfig. This flag is overridden by the environment variable "VAULT_ADDR".
+  -v, --version                    version for switch
+
+Use "switch [command] --help" for more information about a command.
 ```
 
 Just type `switch` to search over the context names defined in the default Kubeconfig file `~/.kube/config`
@@ -109,6 +117,36 @@ In addition, use
 - `switch .` to change to the last used context and namespace (handy for new terminals)
 - `switch -` to change to the previous history entry
 
+<<<<<<< HEAD
+=======
+## List and search for contexts
+
+You can list all your indexed contexts by issuing the following command: `switch list-commands`. And if you want to search for only parts of those contexts, you can use wildcard search:
+
+```sh
+switch list-commands "*-dev-?"
+```
+
+Wildcard search supports [matching wildcards](https://en.wikipedia.org/wiki/Matching_wildcards) notation also known as globbing:
+
+- `?` matches exactly one occurrence of any character.
+- `*` matches arbitrary many (including zero) occurrences of any character.
+
+## Execute commands
+
+You can use the above wildcard search to execute any commands towards the matching clusters. This makes it powerful for quickly running a command through a given set of clusters and see the output of these commands:
+
+```sh
+switch exec "*-dev-?" -- kubectl get ns
+```
+
+You can also wrap the command(s) into a script and execute it via `switch exec`:
+
+```sh
+switch exec "*-dev-?" -- bash script.sh
+```
+
+>>>>>>> e7aa6d0 (Updated documentation and added support for '--' syntax known from kubectl exec)
 ## Kubeconfig stores
 
 Multiple Kubeconfig stores are supported.

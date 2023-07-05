@@ -21,8 +21,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/danielfoehrkn/kubeswitch/types"
 	kubeconfigutil "github.com/danielfoehrkn/kubeswitch/pkg/util/kubectx_copied"
+	"github.com/danielfoehrkn/kubeswitch/types"
 )
 
 // GetContextsNamesFromKubeconfig takes kubeconfig bytes and parses the kubeconfig to extract the context names.
@@ -90,4 +90,33 @@ func GetCurrentContext() (string, error) {
 		return "", fmt.Errorf("current-context is not set")
 	}
 	return currCtx, nil
+}
+
+func SliceFindIndex[T string | int](slice []T, search T) int {
+	for k, v := range slice {
+		if v == search {
+			return k
+		}
+	}
+	return -1
+}
+
+func getAdditionalArgs() []string {
+	additionalArgsIndex := SliceFindIndex(os.Args, "--")
+	var additionalArgs []string
+	if additionalArgsIndex > 0 {
+		additionalArgs = os.Args[additionalArgsIndex+1:]
+	}
+	return additionalArgs
+}
+
+func SplitAdditionalArgs(args *[]string) []string {
+	additionalArgs := getAdditionalArgs()
+	length := len(additionalArgs)
+	if length > 0 {
+		tmp := *args
+		tmp = tmp[0 : len(*args)-length]
+		*args = tmp
+	}
+	return additionalArgs
 }
