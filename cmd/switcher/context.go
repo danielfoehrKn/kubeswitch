@@ -5,6 +5,7 @@ import (
 	"os"
 
 	delete_context "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/delete-context"
+	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/exec"
 	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/history"
 	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/hooks"
 	list_contexts "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/list-contexts"
@@ -49,17 +50,26 @@ var (
 	}
 
 	listContextsCmd = &cobra.Command{
-		Use:     "list-contexts",
-		Short:   "List all available contexts without fuzzy search",
+		Use:     "list-contexts [wildcard-search]",
+		Short:   "List all available contexts",
+		Long:    `List all available contexts - give a second parameter to do a wildcard search. Eg: switch list-contexts "*-dev*"`,
 		Aliases: []string{"ls"},
-		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			lc, err := listContexts("")
+			stores, config, err := initialize()
 			if err != nil {
 				return err
 			}
-			for _, c := range lc {
-				fmt.Println(c)
+			// Get all contexts by default
+			pattern := "*"
+			if len(args) == 1 && len(args[0]) > 0 {
+				pattern = args[0]
+			}
+			contexts, err := list_contexts.ListContexts(pattern, stores, config, stateDirectory, noIndex)
+			if err != nil {
+				return err
+			}
+			for _, context := range contexts {
+				fmt.Println(context)
 			}
 			return nil
 		},
@@ -80,7 +90,7 @@ var (
 				return err
 			}
 
-			kc, err := set_context.SetContext(args[0], stores, config, stateDirectory, noIndex, true)
+			kc, err := set_context.SetContext(args[0], stores, config, stateDirectory, noIndex, true, true)
 			reportNewContext(kc)
 			return err
 		},
@@ -126,6 +136,25 @@ var (
 			return nil
 		},
 	}
+
+	execCmd = &cobra.Command{
+		Use:     "exec wildcard-search -- command",
+		Aliases: []string{"e"},
+		Short:   "Execute any command towards the matching contexts from the wildcard search",
+		Long:    `Execute any command to all the matching cluster contexts given by the search parameter. Eg: switch exec "*-dev-?" -- kubectl get namespaces"`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			stores, config, err := initialize()
+			if err != nil {
+				return err
+			}
+			// split additional args from the command and populate args after "--"
+			cmdArgs := util.SplitAdditionalArgs(&args)
+			if len(cmdArgs) >= 1 && len(args[0]) > 0 {
+				return exec.ExecuteCommand(args[0], cmdArgs, stores, config, stateDirectory, noIndex)
+			}
+			return fmt.Errorf("please provide a search string and the command to execute on each cluster")
+		},
+	}
 )
 
 func init() {
@@ -136,6 +165,7 @@ func init() {
 	rootCommand.AddCommand(unsetContextCmd)
 	rootCommand.AddCommand(previousContextCmd)
 	rootCommand.AddCommand(lastContextCmd)
+	rootCommand.AddCommand(execCmd)
 
 	setFlagsForContextCommands(setContextCmd)
 	setFlagsForContextCommands(listContextsCmd)
@@ -150,7 +180,7 @@ func listContexts(prefix string) ([]string, error) {
 		return nil, err
 	}
 
-	lc, err := list_contexts.ListContexts(stores, config, stateDirectory, noIndex, prefix)
+	lc, err := list_contexts.ListContexts("*", stores, config, stateDirectory, noIndex)
 	if err != nil {
 		return nil, err
 	}
