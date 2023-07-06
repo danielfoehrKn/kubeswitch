@@ -29,10 +29,10 @@ import (
 
 var logger = logrus.New()
 
-func SwitchToHistory(stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) error {
+func SwitchToHistory(stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) (*string, error) {
 	history, err := util.ReadHistory()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	historyLength := len(history)
@@ -83,12 +83,12 @@ func SwitchToHistory(stores []store.KubeconfigStore, config *types.Config, state
 		})
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	context, ns, err := util.ParseHistoryEntry(history[idx])
 	if err != nil {
-		return fmt.Errorf("failed to set namespace: %v", err)
+		return nil, fmt.Errorf("failed to set namespace: %v", err)
 	}
 
 	// TODO: only switch context if the current context is not already set
@@ -96,19 +96,19 @@ func SwitchToHistory(stores []store.KubeconfigStore, config *types.Config, state
 	// do not append to history as the old namespace will be added (only add history after changing the namespace)
 	tmpKubeconfigFile, err := setcontext.SetContext(*context, stores, config, stateDir, noIndex, false, true)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// old history entry that does not include a namespace
 	if ns == nil {
-		return nil
+		return tmpKubeconfigFile, nil
 	}
 
 	if err := setNamespace(*ns, *tmpKubeconfigFile); err != nil {
-		return err
+		return tmpKubeconfigFile, err
 	}
 
-	return util.AppendToHistory(*context, *ns)
+	return tmpKubeconfigFile, util.AppendToHistory(*context, *ns)
 }
 
 func setNamespace(ns string, tmpKubeconfigFile string) error {
@@ -130,14 +130,14 @@ func setNamespace(ns string, tmpKubeconfigFile string) error {
 
 // SetPreviousContext sets the previously used context from the history (position 1)
 // does not add a history entry
-func SetPreviousContext(stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) error {
+func SetPreviousContext(stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) (*string, error) {
 	history, err := util.ReadHistory()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if len(history) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	var position int
@@ -149,48 +149,48 @@ func SetPreviousContext(stores []store.KubeconfigStore, config *types.Config, st
 
 	context, ns, err := util.ParseHistoryEntry(history[position])
 	if err != nil {
-		return fmt.Errorf("failed to set previous context: %v", err)
+		return nil, fmt.Errorf("failed to set previous context: %v", err)
 	}
 
 	tmpKubeconfigFile, err := setcontext.SetContext(*context, stores, config, stateDir, noIndex, false, true)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// old history entry that does not include a namespace
 	if ns == nil {
-		return nil
+		return tmpKubeconfigFile, nil
 	}
 
-	return setNamespace(*ns, *tmpKubeconfigFile)
+	return tmpKubeconfigFile, setNamespace(*ns, *tmpKubeconfigFile)
 }
 
 // SetLastContext sets the last used context from the history (position 0)
 // does not add a history entry
-func SetLastContext(stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) error {
+func SetLastContext(stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) (*string, error) {
 	history, err := util.ReadHistory()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if len(history) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	context, ns, err := util.ParseHistoryEntry(history[0])
 	if err != nil {
-		return fmt.Errorf("failed to set previous context: %v", err)
+		return nil, fmt.Errorf("failed to set previous context: %v", err)
 	}
 
 	tmpKubeconfigFile, err := setcontext.SetContext(*context, stores, config, stateDir, noIndex, false, true)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// old history entry that does not include a namespace
 	if ns == nil {
-		return nil
+		return tmpKubeconfigFile, nil
 	}
 
-	return setNamespace(*ns, *tmpKubeconfigFile)
+	return tmpKubeconfigFile, setNamespace(*ns, *tmpKubeconfigFile)
 }

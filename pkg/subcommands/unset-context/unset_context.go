@@ -12,20 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package setcontext
 
 import (
 	"fmt"
+	kubeconfigutil "github.com/danielfoehrkn/kubeswitch/pkg/util/kubectx_copied"
 	"os"
-
-	"github.com/danielfoehrkn/kubeswitch/cmd/switcher"
 )
 
-func main() {
-	rootCommand := switcher.NewCommandStartSwitcher()
-
-	if err := rootCommand.Execute(); err != nil {
-		fmt.Print(err)
-		os.Exit(1)
+func UnsetCurrentContext() error {
+	kcPath := os.Getenv("KUBECONFIG")
+	kubeconfig, err := kubeconfigutil.NewKubeconfigForPath(kcPath)
+	if err != nil {
+		return err
 	}
+
+	if err := kubeconfig.ModifyCurrentContext(""); err != nil {
+		return err
+	}
+
+	if _, err := kubeconfig.WriteKubeconfigFile(); err != nil {
+		return fmt.Errorf("failed to write temporary kubeconfig file: %v", err)
+	}
+
+	return nil
 }

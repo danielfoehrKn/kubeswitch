@@ -117,6 +117,11 @@ In addition, use
 - `switch .` to change to the last used context and namespace (handy for new terminals)
 - `switch -` to change to the previous history entry
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+>>>>>>> 7ca69ac1c52ee65319dcce671b950b1fb05bccf5
 ## List and search for contexts
 
 You can list all your indexed contexts by issuing the following command: `switch list-commands`. And if you want to search for only parts of those contexts, you can use wildcard search:
@@ -144,6 +149,10 @@ You can also wrap the command(s) into a script and execute it via `switch exec`:
 switch exec "*-dev-?" -- bash script.sh
 ```
 
+<<<<<<< HEAD
+=======
+>>>>>>> e7aa6d0 (Updated documentation and added support for '--' syntax known from kubectl exec)
+>>>>>>> 7ca69ac1c52ee65319dcce671b950b1fb05bccf5
 ## Kubeconfig stores
 
 Multiple Kubeconfig stores are supported.
