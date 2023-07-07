@@ -15,14 +15,19 @@
 package store
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"log"
 	"os"
+	"path"
+	paths "path"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 
+	"github.com/hashicorp/vault/api"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -80,6 +85,16 @@ func NewVaultStore(vaultAPIAddressFromFlag, vaultTokenFileName, kubeconfigName s
 		return nil, fmt.Errorf("when using the vault kubeconfig store, a vault API token must be provided. Per default, the token file in \"~.vault-token\" is used. The default token can be overriden via the environment variable \"VAULT_TOKEN\"")
 	}
 
+	engineversion := vaultStoreConfig.VaultEngineVersion
+	if len(engineversion) == 0 {
+		engineversion = "v1"
+	}
+
+	vaultKeyKubeconfig := vaultStoreConfig.VaultKeyKubeconfig
+	if len(vaultKeyKubeconfig) == 0 {
+		vaultKeyKubeconfig = "config"
+	}
+
 	vaultConfig := &vaultapi.Config{
 		Address: vaultAPI,
 	}
@@ -90,10 +105,12 @@ func NewVaultStore(vaultAPIAddressFromFlag, vaultTokenFileName, kubeconfigName s
 	client.SetToken(vaultToken)
 
 	return &VaultStore{
-		Logger:          logrus.New().WithField("store", types.StoreKindVault),
-		KubeconfigName:  kubeconfigName,
-		KubeconfigStore: kubeconfigStore,
-		Client:          client,
+		Logger:             logrus.New().WithField("store", types.StoreKindVault),
+		KubeconfigName:     kubeconfigName,
+		KubeconfigStore:    kubeconfigStore,
+		VaultKeyKubeconfig: vaultKeyKubeconfig,
+		Client:             client,
+		EngineVersion:      engineversion,
 	}, nil
 }
 
@@ -126,35 +143,70 @@ func (s *VaultStore) GetLogger() *logrus.Entry {
 	return s.Logger
 }
 
-func (s *VaultStore) recursivePathTraversal(wg *sync.WaitGroup, searchPath string, channel chan SearchResult) {
+// recursivePathTraversal dfs-traverses the secrets tree rooted at the given path
+// and calls the `visit` functor for each of the directory and leaf paths.
+// Note: for kv-v2, a "metadata" path is expected and "metadata" paths will be
+// returned in the visit functor.
+func (s *VaultStore) recursivePathTraversal(wg *sync.WaitGroup, ctx context.Context, client *api.Client, path string, visit func(path string, directory bool) error) {
 	defer wg.Done()
 
-	secret, err := s.Client.Logical().List(searchPath)
+	resp, err := client.Logical().ListWithContext(ctx, path)
 	if err != nil {
-		channel <- SearchResult{
-			KubeconfigPath: "",
-			Error:          err,
+		s.Logger.Errorf("could not list %q path: %s", path, err)
+		return
+	}
+
+	if resp == nil || resp.Data == nil {
+		// Check if we're already at a leaf
+		if err := visit(shimKVv2Metadata(path), false); err != nil {
+			return
 		}
 		return
 	}
 
-	if secret == nil {
-		s.Logger.Infof("No secrets found for path %s", searchPath)
+	keysRaw, ok := resp.Data["keys"]
+	if !ok {
+		s.Logger.Errorf("unexpected list response at %q", path)
 		return
 	}
 
-	items := secret.Data["keys"].([]interface{})
-	for _, item := range items {
-		itemPath := fmt.Sprintf("%s/%s", strings.TrimSuffix(searchPath, "/"), item)
-		if strings.HasSuffix(item.(string), "/") {
-			// this is another folder
+	keysRawSlice, ok := keysRaw.([]interface{})
+	if !ok {
+		s.Logger.Errorf("unexpected list response type %T at %q", keysRaw, path)
+		return
+	}
+
+	keys := make([]string, 0, len(keysRawSlice))
+
+	for _, keyRaw := range keysRawSlice {
+		key, ok := keyRaw.(string)
+		if !ok {
+			s.Logger.Errorf("unexpected key type %T at %q", keyRaw, path)
+			return
+		}
+		keys = append(keys, key)
+	}
+
+	// sort the keys for a deterministic output
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		// the keys are relative to the current path: combine them
+		child := paths.Join(path, key)
+
+		if strings.HasSuffix(key, "/") {
+			// visit the directory
+			if err := visit(child, true); err != nil {
+				return
+			}
+
+			// this is not a leaf node: we need to go deeper...
 			wg.Add(1)
-			go s.recursivePathTraversal(wg, itemPath, channel)
-		} else if item != "" {
-			// found an actual secret
-			channel <- SearchResult{
-				KubeconfigPath: itemPath,
-				Error:          err,
+			go s.recursivePathTraversal(wg, ctx, client, child, visit)
+		} else {
+			// this is a leaf node: add it to the list
+			if err := visit(child, false); err != nil {
+				return
 			}
 		}
 	}
@@ -164,10 +216,28 @@ func (s *VaultStore) StartSearch(channel chan SearchResult) {
 	wg := sync.WaitGroup{}
 	// start multiple recursive searches from different root paths
 	for _, path := range s.vaultPaths {
-		s.Logger.Debugf("discovering secrets from vault under path %q", path)
+		// Checking secret engine version. If it's v2, we should shim /metadata/
+		// to secret path if necessary.
+		var secretsPath string
+		if s.EngineVersion == "v2" {
+			mountPath := strings.Split(path, "/")[0]
+			secretsPath = shimKvV2ListPath(path, mountPath)
+		} else {
+			secretsPath = path
+		}
+		s.Logger.Debugf("discovering secrets from vault under path %q", secretsPath)
 
 		wg.Add(1)
-		go s.recursivePathTraversal(&wg, path, channel)
+		go s.recursivePathTraversal(&wg, context.Background(), s.Client, secretsPath, func(path string, directory bool) error {
+			// found an actual secret, but remove "metadata/" from the path
+			rawPath := shimKVv2Metadata(path)
+			channel <- SearchResult{
+				KubeconfigPath: rawPath,
+				Error:          nil,
+			}
+			s.Logger.Debugf("Found %s", rawPath)
+			return nil
+		})
 	}
 	wg.Wait()
 }
@@ -189,35 +259,61 @@ func getBytesFromSecretValue(v interface{}) ([]byte, error) {
 }
 
 func (s *VaultStore) GetKubeconfigForPath(path string) ([]byte, error) {
-	s.Logger.Debugf("vault: getting secret for path %q", path)
 
-	secret, err := s.Client.Logical().Read(path)
+	// Checking secret engine version. If it's v2, we should shim /metadata/
+	// to secret path if necessary.
+	var secretsPath string
+	if s.EngineVersion == "v2" {
+		mountPath := strings.Split(path, "/")[0]
+		secretsPath = shimKVv2Path(path, mountPath)
+	} else {
+		secretsPath = path
+	}
+
+	s.Logger.Debugf("vault: getting secret for path %q", secretsPath)
+	secret, err := s.Client.Logical().Read(secretsPath)
 	if err != nil {
-		return nil, fmt.Errorf("could not read secret with path '%s': %v", path, err)
+		return nil, fmt.Errorf("could not read secret with path '%s': %v", secretsPath, err)
 	}
 
 	if secret == nil {
-		return nil, fmt.Errorf("no kubeconfig found for path %s", path)
+		return nil, fmt.Errorf("no kubeconfig found for path %s", secretsPath)
 	}
 
-	if len(secret.Data) != 1 {
-		return nil, fmt.Errorf("cannot read kubeconfig from %q. Only support one entry in the secret", path)
+	if (s.EngineVersion == "v1") && len(secret.Data) != 1 {
+		return nil, fmt.Errorf("cannot read kubeconfig from %q. Only support one entry in the secret if we using v1", secretsPath)
 	}
 
-	for secretKey, data := range secret.Data {
-		matched, err := filepath.Match(s.KubeconfigName, secretKey)
-		if err != nil {
-			return nil, err
-		}
-		if !matched {
-			return nil, fmt.Errorf("cannot read kubeconfig from %q. Key %q does not match desired kubeconfig name", path, s.KubeconfigName)
-		}
+	if s.EngineVersion == "v1" {
+		for secretKey, data := range secret.Data {
+			matched, err := filepath.Match(s.KubeconfigName, secretKey)
+			if err != nil {
+				return nil, err
+			}
+			if !matched {
+				return nil, fmt.Errorf("cannot read kubeconfig from %q. Key %q does not match desired kubeconfig name", secretsPath, s.KubeconfigName)
+			}
 
-		bytes, err := getBytesFromSecretValue(data)
-		if err != nil {
-			return nil, fmt.Errorf("cannot read kubeconfig from %q: %v", path, err)
+			if matched {
+				bytes, err := getBytesFromSecretValue(data)
+				if err != nil {
+					return nil, fmt.Errorf("cannot read kubeconfig from %q: %v", secretsPath, err)
+				}
+				return bytes, nil
+			}
 		}
-		return bytes, nil
+	} else {
+		if secret.Data["data"] == nil {
+			return nil, fmt.Errorf("cannot read kubeconfig from %q. Secret is empty.", secretsPath)
+		}
+		value, ok := secret.Data["data"].(map[string]interface{})[s.VaultKeyKubeconfig]
+		if ok {
+			bytes, err := getBytesFromSecretValue(value)
+			if err != nil {
+				return nil, fmt.Errorf("cannot read kubeconfig from %q: %v", secretsPath, err)
+			}
+			return bytes, nil
+		}
 	}
 	return nil, fmt.Errorf("should not happen")
 }
@@ -232,12 +328,64 @@ func (s *VaultStore) VerifyKubeconfigPaths() error {
 		}
 		duplicatePath[path] = &struct{}{}
 
-		_, err := s.Client.Logical().Read(path)
+		// Checking secret engine version. If it's v2, we should shim /metadata/
+		// to secret path if necessary.
+		var secretsPath string
+		if s.EngineVersion == "v2" {
+			mountPath := strings.Split(path, "/")[0]
+			secretsPath = shimKvV2ListPath(path, mountPath)
+		} else {
+			secretsPath = path
+		}
+
+		_, err := s.Client.Logical().Read(secretsPath)
 		if err != nil {
 			return err
 		}
 
-		s.vaultPaths = append(s.vaultPaths, path)
+		s.vaultPaths = append(s.vaultPaths, secretsPath)
 	}
 	return nil
+}
+
+// shimKVv2Path aligns the supported legacy path to KV v2 specs by inserting
+// /data/ into the path for reading secrets. Paths for metadata are not modified.
+func shimKVv2Path(rawPath, mountPath string) string {
+	switch {
+	case rawPath == mountPath, rawPath == strings.TrimSuffix(mountPath, "/"):
+		return path.Join(mountPath, "data")
+	default:
+		p := strings.TrimPrefix(rawPath, mountPath)
+
+		// Only add /data/ prefix to the path if neither /data/ or /metadata/ are
+		// present.
+		if strings.HasPrefix(p, "data/") || strings.HasPrefix(p, "metadata/") {
+			return rawPath
+		}
+		return path.Join(mountPath, "data", p)
+	}
+}
+
+// shimKvV2ListPath aligns the supported legacy path to KV v2 specs by inserting
+// /metadata/ into the path for listing secrets. Paths with /metadata/ are not modified.
+func shimKvV2ListPath(rawPath, mountPath string) string {
+	mountPath = strings.TrimSuffix(mountPath, "/")
+
+	if strings.HasPrefix(rawPath, path.Join(mountPath, "metadata")) {
+		// It doesn't need modifying.
+		return rawPath
+	}
+
+	switch {
+	case rawPath == mountPath:
+		return path.Join(mountPath, "metadata")
+	default:
+		rawPath = strings.TrimPrefix(rawPath, mountPath)
+		return path.Join(mountPath, "metadata", rawPath)
+	}
+}
+
+// shimKVv2Metadata removes metadata/ from the path
+func shimKVv2Metadata(path string) string {
+	return strings.Replace(path, "metadata/", "", -1)
 }

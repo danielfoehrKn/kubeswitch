@@ -89,11 +89,13 @@ type FilesystemStore struct {
 }
 
 type VaultStore struct {
-	Logger          *logrus.Entry
-	KubeconfigStore types.KubeconfigStore
-	Client          *vaultapi.Client
-	KubeconfigName  string
-	vaultPaths      []string
+	Logger             *logrus.Entry
+	KubeconfigStore    types.KubeconfigStore
+	Client             *vaultapi.Client
+	VaultKeyKubeconfig string
+	KubeconfigName     string
+	EngineVersion      string
+	vaultPaths         []string
 }
 
 type GardenerStore struct {

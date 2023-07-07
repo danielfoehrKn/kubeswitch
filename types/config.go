@@ -123,7 +123,9 @@ type Cache struct {
 
 type StoreConfigVault struct {
 	// VaultAPIAddress is the URL of the Vault API
-	VaultAPIAddress string `yaml:"vaultAPIAddress"`
+	VaultAPIAddress    string `yaml:"vaultAPIAddress"`
+	VaultEngineVersion string `yaml:"vaultEngineVersion"`
+	VaultKeyKubeconfig string `yaml:"vaultKeyKubeconfig"`
 }
 
 type StoreConfigGardener struct {
