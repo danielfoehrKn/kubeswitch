@@ -37,6 +37,10 @@ var (
 	aliasLsCmd = &cobra.Command{
 		Use:   "ls",
 		Short: "List all existing aliases",
+		Args:  cobra.NoArgs,
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return alias.ListAliases(stateDirectory)
 		},
@@ -45,11 +49,15 @@ var (
 	aliasRmCmd = &cobra.Command{
 		Use:   "rm",
 		Short: "Remove an existing alias",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 1 || len(args[0]) == 0 {
-				return fmt.Errorf("please provide the alias to remove as the first argument")
+		Args:  cobra.ExactArgs(1),
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			if len(args) != 0 {
+				return nil, cobra.ShellCompDirectiveNoFileComp
 			}
-
+			aliases, _ := alias.GetAliases(stateDirectory)
+			return aliases, cobra.ShellCompDirectiveNoFileComp
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
 			return alias.RemoveAlias(args[0], stateDirectory)
 		},
 		SilenceErrors: true,

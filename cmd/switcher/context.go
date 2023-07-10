@@ -17,9 +17,13 @@ import (
 
 var (
 	previousContextCmd = &cobra.Command{
-		Use:   "set-previous-context",
-		Short: "Switch to the previous context from the history",
-		Args:  cobra.NoArgs,
+		Use:     "set-previous-context",
+		Aliases: []string{"spc"},
+		Short:   "Switch to the previous context from the history",
+		Args:    cobra.NoArgs,
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			stores, config, err := initialize()
 			if err != nil {
@@ -33,9 +37,13 @@ var (
 	}
 
 	lastContextCmd = &cobra.Command{
-		Use:   "set-last-context",
-		Short: "Switch to the last used context from the history",
-		Args:  cobra.NoArgs,
+		Use:     "set-last-context",
+		Aliases: []string{"slc"},
+		Short:   "Switch to the last used context from the history",
+		Args:    cobra.NoArgs,
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			stores, config, err := initialize()
 			if err != nil {
@@ -50,9 +58,17 @@ var (
 
 	listContextsCmd = &cobra.Command{
 		Use:     "list-contexts [wildcard-search]",
+		Aliases: []string{"ls"},
 		Short:   "List all available contexts",
 		Long:    `List all available contexts - give a second parameter to do a wildcard search. Eg: switch list-contexts "*-dev*"`,
-		Aliases: []string{"ls"},
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			var comps []string
+			if len(args) != 0 {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			comps = cobra.AppendActiveHelp(comps, "You can provide a wildcard search string, like so: '*-dev-*' to limit the search")
+			return comps, cobra.ShellCompDirectiveNoFileComp
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			stores, config, err := initialize()
 			if err != nil {
@@ -75,10 +91,18 @@ var (
 	}
 
 	setContextCmd = &cobra.Command{
-		Use:   "set-context",
-		Short: "Switch to context name provided as first argument",
-		Long:  `Switch to context name provided as first argument. KubeContext name has to exist in any of the found Kubeconfig files.`,
-		Args:  cobra.ExactArgs(1),
+		Use:     "set-context",
+		Short:   "Switch to context name provided as first argument",
+		Long:    `Switch to context name provided as first argument. KubeContext name has to exist in any of the found Kubeconfig files.`,
+		Aliases: []string{"set", "sc", "set-context"},
+		Args:    cobra.ExactArgs(1),
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			if len(args) != 0 {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			lc, _ := listContexts(toComplete)
+			return lc, cobra.ShellCompDirectiveNoFileComp
+		},
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			log := logrus.New().WithField("hook", "")
 			return hooks.Hooks(log, configPath, stateDirectory, "", false)
@@ -101,6 +125,13 @@ var (
 		Short: "Delete context name provided as first argument",
 		Long:  `Delete context name provided as first argument. KubeContext name has to exist in the current Kubeconfig file.`,
 		Args:  cobra.ExactArgs(1),
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			if len(args) != 0 {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			lc, _ := listContexts(toComplete)
+			return lc, cobra.ShellCompDirectiveNoFileComp
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctxName, err := resolveContextName(args[0])
 			fmt.Println("delete-context", ctxName, args, err)
@@ -116,6 +147,9 @@ var (
 		Short: "Unset current-context",
 		Long:  `Unset current-context in the current Kubeconfig file.`,
 		Args:  cobra.NoArgs,
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return unset_context.UnsetCurrentContext()
 		},
@@ -126,6 +160,9 @@ var (
 		Short: "Show current-context",
 		Long:  `Show current-context in the current Kubeconfig file.`,
 		Args:  cobra.NoArgs,
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx, err := util.GetCurrentContext()
 			if err != nil {

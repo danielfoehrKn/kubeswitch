@@ -119,10 +119,6 @@ var (
 			reportNewContext(kc)
 			return err
 		},
-		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			lc, _ := listContexts(toComplete)
-			return lc, cobra.ShellCompDirectiveNoFileComp
-		},
 		SilenceUsage: true,
 	}
 )

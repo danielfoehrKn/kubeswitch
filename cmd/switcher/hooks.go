@@ -21,6 +21,10 @@ var (
 	hookLsCmd = &cobra.Command{
 		Use:   "ls",
 		Short: "List configured hooks",
+		Args:  cobra.NoArgs,
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log := logrus.New().WithField("hook-ls", hookName)
 			return hooks.ListHooks(log, configPath, stateDirectory)

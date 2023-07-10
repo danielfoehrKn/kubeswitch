@@ -10,10 +10,25 @@ import (
 
 var (
 	execCmd = &cobra.Command{
-		Use:     "exec wildcard-search -- command",
-		Aliases: []string{"e"},
-		Short:   "Execute any command towards the matching contexts from the wildcard search",
-		Long:    `Execute any command to all the matching cluster contexts given by the search parameter. Eg: switch exec "*-dev-?" -- kubectl get namespaces"`,
+		Use:                   "exec wildcard-search -- COMMAND [args...]",
+		DisableFlagsInUseLine: true,
+		Aliases:               []string{"e"},
+		Short:                 "Execute any command towards the matching contexts from the wildcard search",
+		Long:                  `Execute any command to all the matching cluster contexts given by the search parameter. Eg: switch exec "*-dev-?" -- kubectl get namespaces"`,
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			var comps []string
+			if len(args) == 0 {
+				comps = cobra.AppendActiveHelp(comps, "You must provide a wildcard search string, like so: '*-dev-*'")
+				return comps, cobra.ShellCompDirectiveNoFileComp
+			} else if len(args) == 1 {
+				comps = cobra.AppendActiveHelp(comps, "Give a '--' to indicate start of command")
+				return comps, cobra.ShellCompDirectiveNoFileComp
+			}
+			if len(args) >= 2 {
+				comps = cobra.AppendActiveHelp(comps, "Provide the command to send to the contexts")
+			}
+			return comps, cobra.ShellCompDirectiveNoFileComp
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			stores, config, err := initialize()
 			if err != nil {

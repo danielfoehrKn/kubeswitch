@@ -29,6 +29,29 @@ import (
 
 var logger = logrus.New()
 
+func GetAliases(stateDir string) ([]string, error) {
+	if _, err := os.Stat(stateDir); os.IsNotExist(err) {
+		if err := os.Mkdir(stateDir, 0755); err != nil {
+			return nil, err
+		}
+	}
+
+	a, err := state.GetDefaultAlias(stateDir)
+	if err != nil {
+		return nil, err
+	}
+
+	if a.Content.ContextToAliasMapping == nil {
+		return nil, nil
+	}
+
+	var t []string
+	for _, alias := range a.Content.ContextToAliasMapping {
+		t = append(t, alias)
+	}
+	return t, nil
+}
+
 func ListAliases(stateDir string) error {
 	if _, err := os.Stat(stateDir); os.IsNotExist(err) {
 		if err := os.Mkdir(stateDir, 0755); err != nil {

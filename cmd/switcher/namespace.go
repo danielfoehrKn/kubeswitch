@@ -11,6 +11,13 @@ var (
 		Aliases: []string{"ns"},
 		Short:   "Change the current namespace",
 		Long:    `Search namespaces in the current cluster and change to it.`,
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			if len(args) != 0 {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			list, _ := ns.ListNamespaces(getKubeconfigPathFromFlag(), stateDirectory, noIndex)
+			return list, cobra.ShellCompDirectiveNoFileComp
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 1 && len(args[0]) > 0 {
 				return ns.SwitchToNamespace(args[0], getKubeconfigPathFromFlag())
@@ -20,9 +27,23 @@ var (
 		},
 		SilenceErrors: true,
 	}
+	unsetNamespaceCommand = &cobra.Command{
+		Use:   "unset-namespace",
+		Short: "Unset the current namespace",
+		Long:  `Unset the current namespace in the contexts (effectively changes it to default)`,
+		Args:  cobra.NoArgs,
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return ns.SwitchToNamespace("default", getKubeconfigPathFromFlag())
+		},
+		SilenceErrors: true,
+	}
 )
 
 func init() {
 	setCommonFlags(namespaceCommand)
 	rootCommand.AddCommand(namespaceCommand)
+	rootCommand.AddCommand(unsetNamespaceCommand)
 }
