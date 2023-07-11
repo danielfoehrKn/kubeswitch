@@ -8,8 +8,7 @@ import (
 )
 
 var (
-	shellScript string = `#!/usr/bin/env bash
-
+	shellScript string = `
     function switch(){
     #  if the executable path is not set, the switcher binary has to be on the path
     # this is the case when installing it via homebrew
@@ -69,8 +68,7 @@ var (
       printf "%s\n" "$RESPONSE"
 }`
 
-	fishScript string = `#!/usr/bin/env fish
-
+	fishScript string = `
     function kubeswitch
     #  if the executable path is not set, the switcher binary has to be on the path
     # this is the case when installing it via homebrew
