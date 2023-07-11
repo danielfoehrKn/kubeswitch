@@ -44,3 +44,50 @@ kubeconfigStores:
   config:
     vaultAPIAddress: http://127.0.0.1:8200
 ```
+
+### Configure Vault KV Secrets engine v2 in SwitchConfig file
+
+If Vault is setup with a KV secrets engine v2, below is an example configuration for using Vault in the `SwitchConfig` file.
+
+```
+kind: SwitchConfig
+version: v1alpha1
+kubeconfigStores:
+- kind: vault
+  showPrefix: false
+  paths:
+  - "shared/kubernetes"
+  config:
+    vaultAPIAddress: "https://address.to.vault"
+    vaultKeyKubeconfig: "kubeconfig"
+    vaultEngineVersion: "v2"
+```
+
+`vaultKeyKubeconfig` specifies which key in the secret the kubeconfig is saved under. Defaults to `config`.
+
+`vaultEngineVersion` specifies which Vault secrets engine to use. Defaults to `v1`.
+
+Combining `vault` with `cache` means that the fetched kubeconfig's from Vault are cached locally, and thus limiting the number of requests to Vault significant:
+
+```
+kind: SwitchConfig
+version: v1alpha1
+refreshIndexAfter: 12h
+kubeconfigStores:
+- kind: vault
+  showPrefix: false
+  paths:
+  - "shared/kubernetes"
+  config:
+    vaultAPIAddress: "https://address.to.vault"
+    vaultKeyKubeconfig: "kubeconfig"
+    vaultEngineVersion: "v2"
+  cache:
+    kind: filesystem
+    config:
+      path: ~/.kube/cache/switch
+```
+
+By using `refreshIndexAfter` you can force a refresh of the index. In this case every 12th hour.
+
+Note: Make sure that the folder mentioned under `cache.path` is present, otherwise it will not work.
