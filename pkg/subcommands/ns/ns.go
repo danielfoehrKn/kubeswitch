@@ -276,9 +276,11 @@ func ListNamespaces(kubeconfigPathFromFlag, stateDir string, noIndex bool) ([]st
 			allNamespaces = append(allNamespaces, ns)
 		}
 	}
-	//}()
 
-	cache.Write(allNamespaces)
+	err = cache.Write(allNamespaces)
+	if err != nil {
+		return nil, err
+	}
 	return allNamespaces, nil
 }
 

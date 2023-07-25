@@ -16,8 +16,9 @@ package setcontext
 
 import (
 	"fmt"
-	kubeconfigutil "github.com/danielfoehrkn/kubeswitch/pkg/util/kubectx_copied"
 	"os"
+
+	kubeconfigutil "github.com/danielfoehrkn/kubeswitch/pkg/util/kubectx_copied"
 )
 
 func DeleteContext(desiredContext string) error {
