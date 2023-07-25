@@ -34,6 +34,7 @@ require (
 
 require (
 	github.com/Masterminds/semver v1.5.0
+	github.com/becheran/wildmatch-go v1.0.0
 	github.com/gardener/gardener-extension-provider-openstack v1.24.2
 	github.com/google/addlicense v1.0.0
 	github.com/onsi/ginkgo/v2 v2.1.3

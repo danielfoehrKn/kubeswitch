@@ -29,7 +29,7 @@ import (
 
 var logger = logrus.New()
 
-func SetContext(desiredContext string, stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool, appendToHistory bool) (*string, error) {
+func SetContext(desiredContext string, stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool, appendToHistory bool, writeToStdOut bool) (*string, error) {
 	c, err := pkg.DoSearch(stores, config, stateDir, noIndex)
 	if err != nil {
 		return nil, err
@@ -99,7 +99,9 @@ func SetContext(desiredContext string, stores []store.KubeconfigStore, config *t
 			}
 
 			// print kubeconfig path to std.out -> captured by calling bash script to set KUBECONFIG environment Variable
-			fmt.Print(tempKubeconfigPath)
+			if writeToStdOut {
+				fmt.Print(tempKubeconfigPath)
+			}
 			return &tempKubeconfigPath, nil
 		}
 	}

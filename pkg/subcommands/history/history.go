@@ -94,7 +94,7 @@ func SwitchToHistory(stores []store.KubeconfigStore, config *types.Config, state
 	// TODO: only switch context if the current context is not already set
 	// requires to first check if a kubeconfig is already set (setcontext always creates a new file)
 	// do not append to history as the old namespace will be added (only add history after changing the namespace)
-	tmpKubeconfigFile, err := setcontext.SetContext(*context, stores, config, stateDir, noIndex, false)
+	tmpKubeconfigFile, err := setcontext.SetContext(*context, stores, config, stateDir, noIndex, false, true)
 	if err != nil {
 		return err
 	}
@@ -152,7 +152,7 @@ func SetPreviousContext(stores []store.KubeconfigStore, config *types.Config, st
 		return fmt.Errorf("failed to set previous context: %v", err)
 	}
 
-	tmpKubeconfigFile, err := setcontext.SetContext(*context, stores, config, stateDir, noIndex, false)
+	tmpKubeconfigFile, err := setcontext.SetContext(*context, stores, config, stateDir, noIndex, false, true)
 	if err != nil {
 		return err
 	}
@@ -182,7 +182,7 @@ func SetLastContext(stores []store.KubeconfigStore, config *types.Config, stateD
 		return fmt.Errorf("failed to set previous context: %v", err)
 	}
 
-	tmpKubeconfigFile, err := setcontext.SetContext(*context, stores, config, stateDir, noIndex, false)
+	tmpKubeconfigFile, err := setcontext.SetContext(*context, stores, config, stateDir, noIndex, false, true)
 	if err != nil {
 		return err
 	}
