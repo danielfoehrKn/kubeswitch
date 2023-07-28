@@ -17,28 +17,19 @@ package switcher
 import (
 	"fmt"
 	"os"
-	"runtime"
 	"strings"
 
+	"github.com/danielfoehrkn/kubeswitch/pkg"
+
 	"github.com/danielfoehrkn/kubeswitch/pkg/cache"
-	gardenercontrolplane "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/gardener"
-	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/history"
-	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/ns"
 	"github.com/danielfoehrkn/kubeswitch/pkg/util"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"k8s.io/utils/pointer"
 
-	"github.com/danielfoehrkn/kubeswitch/pkg"
 	switchconfig "github.com/danielfoehrkn/kubeswitch/pkg/config"
 	"github.com/danielfoehrkn/kubeswitch/pkg/config/validation"
 	"github.com/danielfoehrkn/kubeswitch/pkg/store"
-	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/alias"
-	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/clean"
-	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/exec"
-	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/hooks"
-	list_contexts "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/list-contexts"
-	setcontext "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/set-context"
 	"github.com/danielfoehrkn/kubeswitch/types"
 )
 
@@ -54,6 +45,9 @@ var (
 	kubeconfigPath string
 	kubeconfigName string
 	showPreview    bool
+	deleteContext  bool
+	unsetContext   bool
+	currentContext bool
 
 	// vault store
 	storageBackend          string
@@ -73,11 +67,44 @@ var (
 	noIndex       bool
 
 	rootCommand = &cobra.Command{
-		Use:     "switch",
+		Use:     "switcher",
 		Short:   "Launch the switch binary",
 		Long:    `The kubectx for operators.`,
 		Version: version,
+		Args: func(cmd *cobra.Command, args []string) error {
+			switch {
+			case deleteContext:
+				if err := cobra.ExactArgs(1)(cmd, args); err != nil {
+					return err
+				}
+			case unsetContext || currentContext:
+				if err := cobra.NoArgs(cmd, args); err != nil {
+					return err
+				}
+			}
+			return cmd.ParseFlags(args)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			switch {
+			case deleteContext:
+				return deleteContextCmd.RunE(cmd, args)
+			case unsetContext:
+				return unsetContextCmd.RunE(cmd, args)
+			case currentContext:
+				return currentContextCmd.RunE(cmd, args)
+			}
+
+			if len(args) > 0 {
+				switch args[0] {
+				case "-":
+					return previousContextCmd.RunE(cmd, args[1:])
+				case ".":
+					return lastContextCmd.RunE(cmd, args[1:])
+				default:
+					return setContextCmd.RunE(cmd, args)
+				}
+			}
+
 			stores, config, err := initialize()
 			if err != nil {
 				return err
@@ -88,348 +115,23 @@ var (
 				showPreview = false
 			}
 
-			return pkg.Switcher(stores, config, stateDirectory, noIndex, showPreview)
+			kc, err := pkg.Switcher(stores, config, stateDirectory, noIndex, showPreview)
+			reportNewContext(kc)
+			return err
 		},
+		SilenceUsage: true,
 	}
 )
 
 func init() {
-	aliasContextCmd := &cobra.Command{
-		Use:   "alias",
-		Short: "Create an alias for a context. Use ALIAS=CONTEXT_NAME",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 1 || !strings.Contains(args[0], "=") || len(strings.Split(args[0], "=")) != 2 {
-				return fmt.Errorf("please provide the alias in the form ALIAS=CONTEXT_NAME")
-			}
-			arguments := strings.Split(args[0], "=")
-
-			stores, config, err := initialize()
-			if err != nil {
-				return err
-			}
-
-			return alias.Alias(arguments[0], arguments[1], stores, config, stateDirectory, noIndex)
-		},
-	}
-
-	aliasLsCmd := &cobra.Command{
-		Use:   "ls",
-		Short: "List all existing aliases",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return alias.ListAliases(stateDirectory)
-		},
-	}
-
-	aliasRmCmd := &cobra.Command{
-		Use:   "rm",
-		Short: "Remove an existing alias",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 1 || len(args[0]) == 0 {
-				return fmt.Errorf("please provide the alias to remove as the first argument")
-			}
-
-			return alias.RemoveAlias(args[0], stateDirectory)
-		},
-	}
-
-	aliasRmCmd.Flags().StringVar(
-		&stateDirectory,
-		"state-directory",
-		os.ExpandEnv("$HOME/.kube/switch-state"),
-		"path to the state directory.")
-
-	aliasContextCmd.AddCommand(aliasLsCmd)
-	aliasContextCmd.AddCommand(aliasRmCmd)
-
-	previousContextCmd := &cobra.Command{
-		Use:   "set-previous-context",
-		Short: "Switch to the previous context from the history",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			stores, config, err := initialize()
-			if err != nil {
-				return err
-			}
-
-			return history.SetPreviousContext(stores, config, stateDirectory, noIndex)
-		},
-	}
-
-	lastContextCmd := &cobra.Command{
-		Use:   "set-last-context",
-		Short: "Switch to the last used context from the history",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			stores, config, err := initialize()
-			if err != nil {
-				return err
-			}
-
-			return history.SetLastContext(stores, config, stateDirectory, noIndex)
-		},
-	}
-
-	historyCmd := &cobra.Command{
-		Use:     "history",
-		Aliases: []string{"h"},
-		Short:   "Switch to any previous tuple {context,namespace} from the history",
-		Long:    `Lists the context history with the ability to switch to a previous context.`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			stores, config, err := initialize()
-			if err != nil {
-				return err
-			}
-
-			return history.SwitchToHistory(stores, config, stateDirectory, noIndex)
-		},
-	}
-
-	namespaceCommand := &cobra.Command{
-		Use:     "namespace",
-		Aliases: []string{"ns"},
-		Short:   "Change the current namespace",
-		Long:    `Search namespaces in the current cluster and change to it.`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 1 && len(args[0]) > 0 {
-				return ns.SwitchToNamespace(args[0], getKubeconfigPathFromFlag())
-			}
-
-			return ns.SwitchNamespace(getKubeconfigPathFromFlag(), stateDirectory, noIndex)
-		},
-	}
-
-	setContextCmd := &cobra.Command{
-		Use:   "set-context",
-		Short: "Switch to context name provided as first argument",
-		Long:  `Switch to context name provided as first argument. KubeContext name has to exist in any of the found Kubeconfig files.`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			stores, config, err := initialize()
-			if err != nil {
-				return err
-			}
-
-			_, err = setcontext.SetContext(args[0], stores, config, stateDirectory, noIndex, true, true)
-			return err
-		},
-	}
-
-	gardenerCmd := &cobra.Command{
-		Use:   "gardener",
-		Short: "gardener specific commands",
-		Long:  `Commands that can only be used if a Gardener store is configured.`,
-	}
-
-	controlplaneCmd := &cobra.Command{
-		Use:   "controlplane",
-		Short: "Switch to the Shoot's controlplane",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			stores, _, err := initialize()
-			if err != nil {
-				return err
-			}
-
-			_, err = gardenercontrolplane.SwitchToControlplane(stores, getKubeconfigPathFromFlag())
-			return err
-		},
-	}
-
-	gardenerCmd.AddCommand(controlplaneCmd)
-
-	listContextsCmd := &cobra.Command{
-		Use:     "list-contexts [wildcard-search]",
-		Short:   "List all available contexts",
-		Long:    `List all available contexts - give a second parameter to do a wildcard search. Eg: switch list-contexts "*-dev*"`,
-		Aliases: []string{"ls"},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			stores, config, err := initialize()
-			if err != nil {
-				return err
-			}
-			// Get all contexts by default
-			pattern := "*"
-			if len(args) == 1 && len(args[0]) > 0 {
-				pattern = args[0]
-			}
-			contexts, err := list_contexts.ListContexts(pattern, stores, config, stateDirectory, noIndex)
-			if err != nil {
-				return err
-			}
-			for _, context := range contexts {
-				fmt.Println(context)
-			}
-			return nil
-		},
-	}
-
-	cleanCmd := &cobra.Command{
-		Use:   "clean",
-		Short: "Cleans all temporary and cached kubeconfig files",
-		Long:  `Cleans the temporary kubeconfig files created in the directory $HOME/.kube/switch_tmp and flushes every cache`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			stores, _, err := initialize()
-			if err != nil {
-				return err
-			}
-			return clean.Clean(stores)
-		},
-	}
-
-	execCmd := &cobra.Command{
-		Use:     "exec wildcard-search -- command",
-		Aliases: []string{"e"},
-		Short:   "Execute any command towards the matching contexts from the wildcard search",
-		Long:    `Execute any command to all the matching cluster contexts given by the search parameter. Eg: switch exec "*-dev-?" -- kubectl get namespaces"`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			stores, config, err := initialize()
-			if err != nil {
-				return err
-			}
-			// split additional args from the command and populate args after "--"
-			cmdArgs := util.SplitAdditionalArgs(&args)
-			if len(cmdArgs) >= 1 && len(args[0]) > 0 {
-				return exec.ExecuteCommand(args[0], cmdArgs, stores, config, stateDirectory, noIndex)
-			}
-			return fmt.Errorf("please provide a search string and the command to execute on each cluster")
-		},
-	}
-
-	hookCmd := &cobra.Command{
-		Use:   "hooks",
-		Short: "Run configured hooks",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			log := logrus.New().WithField("hook", hookName)
-			return hooks.Hooks(log, configPath, stateDirectory, hookName, runImmediately)
-		},
-	}
-
-	hookLsCmd := &cobra.Command{
-		Use:   "ls",
-		Short: "List configured hooks",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			log := logrus.New().WithField("hook-ls", hookName)
-			return hooks.ListHooks(log, configPath, stateDirectory)
-		},
-	}
-	hookLsCmd.Flags().StringVar(
-		&configPath,
-		"config-path",
-		os.ExpandEnv("$HOME/.kube/switch-config.yaml"),
-		"path on the local filesystem to the configuration file.")
-
-	hookLsCmd.Flags().StringVar(
-		&stateDirectory,
-		"state-directory",
-		os.ExpandEnv("$HOME/.kube/switch-state"),
-		"path to the state directory.")
-
-	hookCmd.AddCommand(hookLsCmd)
-
-	hookCmd.Flags().StringVar(
-		&configPath,
-		"config-path",
-		os.ExpandEnv("$HOME/.kube/switch-config.yaml"),
-		"path on the local filesystem to the configuration file.")
-
-	hookCmd.Flags().StringVar(
-		&stateDirectory,
-		"state-directory",
-		os.ExpandEnv("$HOME/.kube/switch-state"),
-		"path to the state directory.")
-
-	hookCmd.Flags().StringVar(
-		&hookName,
-		"hook-name",
-		"",
-		"the name of the hook that should be run.")
-
-	hookCmd.Flags().BoolVar(
-		&runImmediately,
-		"run-immediately",
-		true,
-		"run hooks right away. Do not respect the hooks execution configuration.")
-
-	versionCmd := &cobra.Command{
-		Use:     "version",
-		Short:   "show Switch Version info",
-		Long:    "show the Switch version information",
-		Example: "switch version",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Printf(`Switch:
-		version     : %s
-		build date  : %s
-		go version  : %s
-		go compiler : %s
-		platform    : %s/%s
-`, version, buildDate, runtime.Version(), runtime.Compiler, runtime.GOOS, runtime.GOARCH)
-
-			return nil
-		},
-	}
-	rootCommand.AddCommand(setContextCmd)
-	rootCommand.AddCommand(listContextsCmd)
-	rootCommand.AddCommand(cleanCmd)
-	rootCommand.AddCommand(execCmd)
-	rootCommand.AddCommand(namespaceCommand)
-	rootCommand.AddCommand(hookCmd)
-	rootCommand.AddCommand(historyCmd)
-	rootCommand.AddCommand(previousContextCmd)
-	rootCommand.AddCommand(lastContextCmd)
-	rootCommand.AddCommand(aliasContextCmd)
-	rootCommand.AddCommand(versionCmd)
-	rootCommand.AddCommand(gardenerCmd)
-
-	setContextCmd.SilenceUsage = true
-	aliasContextCmd.SilenceErrors = true
-	aliasRmCmd.SilenceErrors = true
-	namespaceCommand.SilenceErrors = true
-
-	setFlagsForContextCommands(setContextCmd)
-	setFlagsForContextCommands(listContextsCmd)
-	setFlagsForContextCommands(historyCmd)
-	// need to add flags as the namespace history allows switching to any {context: namespace} combination
-	setFlagsForContextCommands(previousContextCmd)
-	setFlagsForContextCommands(lastContextCmd)
-	setFlagsForContextCommands(aliasContextCmd)
-
-	setCommonFlags(namespaceCommand)
-	setControlplaneCommandFlags(controlplaneCmd)
+	setFlagsForContextCommands(rootCommand)
+	rootCommand.Flags().BoolVarP(&deleteContext, "d", "d", false, "delete desired context. Context name is required")
+	rootCommand.Flags().BoolVarP(&unsetContext, "unset", "u", false, "unset current context")
+	rootCommand.Flags().BoolVarP(&currentContext, "current", "c", false, "show current context")
 }
 
 func NewCommandStartSwitcher() *cobra.Command {
 	return rootCommand
-}
-
-func init() {
-	setFlagsForContextCommands(rootCommand)
-	rootCommand.SilenceUsage = true
-}
-
-func setFlagsForContextCommands(command *cobra.Command) {
-	setCommonFlags(command)
-	command.Flags().StringVar(
-		&storageBackend,
-		"store",
-		"filesystem",
-		"the backing store to be searched for kubeconfig files. Can be either \"filesystem\" or \"vault\"")
-	command.Flags().StringVar(
-		&kubeconfigName,
-		"kubeconfig-name",
-		defaultKubeconfigName,
-		"only shows kubeconfig files with this name. Accepts wilcard arguments '*' and '?'. Defaults to 'config'.")
-	command.Flags().StringVar(
-		&vaultAPIAddressFromFlag,
-		"vault-api-address",
-		"",
-		"the API address of the Vault store. Overrides the default \"vaultAPIAddress\" field in the SwitchConfig. This flag is overridden by the environment variable \"VAULT_ADDR\".")
-	command.Flags().StringVar(
-		&configPath,
-		"config-path",
-		os.ExpandEnv("$HOME/.kube/switch-config.yaml"),
-		"path on the local filesystem to the configuration file.")
-	// not used for setContext command. Makes call in switch.sh script easier (no need to exclude flag from call)
-	command.Flags().BoolVar(
-		&showPreview,
-		"show-preview",
-		true,
-		"show preview of the selected kubeconfig. Possibly makes sense to disable when using vault as the kubeconfig store to prevent excessive requests against the API.")
 }
 
 func setCommonFlags(command *cobra.Command) {
@@ -453,15 +155,6 @@ func setCommonFlags(command *cobra.Command) {
 		"state-directory",
 		os.ExpandEnv("$HOME/.kube/switch-state"),
 		"path to the local directory used for storing internal state.")
-}
-
-func setControlplaneCommandFlags(cmd *cobra.Command) {
-	setCommonFlags(cmd)
-	cmd.Flags().StringVar(
-		&configPath,
-		"config-path",
-		os.ExpandEnv("$HOME/.kube/switch-config.yaml"),
-		"path on the local filesystem to the configuration file.")
 }
 
 func initialize() ([]store.KubeconfigStore, *types.Config, error) {

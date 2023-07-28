@@ -17,7 +17,10 @@ package kubeconfigutil
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"gopkg.in/yaml.v3"
 )
@@ -31,6 +34,15 @@ type Kubeconfig struct {
 	path       string
 	useTmpFile bool
 	rootNode   *yaml.Node
+}
+
+// LoadCurrentKubeconfig loads the current kubeconfig
+func LoadCurrentKubeconfig() (*Kubeconfig, error) {
+	path, err := kubeconfigPath()
+	if err != nil {
+		return nil, err
+	}
+	return NewKubeconfigForPath(path)
 }
 
 // NewKubeconfigForPath creates a kubeconfig representation based on an existing kubeconfig
@@ -175,4 +187,23 @@ func (k *Kubeconfig) WriteKubeconfigFile() (string, error) {
 
 func (k *Kubeconfig) GetBytes() ([]byte, error) {
 	return yaml.Marshal(k.rootNode)
+}
+
+func kubeconfigPath() (string, error) {
+	// KUBECONFIG env var
+	if v := os.Getenv("KUBECONFIG"); v != "" {
+		list := filepath.SplitList(v)
+		if len(list) > 1 {
+			// TODO KUBECONFIG=file1:file2 currently not supported
+			return "", errors.New("multiple files in KUBECONFIG are currently not supported")
+		}
+		return v, nil
+	}
+
+	// default path
+	home := os.Getenv("HOME")
+	if home == "" {
+		return "", errors.New("HOME environment variable not set")
+	}
+	return filepath.Join(home, ".kube", "config"), nil
 }

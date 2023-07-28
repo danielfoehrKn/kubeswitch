@@ -9,9 +9,15 @@ Mac and Linux users can install both the `switch.sh` script and the `switcher` b
 $ brew install danielfoehrkn/switch/switch
 ```
 
-Source the `switch.sh` script from the `homebrew` installation path by adding this to `.bashrc`/`.zsh`:
+Source the `switch()` wrapper and autocompletion by adding this into `.bashrc`/`.zshrc`:
 ```
-INSTALLATION_PATH=$(brew --prefix switch) && source $INSTALLATION_PATH/switch.sh
+source <(switcher init shell)
+```
+Where `shell` is either bash, zsh or fish. 
+
+If you wish to source shell completion only, use:
+```
+source <(switcher completion shell)
 ```
 
 ### Option 1b - MacPorts
@@ -22,10 +28,11 @@ $ sudo port selfupdate
 $ sudo port install kubeswitch
 ```
 
-Source the `switch.sh` script from the MacPorts root (/opt/local).
+Source the `switch()` wrapper and autocompletion by adding this into `.bashrc`/`.zshrc`:
 ```
-$ source /opt/local/libexec/kubeswitch/switch.sh
+source <(switcher init shell)
 ```
+Where `shell` is either bash, zsh or fish.
 
 ### Option 2 - Manual Installation
 
@@ -73,8 +80,25 @@ desired kubeconfig contexts that you want to choose from, follow
 
 ## Command completion
 
-Please [see here](command_completion.md) how to install command completion for bash and zsh shells.
-This completes both the `kubeswitch` commands as well as the context names.
+The binary `switcher` comes with autocompletion for bash, zsh and fish and is installed automatically by sourcing `switcher init <shell>`, however to autocomplete on `switch` (and the alias `s`), add the following line in your shell configuration:
+
+### Zsh
+```sh
+alias s=switch
+compdef _switcher switch
+```
+This enables autocompletion for both the `switch` function as well as the `s` alias.
+
+### Fish
+As fish shell have a built-in `switch` already, the `switcher init fish` installs a `kubeswitch` function instead. To autocomplete on `s` add the following to your configuration:
+
+```sh
+function s --wraps switcher
+        kubeswitch $argv;
+end
+```
+
+To install autocompletion without the `switch()` wrapper, take a [look here](command_completion.md).
 
 ## Clean up temporary kubeconfig files
 

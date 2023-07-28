@@ -3,21 +3,18 @@
 Currently, command line completion is not pre-installed in any installation method.
 You need to do it manually.
 
-## Bash
+Install the completion script by running:
 
-Source this [this script ](../scripts/_switch.bash) from your `~/.bashrc`
-or put it into [your completions directory](https://serverfault.com/questions/506612/standard-place-for-user-defined-bash-completion-d-scripts).
+### Bash
 
-## Zsh
-
-There is currently only a bash completion script.
-But you can use it in zsh also.
-
-Add below lines to your `~/.zshrc` file (before you source the bash completion script).
-
+```sh
+echo 'source <(switch completion bash)' >> ~/.bashrc
 ```
-autoload bashcompinit
-bashcompinit
+### Zsh
+```sh
+echo 'source <(switch completion zsh)' >> ~/.bashrc
 ```
-
-Then source the bash completion script.
+### Fish
+```sh
+echo 'kubeswitch completion fish | source' >> ~/.config/fish/config.fish
+```

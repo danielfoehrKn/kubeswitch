@@ -28,9 +28,11 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -198,6 +200,88 @@ func SwitchNamespace(kubeconfigPathFromFlag, stateDir string, noIndex bool) erro
 	}
 
 	return cache.Write(allNamespaces)
+}
+
+// ListNamespaces retrieves all available namespaces (either via API call or from local cache)
+func ListNamespaces(kubeconfigPathFromFlag, stateDir string, noIndex bool) ([]string, error) {
+	cachedNamespaces := sets.NewString()
+
+	kubeconfigPath, err := getKubeconfigPath(kubeconfigPathFromFlag)
+	if err != nil {
+		return nil, err
+	}
+	kubeconfig, err := kubeconfigutil.NewKubeconfigForPath(kubeconfigPath)
+	if err != nil {
+		return nil, err
+	}
+
+	kubeswitchContext := kubeconfig.GetKubeswitchContext()
+	if len(kubeswitchContext) == 0 {
+		// If no context return
+		return nil, nil
+	}
+
+	if len(kubeswitchContext) > 0 && !noIndex {
+		cache, err = NewNamespaceCache(stateDir, kubeswitchContext)
+		if err != nil {
+			logger.Warnf("failed to use namespace cache: %v", err)
+		}
+		allNamespaces = cache.GetContent()
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	cachedNamespaces.Insert(allNamespaces...)
+
+	// Build the Kubernetes client configuration
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create the Kubernetes client
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	// list all the namespaces
+	list, err := clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	realNs := sets.NewString()
+	for _, namespace := range list.Items {
+		realNs.Insert(namespace.Name)
+	}
+
+	n := 0
+	// filter array in place
+	for _, namespaceInCache := range allNamespaces {
+		// this overwrites the index in the array which contains a namespace that is in the cache,
+		// but not in the cluster
+		if realNs.Has(namespaceInCache) {
+			allNamespaces[n] = namespaceInCache
+			n++
+		}
+	}
+	// update the slice-internal array pointer to point only to the potentially shorter range of values
+	allNamespaces = allNamespaces[:n]
+
+	// add namespaces that are not in the cached maespace list
+	for _, ns := range realNs.List() {
+		if !cachedNamespaces.Has(ns) {
+			allNamespaces = append(allNamespaces, ns)
+		}
+	}
+
+	err = cache.Write(allNamespaces)
+	if err != nil {
+		return nil, err
+	}
+	return allNamespaces, nil
 }
 
 func getKubeconfigPath(kubeconfigPathFromFlag string) (string, error) {

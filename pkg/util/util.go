@@ -21,6 +21,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	kubeconfigutil "github.com/danielfoehrkn/kubeswitch/pkg/util/kubectx_copied"
 	"github.com/danielfoehrkn/kubeswitch/types"
 )
 
@@ -76,6 +77,19 @@ func getContextNames(config *types.KubeConfig, prefix string) []string {
 func ExpandEnv(path string) string {
 	path = strings.ReplaceAll(path, "~", "$HOME")
 	return os.ExpandEnv(path)
+}
+
+// GetCurrentContext returns "current-context" value of current kubeconfig
+func GetCurrentContext() (string, error) {
+	kc, err := kubeconfigutil.LoadCurrentKubeconfig()
+	if err != nil {
+		return "", err
+	}
+	currCtx := kc.GetCurrentContext()
+	if currCtx == "" {
+		return "", fmt.Errorf("current-context is not set")
+	}
+	return currCtx, nil
 }
 
 func SliceFindIndex[T string | int](slice []T, search T) int {
