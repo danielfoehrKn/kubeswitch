@@ -29,13 +29,31 @@ function kubeswitch
     return $RESULT
   end
 
-  set -l trim_left "switched to context \""
-  set -l trim_right "\"."
-  if string match -q "$trim_left*$trim_right" -- "$RESPONSE"
-    set -l new_config (string replace -r "$trim_left(.*)$trim_right\$" '$1' -- "$RESPONSE")
+  # switcher returns a response that contains a kubeconfig path with a prefix "__ " to be able to
+  # distinguish it from other responses which just need to write to STDOUT
+  if string match -q "__ *" -- "$RESPONSE"
+    # remove the prefix
+    set -l RESPONSE (string replace --regex "__ " "" "$RESPONSE")
+    set split_info (string split , "$RESPONSE")
 
-    if test ! -e "$new_config"
-      echo "ERROR: \"$new_config\" does not exist"
+    if set -q split_info[1]
+        set KUBECONFIG_PATH $split_info[1]
+    else
+        # kubeconfig path is not set, simply return the response
+        printf "%s\n" $RESPONSE
+        return
+    end
+
+    if set -q split_info[2]
+        set SELECTED_CONTEXT $split_info[2]
+    else
+        # context is not set, simply return the response
+        printf "%s\n" $RESPONSE
+        return
+    end
+
+    if test ! -e "$KUBECONFIG_PATH"
+      echo "ERROR: \"$KUBECONFIG_PATH\" does not exist"
       return 1
     end
 
@@ -44,7 +62,9 @@ function kubeswitch
       rm -f "$KUBECONFIG"
     end
 
-    set -gx KUBECONFIG "$new_config"
+    set -gx KUBECONFIG "$KUBECONFIG_PATH"
+    printf "switched to context %s\n" "$SELECTED_CONTEXT"
+    return
   end
   printf "%s\n" $RESPONSE
 end

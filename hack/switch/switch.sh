@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# PLEASE KEEP IN SYNC WITH THE COMMAND `switch init zsh/bash`
+# REQUIRED FOR THE DEFAULT HOMEBREW INSTALLATION for zsh and bash
+
+has_prefix() { case $2 in "$1"*) true;; *) false;; esac; }
 
 function switch(){
 #  if the executable path is not set, the switcher binary has to be on the path
@@ -22,39 +26,51 @@ function switch(){
     shift
   done
 
-  if [ -z "$EXECUTABLE_PATH" ]
-  then
+  if [ -z "$EXECUTABLE_PATH" ]; then
     EXECUTABLE_PATH="$DEFAULT_EXECUTABLE_PATH"
   fi
 
   RESPONSE="$($EXECUTABLE_PATH "${opts[@]}")"
-  if [ $? -ne 0 -o -z "$RESPONSE" ]
-  then
+  if [ $? -ne 0 -o -z "$RESPONSE" ]; then
     printf "%s\n" "$RESPONSE"
     return $?
   fi
 
-  local trim_left="switched to context \""
-  local trim_right="\"."
-  if [[ "$RESPONSE" == "$trim_left"*"$trim_right" ]]
-  then
-    local new_config="${RESPONSE#$trim_left}"
-    new_config="${new_config%$trim_right}"
-
-    if [ ! -e "$new_config" ]
-    then
-      echo "ERROR: \"$new_config\" does not exist"
-      return 1
-    fi
-
-    # cleanup old temporary kubeconfig file
-    local switchTmpDirectory="$HOME/.kube/.switch_tmp/config"
-    if [[ -n "$KUBECONFIG" && "$KUBECONFIG" == *"$switchTmpDirectory"* ]]
-    then
-      rm -f "$KUBECONFIG"
-    fi
-
-    export KUBECONFIG="$new_config"
+  # switcher returns a response that contains a kubeconfig path with a prefix "__ " to be able to
+  # distinguish it from other responses which just need to write to STDOUT
+  prefix="__ "
+  if ! has_prefix "$prefix" "$RESPONSE" ; then
+      printf "%s\n" "$RESPONSE"
+      return
   fi
-  printf "%s\n" "$RESPONSE"
+
+  # remove prefix
+  RESPONSE=${RESPONSE#"$prefix"}
+
+  #the response form the switcher binary is "kubeconfig_path,selected_context"
+  remainder="$RESPONSE"
+  KUBECONFIG_PATH="${remainder%%,*}"; remainder="${remainder#*,}"
+  SELECTED_CONTEXT="${remainder%%,*}"; remainder="${remainder#*,}"
+
+  if [ -z ${KUBECONFIG_PATH+x} ]; then
+    # KUBECONFIG_PATH is not set
+    printf "%s\n" "$RESPONSE"
+    return
+  fi
+
+  if [ -z ${SELECTED_CONTEXT+x} ]; then
+    # SELECTED_CONTEXT is not set
+    printf "%s\n" "$RESPONSE"
+    return
+  fi
+
+  # cleanup old temporary kubeconfig file
+  local switchTmpDirectory="$HOME/.kube/.switch_tmp/config"
+  if [[ -n "$KUBECONFIG" && "$KUBECONFIG" == *"$switchTmpDirectory"* ]]
+  then
+    rm -f "$KUBECONFIG"
+  fi
+
+  export KUBECONFIG="$KUBECONFIG_PATH"
+  printf "switched to context %s\n" "$SELECTED_CONTEXT"
 }

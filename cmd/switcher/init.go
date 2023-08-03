@@ -22,113 +22,146 @@ import (
 
 var (
 	shellScript string = `
-    function switch(){
-    #  if the executable path is not set, the switcher binary has to be on the path
-    # this is the case when installing it via homebrew
-    
-      local DEFAULT_EXECUTABLE_PATH="switcher"
-      declare -a opts
-    
-      while test $# -gt 0; do
-        case "$1" in
-        --executable-path)
-            EXECUTABLE_PATH="$1"
-            ;;
-        completion)
-            opts+=("$1" --cmd switch)
-            ;;
-        *)
-            opts+=( "$1" )
-            ;;
-        esac
-        shift
-      done
-    
-      if [ -z "$EXECUTABLE_PATH" ]
-      then
-        EXECUTABLE_PATH="$DEFAULT_EXECUTABLE_PATH"
-      fi
-    
-      RESPONSE="$($EXECUTABLE_PATH "${opts[@]}")"
-      if [ $? -ne 0 -o -z "$RESPONSE" ]
-      then
-        printf "%s\n" "$RESPONSE"
-        return $?
-      fi
-    
-      local trim_left="switched to context \""
-      local trim_right="\"."
-      if [[ "$RESPONSE" == "$trim_left"*"$trim_right" ]]
-      then
-        local new_config="${RESPONSE#$trim_left}"
-        new_config="${new_config%$trim_right}"
-    
-        if [ ! -e "$new_config" ]
-        then
-          echo "ERROR: \"$new_config\" does not exist"
-          return 1
-        fi
-    
-        # cleanup old temporary kubeconfig file
-        local switchTmpDirectory="$HOME/.kube/.switch_tmp/config"
-        if [[ -n "$KUBECONFIG" && "$KUBECONFIG" == *"$switchTmpDirectory"* ]]
-        then
-          rm -f "$KUBECONFIG"
-        fi
-    
-        export KUBECONFIG="$new_config"
-      fi
-      printf "%s\n" "$RESPONSE"
+has_prefix() { case $2 in "$1"*) true;; *) false;; esac; }
+function switch(){
+#  if the executable path is not set, the switcher binary has to be on the path
+# this is the case when installing it via homebrew
+
+  local DEFAULT_EXECUTABLE_PATH="switcher"
+  declare -a opts
+
+  while test $# -gt 0; do
+	case "$1" in
+	--executable-path)
+		EXECUTABLE_PATH="$1"
+		;;
+	completion)
+		opts+=("$1" --cmd switch)
+		;;
+	*)
+		opts+=( "$1" )
+		;;
+	esac
+	shift
+  done
+
+  if [ -z "$EXECUTABLE_PATH" ]; then
+	EXECUTABLE_PATH="$DEFAULT_EXECUTABLE_PATH"
+  fi
+
+  RESPONSE="$($EXECUTABLE_PATH "${opts[@]}")"
+  if [ $? -ne 0 -o -z "$RESPONSE" ]; then
+	printf "%s\n" "$RESPONSE"
+	return $?
+  fi
+
+  # switcher returns a response that contains a kubeconfig path with a prefix "__ " to be able to
+  # distinguish it from other responses which just need to write to STDOUT
+  prefix="__ "
+  if ! has_prefix "$prefix" "$RESPONSE" ; then
+	  printf "%s\n" "$RESPONSE"
+	  return
+  fi
+
+  # remove prefix
+  RESPONSE=${RESPONSE#"$prefix"}
+
+  #the response form the switcher binary is "kubeconfig_path,selected_context"
+  remainder="$RESPONSE"
+  KUBECONFIG_PATH="${remainder%%,*}"; remainder="${remainder#*,}"
+  SELECTED_CONTEXT="${remainder%%,*}"; remainder="${remainder#*,}"
+
+  if [ -z ${KUBECONFIG_PATH+x} ]; then
+	# KUBECONFIG_PATH is not set
+	printf "%s\n" "$RESPONSE"
+	return
+  fi
+
+  if [ -z ${SELECTED_CONTEXT+x} ]; then
+	# SELECTED_CONTEXT is not set
+	printf "%s\n" "$RESPONSE"
+	return
+  fi
+
+  # cleanup old temporary kubeconfig file
+  local switchTmpDirectory="$HOME/.kube/.switch_tmp/config"
+  if [[ -n "$KUBECONFIG" && "$KUBECONFIG" == *"$switchTmpDirectory"* ]]
+  then
+	rm -f "$KUBECONFIG"
+  fi
+
+  export KUBECONFIG="$KUBECONFIG_PATH"
+  printf "switched to context %s\n" "$SELECTED_CONTEXT"
 }`
 
 	fishScript string = `
-    function kubeswitch
-    #  if the executable path is not set, the switcher binary has to be on the path
-    # this is the case when installing it via homebrew
-      set -f DEFAULT_EXECUTABLE_PATH 'switcher'
-      set -f REPORT_RESPONSE
-      set -f opts
-    
-      for i in $argv
-        switch "$i"
-          case --executable-path
-            set -f EXECUTABLE_PATH $i
-          case completion
-            set -a opts $i --cmd kubeswitch
-          case '*'
-            set -a opts $i
-        end
-      end
-    
-      if test -z "$EXECUTABLE_PATH"
-        set -f EXECUTABLE_PATH $DEFAULT_EXECUTABLE_PATH
-      end
-    
-      set -f RESULT 0
-      set -f RESPONSE ($EXECUTABLE_PATH $opts; or set RESULT $status | string split0)
-      if test $RESULT -ne 0; or test -z "$RESPONSE"
-        printf "%s\n" $RESPONSE
-        return $RESULT
-      end
-    
-      set -l trim_left "switched to context \""
-      set -l trim_right "\"."
-      if string match -q "$trim_left*$trim_right" -- "$RESPONSE"
-        set -l new_config (string replace -r "$trim_left(.*)$trim_right\$" '$1' -- "$RESPONSE")
-    
-        if test ! -e "$new_config"
-          echo "ERROR: \"$new_config\" does not exist"
-          return 1
-        end
-    
-        set -l switchTmpDirectory "$HOME/.kube/.switch_tmp/config"
-        if test -n "$KUBECONFIG"; and string match -q "*$switchTmpDirectory*" -- "$KUBECONFIG"
-          rm -f "$KUBECONFIG"
-        end
-    
-        set -gx KUBECONFIG "$new_config"
-      end
-      printf "%s\n" $RESPONSE
+function kubeswitch
+#  if the executable path is not set, the switcher binary has to be on the path
+# this is the case when installing it via homebrew
+  set -f DEFAULT_EXECUTABLE_PATH 'switcher'
+  set -f REPORT_RESPONSE
+  set -f opts
+
+  for i in $argv
+	switch "$i"
+	  case --executable-path
+		set -f EXECUTABLE_PATH $i
+	  case completion
+		set -a opts $i --cmd kubeswitch
+	  case '*'
+		set -a opts $i
+	end
+  end
+
+  if test -z "$EXECUTABLE_PATH"
+	set -f EXECUTABLE_PATH $DEFAULT_EXECUTABLE_PATH
+  end
+
+  set -f RESULT 0
+  set -f RESPONSE ($EXECUTABLE_PATH $opts; or set RESULT $status | string split0)
+  if test $RESULT -ne 0; or test -z "$RESPONSE"
+	printf "%s\n" $RESPONSE
+	return $RESULT
+  end
+
+  # switcher returns a response that contains a kubeconfig path with a prefix "__ " to be able to
+  # distinguish it from other responses which just need to write to STDOUT
+  if string match -q "__ *" -- "$RESPONSE"
+	# remove the prefix
+	set -l RESPONSE (string replace --regex "__ " "" "$RESPONSE")
+	set split_info (string split , "$RESPONSE")
+
+	if set -q split_info[1]
+		set KUBECONFIG_PATH $split_info[1]
+	else
+		# kubeconfig path is not set, simply return the response
+		printf "%s\n" $RESPONSE
+		return
+	end
+
+	if set -q split_info[2]
+		set SELECTED_CONTEXT $split_info[2]
+	else
+		# context is not set, simply return the response
+		printf "%s\n" $RESPONSE
+		return
+	end
+
+	if test ! -e "$KUBECONFIG_PATH"
+	  echo "ERROR: \"$KUBECONFIG_PATH\" does not exist"
+	  return 1
+	end
+
+	set -l switchTmpDirectory "$HOME/.kube/.switch_tmp/config"
+	if test -n "$KUBECONFIG"; and string match -q "*$switchTmpDirectory*" -- "$KUBECONFIG"
+	  rm -f "$KUBECONFIG"
+	end
+
+	set -gx KUBECONFIG "$KUBECONFIG_PATH"
+	printf "switched to context %s\n" "$SELECTED_CONTEXT"
+	return
+  end
+  printf "%s\n" $RESPONSE
     end`
 )
 
@@ -147,6 +180,7 @@ var (
 			}
 			switch args[0] {
 			case "bash":
+				// same shell script as zsh, but different bash completion
 				fmt.Println(shellScript)
 				return root.GenBashCompletion(os.Stdout)
 			case "zsh":
