@@ -1,7 +1,6 @@
 # Command completion 
 
-Currently, command line completion is not pre-installed in any installation method.
-You need to do it manually.
+**Note**: this is only needed for `homebrew` and `MacPorts` installations, as when installing the shell function mannually via [source the shell function](#source-the-shell-function), the completion script is already included.
 
 Install the completion script by running:
 

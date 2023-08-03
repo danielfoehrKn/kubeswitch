@@ -1,26 +1,22 @@
 # Installation
 
-## `switch` command
+The kubeswitch installation consists of both a `switcher` binary and a shell script which needs to be sourced.
 
-### Option 1a - Homebrew
+**NOTE**: to invoke kubeswitch, do not call the `switcher` binary directly from the command line. 
+Instead, use the sourced shell function as described in [source the shell function](#source-the-shell-function).
 
-Mac and Linux users can install both the `switch.sh` script and the `switcher` binary with `homebrew`.
+## Option 1 - Homebrew
+**NOTE**: `fish` users please follow [install via Github releases](#option-2---github-releases) as the shell script only works for `zsh` and `bash` shells.
+
+Install the `switcher` binary with `homebrew`.
 ```
 $ brew install danielfoehrkn/switch/switch
 ```
 
-Source the `switch()` wrapper and autocompletion by adding this into `.bashrc`/`.zshrc`:
-```
-source <(switcher init shell)
-```
-Where `shell` is either bash, zsh or fish. 
+Optionally, [install command completion](command_completion.md) and [verify the installation](#check-that-it-works).
 
-If you wish to source shell completion only, use:
-```
-source <(switcher completion shell)
-```
-
-### Option 1b - MacPorts
+### Option 2 - MacPorts
+**NOTE**: `fish` users please follow [install via Github releases](#option-2---github-releases) as the shell script only works for `zsh` and `bash` shells.
 
 Mac users can also install both `switch.sh` and `switcher` from [MacPorts](https://www.macports.org)
 ```
@@ -28,15 +24,22 @@ $ sudo port selfupdate
 $ sudo port install kubeswitch
 ```
 
-Source the `switch()` wrapper and autocompletion by adding this into `.bashrc`/`.zshrc`:
-```
-source <(switcher init shell)
-```
-Where `shell` is either bash, zsh or fish.
+Optionally, [install command completion](command_completion.md) and [verify the installation](#check-that-it-works).
 
-### Option 2 - Manual Installation
+### Option 2 - Github releases
 
-#### From source
+Download the switcher binary
+```sh
+OS=linux                        # Pick the right os: linux, darwin (intel only)
+VERSION=0.7.0                   # Pick the current version.
+
+curl -L -o /usr/local/bin/switcher https://github.com/danielfoehrKn/kubeswitch/releases/download/${VERSION}/switcher_${OS}_amd64
+chmod +x /usr/local/bin/switcher
+```
+
+Next, follow [source the shell function](#source-the-shell-function).
+
+### Option 3 - From source
 
 ```
 $ go get github.com/danielfoehrkn/kubeswitch
@@ -44,65 +47,52 @@ $ go get github.com/danielfoehrkn/kubeswitch
 
 From the repository root run `make build-switcher`.
 This builds the binaries to `/hack/switch/`.
-Copy the build binary for your OS / Architecture to e.g. `/usr/local/bin`
-and source the switch script from `/hack/switch/switch.sh`.
+Copy the build binary for your OS/Architecture to e.g. `/usr/local/bin`.
 
-#### From Github releases
+Next, follow [source the shell function](#source-the-shell-function).
 
-Download the switch script and the switcher binary.
+## Source the shell function
 
-```sh
-OS=linux                        # Pick the right os: linux, darwin (intel only)
-VERSION=0.7.0                   # Pick the current version.
+Source the shell function which is used to call the `switcher` binary. 
+For `zsh/bash` the name of the shell function is `switch` and for `fish` its `kubeswitch`.
+Additionally, installs the command completion script.
 
-curl -L -o /usr/local/bin/switcher https://github.com/danielfoehrKn/kubeswitch/releases/download/${VERSION}/switcher_${OS}_amd64
-chmod +x /usr/local/bin/switcher
-
-curl -L -o  /usr/local/bin/switch.sh https://github.com/danielfoehrKn/kubeswitch/releases/download/${VERSION}/switch.sh
-chmod +x /usr/local/bin/switch.sh
-```
-
-Source `switch.sh` in `.bashrc`/`.zsh` via:
+### Bash
 
 ```sh
-source /usr/local/bin/switch.sh
-```
+echo 'source <(switcher init bash)' >> ~/.bashrc
 
-## Set up finding kubeconfig files and contexts
-
-If you installed kubeswitch correctly, you can run the command `switch`
-and should see the contexts it can find with its default configuration.
-The command is only available once you open a new terminal, in case you load
-`switch.sh` through `.bashrc`/`.zsh`. If you get the error
-`Error: you need to point kubeswitch to a kubeconfig file` or do not see all
-desired kubeconfig contexts that you want to choose from, follow
-[kubeconfig stores](kubeconfig_stores.md) for the configuration.
-
-## Command completion
-
-The binary `switcher` comes with autocompletion for bash, zsh and fish and is installed automatically by sourcing `switcher init <shell>`, however to autocomplete on `switch` (and the alias `s`), add the following line in your shell configuration:
-
-### Zsh
-```sh
+# optionally use alias `s` instead of `switch`
 alias s=switch
 compdef _switcher switch
 ```
-This enables autocompletion for both the `switch` function as well as the `s` alias.
-
-### Fish
-As fish shell have a built-in `switch` already, the `switcher init fish` installs a `kubeswitch` function instead. To autocomplete on `s` add the following to your configuration:
-
+### Zsh
 ```sh
+echo 'source <(switcher init zsh)' >> ~/.zshrc
+
+# optionally use alias `s` instead of `switch`
+alias s=switch
+compdef _switcher switch
+```
+### Fish
+Fish shell have a built-in `switch` function. Hence, differently from `zsh` shells, the kubeswitch function is called `kubeswitch`.
+```sh
+echo 'switcher init fish | source' >> ~/.config/fish/config.fish
+
+# optionally use alias `s` instead of `kubeswitch`
 function s --wraps switcher
         kubeswitch $argv;
 end
 ```
 
-To install autocompletion without the `switch()` wrapper, take a [look here](command_completion.md).
+## Check that it works
 
-## Clean up temporary kubeconfig files
+If you installed kubeswitch correctly, you can run the command `switch` (zsh, bash) or `kubeswitch` (fish) or alternatively the alias `s` from the terminal.
+In case the terminal can't find the function, you might need to open another terminal or re-source your config file (`.zshrc`,`.bashrc`,...).
 
-To not alter the current shell session, `kubeswitch` does not spawn a new sub-shell.
-You need to configure a cleanup handler if you care to remove temporary kubeconfig files from `$HOME/.kube/.switch_tmp` when the shell session
-ends (close the terminal window, or `exit` is called).
-For `zsh`, please source [this script](/scripts/cleanup_handler_zsh.sh) from your `.zshrc` file.
+That should display the contexts the tool can find with the default configuration.
+The command is only available once you open a new terminal, in case you load
+`switch.sh` through `.bashrc`/`.zsh`. If you get the error
+`Error: you need to point kubeswitch to a kubeconfig file` or do not see all
+desired kubeconfig contexts that you want to choose from, follow
+[kubeconfig stores](kubeconfig_stores.md) for the configuration.
