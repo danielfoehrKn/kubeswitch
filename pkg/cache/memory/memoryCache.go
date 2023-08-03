@@ -37,7 +37,7 @@ type memoryCache struct {
 	cache    map[string][]byte
 }
 
-// cache implements the store.KubeconfigStore interface.
+// GetKubeconfigForPath implements the store.KubeconfigStore interface.
 // It is a wrapper around a KubeConfigCache.
 // It intercepts calls to GetKubeconfigForPath and caches the result in memory.
 func (c *memoryCache) GetKubeconfigForPath(path string) ([]byte, error) {

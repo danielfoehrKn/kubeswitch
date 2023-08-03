@@ -43,8 +43,8 @@ var (
 				return err
 			}
 
-			kc, err := history.SetPreviousContext(stores, config, stateDirectory, noIndex)
-			reportNewContext(kc)
+			kubeconfigPath, contextName, err := history.SetPreviousContext(stores, config, stateDirectory, noIndex)
+			reportNewContext(kubeconfigPath, contextName)
 			return err
 		},
 	}
@@ -63,8 +63,8 @@ var (
 				return err
 			}
 
-			kc, err := history.SetLastContext(stores, config, stateDirectory, noIndex)
-			reportNewContext(kc)
+			kubeconfigPath, contextName, err := history.SetLastContext(stores, config, stateDirectory, noIndex)
+			reportNewContext(kubeconfigPath, contextName)
 			return err
 		},
 	}
@@ -126,8 +126,8 @@ var (
 				return err
 			}
 
-			kc, err := set_context.SetContext(args[0], stores, config, stateDirectory, noIndex, true, true)
-			reportNewContext(kc)
+			kubeconfigPath, contextName, err := set_context.SetContext(args[0], stores, config, stateDirectory, noIndex, true)
+			reportNewContext(kubeconfigPath, contextName)
 			return err
 		},
 		SilenceUsage: true,
@@ -257,9 +257,13 @@ func setFlagsForContextCommands(command *cobra.Command) {
 		"show preview of the selected kubeconfig. Possibly makes sense to disable when using vault as the kubeconfig store to prevent excessive requests against the API.")
 }
 
-func reportNewContext(ctxName *string) {
-	if ctxName == nil {
+func reportNewContext(kubeconfigPath *string, contextName *string) {
+	if kubeconfigPath == nil || contextName == nil {
 		return
 	}
-	fmt.Printf("switched to context \"%s\".\n", *ctxName)
+
+	// print kubeconfig path and context name to std.out
+	// captured by calling script setting KUBECONFIG environment variable
+	// prefixed with "__ " to distinguish kubeconfig path output from other responses (e.g., errors, list of context, ...)
+	fmt.Printf("__ %s,%s", *kubeconfigPath, *contextName)
 }

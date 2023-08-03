@@ -115,8 +115,8 @@ var (
 				showPreview = false
 			}
 
-			kc, err := pkg.Switcher(stores, config, stateDirectory, noIndex, showPreview)
-			reportNewContext(kc)
+			kubeconfigPath, contextName, err := pkg.Switcher(stores, config, stateDirectory, noIndex, showPreview)
+			reportNewContext(kubeconfigPath, contextName)
 			return err
 		},
 		SilenceUsage: true,

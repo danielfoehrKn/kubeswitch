@@ -23,8 +23,8 @@ import (
 var (
 	versionCmd = &cobra.Command{
 		Use:     "version",
-		Short:   "show Switch Version info",
-		Long:    "show the Switch version information",
+		Short:   "show switch version info",
+		Long:    "show the switch version information",
 		Example: "switch version",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Printf(`Switch:
