@@ -5,7 +5,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/danielfoehrKn/kubeswitch)](https://goreportcard.com/badge/github.com/danielfoehrKn/kubeswitch)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Steroids for your Kubernetes terminal.
+The kubectx for operators.
 
 `kubeswitch` (lazy: `switch`) is the single pane of glass for all of your kubeconfig files.  
 Caters to operators of large scale Kubernetes installations.
@@ -74,7 +74,7 @@ Available Commands:
   set-context          Switch to context name provided as first argument
   set-last-context     Switch to the last used context from the history
   set-previous-context Switch to the previous context from the history
-  version              show Switch Version info
+  version              show switch version info
 
 Flags:
       --config-path string         path on the local filesystem to the configuration file. (default "/Users/tommyolsen/.kube/switch-config.yaml")
@@ -119,10 +119,11 @@ In addition, use
 
 ## List and search for contexts
 
-You can list all your indexed contexts by issuing the following command: `switch list-commands`. And if you want to search for only parts of those contexts, you can use wildcard search:
+You can list all your indexed contexts by issuing the following command: `switch list-commands`. 
+And if you want to search for only parts of those contexts, you can use wildcard search:
 
 ```sh
-switch list-commands "*-dev-?"
+switch list-contexts "*-dev-?"
 ```
 
 Wildcard search supports [matching wildcards](https://en.wikipedia.org/wiki/Matching_wildcards) notation also known as globbing:
