@@ -153,8 +153,8 @@ github.com/cenkalti/backoff/v3
 # github.com/cespare/xxhash/v2 v2.1.2
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
-# github.com/cyphar/filepath-securejoin v0.2.2
-## explicit
+# github.com/cyphar/filepath-securejoin v0.2.4
+## explicit; go 1.13
 github.com/cyphar/filepath-securejoin
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
@@ -320,8 +320,6 @@ github.com/golang/protobuf/ptypes/timestamp
 # github.com/google/addlicense v1.0.0
 ## explicit; go 1.13
 github.com/google/addlicense
-# github.com/google/btree v1.0.1
-## explicit; go 1.12
 # github.com/google/go-cmp v0.5.7
 ## explicit; go 1.11
 github.com/google/go-cmp/cmp
@@ -353,8 +351,6 @@ github.com/googleapis/gnostic/openapiv2
 # github.com/gorilla/websocket v1.4.2
 ## explicit; go 1.12
 github.com/gorilla/websocket
-# github.com/gregjones/httpcache v0.0.0-20181110185634-c63ab54fda8f
-## explicit
 # github.com/hashicorp/errwrap v1.1.0
 ## explicit
 github.com/hashicorp/errwrap
@@ -518,8 +514,6 @@ github.com/onsi/gomega/matchers/support/goraph/edge
 github.com/onsi/gomega/matchers/support/goraph/node
 github.com/onsi/gomega/matchers/support/goraph/util
 github.com/onsi/gomega/types
-# github.com/peterbourgon/diskv v2.0.1+incompatible
-## explicit
 # github.com/pkg/browser v0.0.0-20180916011732-0a3d74bf9ce4
 ## explicit
 github.com/pkg/browser
