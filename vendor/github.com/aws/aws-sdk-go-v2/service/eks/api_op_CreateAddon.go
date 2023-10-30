@@ -4,20 +4,22 @@ package eks
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	internalauth "github.com/aws/aws-sdk-go-v2/internal/auth"
 	"github.com/aws/aws-sdk-go-v2/service/eks/types"
+	smithyendpoints "github.com/aws/smithy-go/endpoints"
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // Creates an Amazon EKS add-on. Amazon EKS add-ons help to automate the
 // provisioning and lifecycle management of common operational software for Amazon
-// EKS clusters. Amazon EKS add-ons can only be used with Amazon EKS clusters
-// running version 1.18 with platform version eks.3 or later because add-ons rely
-// on the Server-side Apply Kubernetes feature, which is only available in
-// Kubernetes 1.18 and later.
+// EKS clusters. For more information, see Amazon EKS add-ons (https://docs.aws.amazon.com/eks/latest/userguide/eks-add-ons.html)
+// in the Amazon EKS User Guide.
 func (c *Client) CreateAddon(ctx context.Context, params *CreateAddonInput, optFns ...func(*Options)) (*CreateAddonOutput, error) {
 	if params == nil {
 		params = &CreateAddonInput{}
@@ -35,9 +37,9 @@ func (c *Client) CreateAddon(ctx context.Context, params *CreateAddonInput, optF
 
 type CreateAddonInput struct {
 
-	// The name of the add-on. The name must match one of the names returned by
-	// DescribeAddonVersions
-	// (https://docs.aws.amazon.com/eks/latest/APIReference/API_DescribeAddonVersions.html).
+	// The name of the add-on. The name must match one of the names that
+	// DescribeAddonVersions (https://docs.aws.amazon.com/eks/latest/APIReference/API_DescribeAddonVersions.html)
+	// returns.
 	//
 	// This member is required.
 	AddonName *string
@@ -48,34 +50,48 @@ type CreateAddonInput struct {
 	ClusterName *string
 
 	// The version of the add-on. The version must match one of the versions returned
-	// by DescribeAddonVersions
-	// (https://docs.aws.amazon.com/eks/latest/APIReference/API_DescribeAddonVersions.html).
+	// by DescribeAddonVersions (https://docs.aws.amazon.com/eks/latest/APIReference/API_DescribeAddonVersions.html)
+	// .
 	AddonVersion *string
 
 	// A unique, case-sensitive identifier that you provide to ensure the idempotency
 	// of the request.
 	ClientRequestToken *string
 
-	// How to resolve parameter value conflicts when migrating an existing add-on to an
-	// Amazon EKS add-on.
+	// The set of configuration values for the add-on that's created. The values that
+	// you provide are validated against the schema in DescribeAddonConfiguration (https://docs.aws.amazon.com/eks/latest/APIReference/API_DescribeAddonConfiguration.html)
+	// .
+	ConfigurationValues *string
+
+	// How to resolve field value conflicts for an Amazon EKS add-on. Conflicts are
+	// handled based on the value you choose:
+	//   - None – If the self-managed version of the add-on is installed on your
+	//   cluster, Amazon EKS doesn't change the value. Creation of the add-on might fail.
+	//
+	//   - Overwrite – If the self-managed version of the add-on is installed on your
+	//   cluster and the Amazon EKS default value is different than the existing value,
+	//   Amazon EKS changes the value to the Amazon EKS default value.
+	//   - Preserve – Not supported. You can set this value when updating an add-on
+	//   though. For more information, see UpdateAddon (https://docs.aws.amazon.com/eks/latest/APIReference/API_UpdateAddon.html)
+	//   .
+	// If you don't currently have the self-managed version of the add-on installed on
+	// your cluster, the Amazon EKS add-on is installed. Amazon EKS sets all values to
+	// default values, regardless of the option that you specify.
 	ResolveConflicts types.ResolveConflicts
 
 	// The Amazon Resource Name (ARN) of an existing IAM role to bind to the add-on's
 	// service account. The role must be assigned the IAM permissions required by the
 	// add-on. If you don't specify an existing IAM role, then the add-on uses the
 	// permissions assigned to the node IAM role. For more information, see Amazon EKS
-	// node IAM role
-	// (https://docs.aws.amazon.com/eks/latest/userguide/create-node-role.html) in the
-	// Amazon EKS User Guide. To specify an existing IAM role, you must have an IAM
-	// OpenID Connect (OIDC) provider created for your cluster. For more information,
-	// see Enabling IAM roles for service accounts on your cluster
-	// (https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html)
+	// node IAM role (https://docs.aws.amazon.com/eks/latest/userguide/create-node-role.html)
+	// in the Amazon EKS User Guide. To specify an existing IAM role, you must have an
+	// IAM OpenID Connect (OIDC) provider created for your cluster. For more
+	// information, see Enabling IAM roles for service accounts on your cluster (https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html)
 	// in the Amazon EKS User Guide.
 	ServiceAccountRoleArn *string
 
 	// The metadata to apply to the cluster to assist with categorization and
-	// organization. Each tag consists of a key and an optional value, both of which
-	// you define.
+	// organization. Each tag consists of a key and an optional value. You define both.
 	Tags map[string]string
 
 	noSmithyDocumentSerde
@@ -83,7 +99,8 @@ type CreateAddonInput struct {
 
 type CreateAddonOutput struct {
 
-	// An Amazon EKS add-on.
+	// An Amazon EKS add-on. For more information, see Amazon EKS add-ons (https://docs.aws.amazon.com/eks/latest/userguide/eks-add-ons.html)
+	// in the Amazon EKS User Guide.
 	Addon *types.Addon
 
 	// Metadata pertaining to the operation's result.
@@ -99,6 +116,9 @@ func (c *Client) addOperationCreateAddonMiddlewares(stack *middleware.Stack, opt
 	}
 	err = stack.Deserialize.Add(&awsRestjson1_deserializeOpCreateAddon{}, middleware.After)
 	if err != nil {
+		return err
+	}
+	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
 		return err
 	}
 	if err = addSetLoggerMiddleware(stack, options); err != nil {
@@ -128,13 +148,16 @@ func (c *Client) addOperationCreateAddonMiddlewares(stack *middleware.Stack, opt
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
+		return err
+	}
+	if err = addCreateAddonResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
 	if err = addIdempotencyToken_opCreateAddonMiddleware(stack, options); err != nil {
@@ -146,6 +169,9 @@ func (c *Client) addOperationCreateAddonMiddlewares(stack *middleware.Stack, opt
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opCreateAddon(options.Region), middleware.Before); err != nil {
 		return err
 	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
+		return err
+	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
 		return err
 	}
@@ -153,6 +179,9 @@ func (c *Client) addOperationCreateAddonMiddlewares(stack *middleware.Stack, opt
 		return err
 	}
 	if err = addRequestResponseLogging(stack, options); err != nil {
+		return err
+	}
+	if err = addendpointDisableHTTPSMiddleware(stack, options); err != nil {
 		return err
 	}
 	return nil
@@ -198,4 +227,127 @@ func newServiceMetadataMiddleware_opCreateAddon(region string) *awsmiddleware.Re
 		SigningName:   "eks",
 		OperationName: "CreateAddon",
 	}
+}
+
+type opCreateAddonResolveEndpointMiddleware struct {
+	EndpointResolver EndpointResolverV2
+	BuiltInResolver  builtInParameterResolver
+}
+
+func (*opCreateAddonResolveEndpointMiddleware) ID() string {
+	return "ResolveEndpointV2"
+}
+
+func (m *opCreateAddonResolveEndpointMiddleware) HandleSerialize(ctx context.Context, in middleware.SerializeInput, next middleware.SerializeHandler) (
+	out middleware.SerializeOutput, metadata middleware.Metadata, err error,
+) {
+	if awsmiddleware.GetRequiresLegacyEndpoints(ctx) {
+		return next.HandleSerialize(ctx, in)
+	}
+
+	req, ok := in.Request.(*smithyhttp.Request)
+	if !ok {
+		return out, metadata, fmt.Errorf("unknown transport type %T", in.Request)
+	}
+
+	if m.EndpointResolver == nil {
+		return out, metadata, fmt.Errorf("expected endpoint resolver to not be nil")
+	}
+
+	params := EndpointParameters{}
+
+	m.BuiltInResolver.ResolveBuiltIns(&params)
+
+	var resolvedEndpoint smithyendpoints.Endpoint
+	resolvedEndpoint, err = m.EndpointResolver.ResolveEndpoint(ctx, params)
+	if err != nil {
+		return out, metadata, fmt.Errorf("failed to resolve service endpoint, %w", err)
+	}
+
+	req.URL = &resolvedEndpoint.URI
+
+	for k := range resolvedEndpoint.Headers {
+		req.Header.Set(
+			k,
+			resolvedEndpoint.Headers.Get(k),
+		)
+	}
+
+	authSchemes, err := internalauth.GetAuthenticationSchemes(&resolvedEndpoint.Properties)
+	if err != nil {
+		var nfe *internalauth.NoAuthenticationSchemesFoundError
+		if errors.As(err, &nfe) {
+			// if no auth scheme is found, default to sigv4
+			signingName := "eks"
+			signingRegion := m.BuiltInResolver.(*builtInResolver).Region
+			ctx = awsmiddleware.SetSigningName(ctx, signingName)
+			ctx = awsmiddleware.SetSigningRegion(ctx, signingRegion)
+
+		}
+		var ue *internalauth.UnSupportedAuthenticationSchemeSpecifiedError
+		if errors.As(err, &ue) {
+			return out, metadata, fmt.Errorf(
+				"This operation requests signer version(s) %v but the client only supports %v",
+				ue.UnsupportedSchemes,
+				internalauth.SupportedSchemes,
+			)
+		}
+	}
+
+	for _, authScheme := range authSchemes {
+		switch authScheme.(type) {
+		case *internalauth.AuthenticationSchemeV4:
+			v4Scheme, _ := authScheme.(*internalauth.AuthenticationSchemeV4)
+			var signingName, signingRegion string
+			if v4Scheme.SigningName == nil {
+				signingName = "eks"
+			} else {
+				signingName = *v4Scheme.SigningName
+			}
+			if v4Scheme.SigningRegion == nil {
+				signingRegion = m.BuiltInResolver.(*builtInResolver).Region
+			} else {
+				signingRegion = *v4Scheme.SigningRegion
+			}
+			if v4Scheme.DisableDoubleEncoding != nil {
+				// The signer sets an equivalent value at client initialization time.
+				// Setting this context value will cause the signer to extract it
+				// and override the value set at client initialization time.
+				ctx = internalauth.SetDisableDoubleEncoding(ctx, *v4Scheme.DisableDoubleEncoding)
+			}
+			ctx = awsmiddleware.SetSigningName(ctx, signingName)
+			ctx = awsmiddleware.SetSigningRegion(ctx, signingRegion)
+			break
+		case *internalauth.AuthenticationSchemeV4A:
+			v4aScheme, _ := authScheme.(*internalauth.AuthenticationSchemeV4A)
+			if v4aScheme.SigningName == nil {
+				v4aScheme.SigningName = aws.String("eks")
+			}
+			if v4aScheme.DisableDoubleEncoding != nil {
+				// The signer sets an equivalent value at client initialization time.
+				// Setting this context value will cause the signer to extract it
+				// and override the value set at client initialization time.
+				ctx = internalauth.SetDisableDoubleEncoding(ctx, *v4aScheme.DisableDoubleEncoding)
+			}
+			ctx = awsmiddleware.SetSigningName(ctx, *v4aScheme.SigningName)
+			ctx = awsmiddleware.SetSigningRegion(ctx, v4aScheme.SigningRegionSet[0])
+			break
+		case *internalauth.AuthenticationSchemeNone:
+			break
+		}
+	}
+
+	return next.HandleSerialize(ctx, in)
+}
+
+func addCreateAddonResolveEndpointMiddleware(stack *middleware.Stack, options Options) error {
+	return stack.Serialize.Insert(&opCreateAddonResolveEndpointMiddleware{
+		EndpointResolver: options.EndpointResolverV2,
+		BuiltInResolver: &builtInResolver{
+			Region:       options.Region,
+			UseDualStack: options.EndpointOptions.UseDualStackEndpoint,
+			UseFIPS:      options.EndpointOptions.UseFIPSEndpoint,
+			Endpoint:     options.BaseEndpoint,
+		},
+	}, "ResolveEndpoint", middleware.After)
 }
