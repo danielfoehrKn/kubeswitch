@@ -46,10 +46,12 @@ type ExecProvider struct {
 	// may reject unrecognized values.
 	// More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources
 	// +optional
-	APIVersion string   `yaml:"apiVersion,omitempty" protobuf:"bytes,2,opt,name=apiVersion"`
-	Args       []string `yaml:"args"`
-	Command    string   `yaml:"command"`
-	Env        []EnvMap `yaml:"env"`
+	APIVersion         string   `yaml:"apiVersion,omitempty" protobuf:"bytes,2,opt,name=apiVersion"`
+	Args               []string `yaml:"args"`
+	Command            string   `yaml:"command"`
+	Env                []EnvMap `yaml:"env"`
+	InstallHint        string   `yaml:"installHint,omitempty"`
+	ProvideClusterInfo bool     `yaml:"provideClusterInfo,omitempty"`
 }
 
 type EnvMap struct {
