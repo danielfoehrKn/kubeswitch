@@ -17,7 +17,8 @@ package exec
 import (
 	"fmt"
 	"os"
-	"os/exec"
+
+	"github.com/go-cmd/cmd"
 
 	"github.com/danielfoehrkn/kubeswitch/pkg/store"
 	list_contexts "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/list-contexts"
@@ -37,26 +38,52 @@ func ExecuteCommand(pattern string, command []string, stores []store.KubeconfigS
 			return err
 		}
 		fmt.Printf("=== START Executing on %s ===\n", context)
-		cmd := exec.Command(command[0], command[1:]...)
+
+		// Disable output buffering, enable streaming
+		cmdOptions := cmd.Options{
+			Buffered:  false,
+			Streaming: true,
+		}
+
+		// Create Cmd with options
+		envCmd := cmd.NewCmdOptions(cmdOptions, command[0], command[1:]...)
 
 		// Set environment variables for the command
-		cmd.Env = os.Environ()
+		envCmd.Env = os.Environ()
 
 		kubeconfigEnvVar := fmt.Sprintf("KUBECONFIG=%s", *tmpKubeconfigFile)
-		cmd.Env = append(cmd.Env, kubeconfigEnvVar)
+		envCmd.Env = append(envCmd.Env, kubeconfigEnvVar)
 
-		// Redirect the command's output to the current process's output
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
+		// Print STDOUT and STDERR lines streaming from Cmd
+		doneChan := make(chan struct{})
+		go func() {
+			defer close(doneChan)
+			// Done when both channels have been closed
+			// https://dave.cheney.net/2013/04/30/curious-channels
+			for envCmd.Stdout != nil || envCmd.Stderr != nil {
+				select {
+				case line, open := <-envCmd.Stdout:
+					if !open {
+						envCmd.Stdout = nil
+						continue
+					}
+					fmt.Println(line)
+				case line, open := <-envCmd.Stderr:
+					if !open {
+						envCmd.Stderr = nil
+						continue
+					}
+					fmt.Fprintln(os.Stderr, line)
+				}
+			}
+		}()
 
-		cmd.Environ()
+		// Run and wait for Cmd to return, discard Status
+		<-envCmd.Start()
 
-		// Run the command
-		err = cmd.Run()
-		if err != nil {
-			fmt.Printf("Command execution failed: %v\n", err)
-			return err
-		}
+		// Wait for goroutine to print everything
+		<-doneChan
+
 		fmt.Printf("=== END Executing on %s ===\n", context)
 	}
 	return nil
