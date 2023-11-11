@@ -266,6 +266,15 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 				return nil, nil, err
 			}
 			s = rancherStore
+		case types.StoreKindOVH:
+			ovhStore, err := store.NewOVHStore(kubeconfigStoreFromConfig)
+			if err != nil {
+				if kubeconfigStoreFromConfig.Required != nil && !*kubeconfigStoreFromConfig.Required {
+					continue
+				}
+				return nil, nil, err
+			}
+			s = ovhStore
 		default:
 			return nil, nil, fmt.Errorf("unknown store %q", kubeconfigStoreFromConfig.Kind)
 		}

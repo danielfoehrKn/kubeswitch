@@ -25,6 +25,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	vaultapi "github.com/hashicorp/vault/api"
+	"github.com/ovh/go-ovh/ovh"
 	"github.com/rancher/norman/clientbase"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/sirupsen/logrus"
@@ -163,4 +164,11 @@ type RancherStore struct {
 	KubeconfigStore types.KubeconfigStore
 	ClientOpts      *clientbase.ClientOpts
 	Client          *managementClient.Client
+}
+
+type OVHStore struct {
+	Logger          *logrus.Entry
+	KubeconfigStore types.KubeconfigStore
+	Client          *ovh.Client
+	OVHKubeCache    map[string]OVHKube // map[clusterID]OVHKube
 }
