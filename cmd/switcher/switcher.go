@@ -275,6 +275,15 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 				return nil, nil, err
 			}
 			s = ovhStore
+		case types.StoreKindScaleway:
+			scalewayStore, err := store.NewScalewayStore(kubeconfigStoreFromConfig)
+			if err != nil {
+				if kubeconfigStoreFromConfig.Required != nil && !*kubeconfigStoreFromConfig.Required {
+					continue
+				}
+				return nil, nil, err
+			}
+			s = scalewayStore
 		default:
 			return nil, nil, fmt.Errorf("unknown store %q", kubeconfigStoreFromConfig.Kind)
 		}

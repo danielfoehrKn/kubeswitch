@@ -24,7 +24,7 @@ import (
 type StoreKind string
 
 // ValidStoreKinds contains all valid store kinds
-var ValidStoreKinds = sets.NewString(string(StoreKindVault), string(StoreKindFilesystem), string(StoreKindGardener), string(StoreKindGKE), string(StoreKindAzure), string(StoreKindEKS), string(StoreKindRancher), string(StoreKindOVH))
+var ValidStoreKinds = sets.NewString(string(StoreKindVault), string(StoreKindFilesystem), string(StoreKindGardener), string(StoreKindGKE), string(StoreKindAzure), string(StoreKindEKS), string(StoreKindRancher), string(StoreKindOVH), string(StoreKindScaleway))
 
 // ValidConfigVersions contains all valid config versions
 var ValidConfigVersions = sets.NewString("v1alpha1")
@@ -45,6 +45,7 @@ const (
 	// StoreKindRancher is an identifier for the Rancher store
 	StoreKindRancher  StoreKind = "rancher"
 	StoreKindOVH      StoreKind = "ovh"
+	StoreKindScaleway StoreKind = "scaleway"
 )
 
 type Config struct {
@@ -236,4 +237,11 @@ type StoreConfigOVH struct {
 	OVHApplicationKey    string `yaml:"application_key"`
 	OVHApplicationSecret string `yaml:"application_secret"`
 	OVHConsumerKey       string `yaml:"consumer_key"`
+}
+
+type StoreConfigScaleway struct {
+	ScalewayOrganizationID string `yaml:"organization_id"`
+	ScalewayAccessKey      string `yaml:"access_key"`
+	ScalewaySecretKey      string `yaml:"secret_key"`
+	ScalewayRegion         string `yaml:"region"`
 }
