@@ -63,8 +63,8 @@ Additionally, installs the command completion script.
 echo 'source <(switcher init bash)' >> ~/.bashrc
 
 # optionally use alias `s` instead of `switch`
-echo 'source <(alias s=switch)' >> ~/.bashrc
-echo 'source <(compdef _switcher switch)' >> ~/.bashrc
+echo 'alias s=switch' >> ~/.bashrc
+echo 'complete -o default -F _switcher s' >> ~/.bashrc
 ```
 ### Zsh
 ```sh
