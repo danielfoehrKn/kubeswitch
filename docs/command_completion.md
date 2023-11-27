@@ -11,7 +11,7 @@ echo 'source <(switch completion bash)' >> ~/.bashrc
 ```
 ### Zsh
 ```sh
-echo 'source <(switch completion zsh)' >> ~/.bashrc
+echo 'source <(switch completion zsh)' >> ~/.zshrc
 ```
 ### Fish
 ```sh
