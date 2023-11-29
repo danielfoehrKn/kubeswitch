@@ -1,4 +1,4 @@
-// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -73,7 +73,7 @@ type InfrastructureSpec struct {
 	DefaultSpec `json:",inline"`
 	// Region is the region of this infrastructure. This field is immutable.
 	Region string `json:"region"`
-	// SecretRef is a reference to a secret that contains the actual result of the generated cloud config.
+	// SecretRef is a reference to a secret that contains the cloud provider credentials.
 	SecretRef corev1.SecretReference `json:"secretRef"`
 	// SSHPublicKey is the public SSH key that should be used with this infrastructure.
 	// +optional

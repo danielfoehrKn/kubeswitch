@@ -17,9 +17,9 @@ package openstack
 import (
 	"fmt"
 
-	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/gardener/gardener-extension-provider-openstack/pkg/utils"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -37,6 +37,10 @@ type CloudProfileConfig struct {
 	DHCPDomain *string
 	// KeyStoneURL is the URL for auth{n,z} in OpenStack (pointing to KeyStone).
 	KeyStoneURL string
+	// KeystoneCACert is the CA Bundle for the KeyStoneURL.
+	KeyStoneCACert *string
+	// KeyStoneForceInsecure is a flag to control whether the OpenStack client should perform no certificate validation.
+	KeyStoneForceInsecure bool
 	// KeyStoneURLs is a region-URL mapping for auth{n,z} in OpenStack (pointing to KeyStone).
 	KeyStoneURLs []KeyStoneURL
 	// MachineImages is the list of machine images that are understood by the controller. It maps
@@ -48,7 +52,7 @@ type CloudProfileConfig struct {
 	// the filesystem.
 	RescanBlockStorageOnResize *bool
 	// IgnoreVolumeAZ specifies whether the volumes AZ should be ignored when scheduling to nodes,
-	// to allow for differences between volume and compute zone naming. Only works with kubernetes 1.20.x and newer.
+	// to allow for differences between volume and compute zone naming.
 	IgnoreVolumeAZ *bool
 	// NodeVolumeAttachLimit specifies how many volumes can be attached to a node.
 	NodeVolumeAttachLimit *int32
@@ -60,6 +64,9 @@ type CloudProfileConfig struct {
 	ServerGroupPolicies []string
 	// ResolvConfOptions specifies options to be added to /etc/resolv.conf on workers
 	ResolvConfOptions []string
+	// StorageClasses defines storageclasses for the shoot
+	// +optional
+	StorageClasses []StorageClassDefinition
 }
 
 // Constraints is an object containing constraints for the shoots.
@@ -92,6 +99,8 @@ type KeyStoneURL struct {
 	Region string
 	// URL is the keystone URL.
 	URL string
+	// CACert is the CA Bundle for the KeyStoneURL.
+	CACert *string
 }
 
 // LoadBalancerClass defines a restricted network setting for generic LoadBalancer classes.
@@ -189,4 +198,31 @@ type RegionIDMapping struct {
 	Name string
 	// ID is the ID for the machine image in the given region.
 	ID string
+}
+
+// StorageClassDefinition is a definition of a storageClass
+type StorageClassDefinition struct {
+	// Name is the name of the storageclass
+	Name string
+	// Default set the storageclass to the default one
+	// +optional
+	Default *bool
+	// Provisioner set the Provisioner inside the storageclass
+	// +optional
+	Provisioner *string
+	// Parameters adds parameters to the storageclass (storageclass.parameters)
+	// +optional
+	Parameters map[string]string
+	// Annotations sets annotations for the storageclass
+	// +optional
+	Annotations map[string]string
+	// Labels sets labels for the storageclass
+	// +optional
+	Labels map[string]string
+	// ReclaimPolicy sets reclaimPolicy for the storageclass
+	// +optional
+	ReclaimPolicy *string
+	// VolumeBindingMode sets bindingMode for the storageclass
+	// +optional
+	VolumeBindingMode *string
 }

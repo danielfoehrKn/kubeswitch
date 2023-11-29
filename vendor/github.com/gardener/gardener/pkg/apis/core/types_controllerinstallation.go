@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -72,6 +72,8 @@ const (
 	ControllerInstallationHealthy ConditionType = "Healthy"
 	// ControllerInstallationInstalled is a condition type for indicating whether the controller has been installed.
 	ControllerInstallationInstalled ConditionType = "Installed"
+	// ControllerInstallationProgressing is a condition type for indicating whether the controller is progressing.
+	ControllerInstallationProgressing ConditionType = "Progressing"
 	// ControllerInstallationValid is a condition type for indicating whether the installation request is valid.
 	ControllerInstallationValid ConditionType = "Valid"
 	// ControllerInstallationRequired is a condition type for indicating that the respective extension controller is

@@ -1,4 +1,4 @@
-// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -60,10 +60,6 @@ type ManagedSeedSpec struct {
 	// Shoot references a Shoot that should be registered as Seed.
 	// This field is immutable.
 	Shoot *Shoot
-	// SeedTemplate is a template for a Seed object, that should be used to register a given cluster as a Seed.
-	// Either SeedTemplate or Gardenlet must be specified. When Seed is specified, the ManagedSeed controller will not deploy a gardenlet into the cluster
-	// and an existing gardenlet reconciling the new Seed is required.
-	SeedTemplate *gardencore.SeedTemplate
 	// Gardenlet specifies that the ManagedSeed controller should deploy a gardenlet into the cluster
 	// with the given deployment parameters and GardenletConfiguration.
 	Gardenlet *Gardenlet
@@ -95,9 +91,9 @@ type Gardenlet struct {
 // GardenletDeployment specifies certain gardenlet deployment parameters, such as the number of replicas,
 // the image, etc.
 type GardenletDeployment struct {
-	// ReplicaCount is the number of gardenlet replicas. Defaults to 1.
+	// ReplicaCount is the number of gardenlet replicas. Defaults to 2.
 	ReplicaCount *int32
-	// RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 10.
+	// RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 2.
 	RevisionHistoryLimit *int32
 	// ServiceAccountName is the name of the ServiceAccount to use to run gardenlet pods.
 	ServiceAccountName *string

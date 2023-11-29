@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -63,9 +63,11 @@ type ControllerResource struct {
 	// Type is the resource type, for example "coreos" or "ubuntu".
 	Type string `json:"type" protobuf:"bytes,2,opt,name=type"`
 	// GloballyEnabled determines if this ControllerResource is required by all Shoot clusters.
+	// This field is defaulted to false when kind is "Extension".
 	// +optional
 	GloballyEnabled *bool `json:"globallyEnabled,omitempty" protobuf:"varint,3,opt,name=globallyEnabled"`
 	// ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.
+	// This field is defaulted to 3m0s when kind is "Extension".
 	// +optional
 	ReconcileTimeout *metav1.Duration `json:"reconcileTimeout,omitempty" protobuf:"bytes,4,opt,name=reconcileTimeout"`
 	// Primary determines if the controller backed by this ControllerRegistration is responsible for the extension
@@ -73,6 +75,17 @@ type ControllerResource struct {
 	// combination. This field is immutable.
 	// +optional
 	Primary *bool `json:"primary,omitempty" protobuf:"varint,5,opt,name=primary"`
+	// Lifecycle defines a strategy that determines when different operations on a ControllerResource should be performed.
+	// This field is defaulted in the following way when kind is "Extension".
+	//  Reconcile: "AfterKubeAPIServer"
+	//  Delete: "BeforeKubeAPIServer"
+	//  Migrate: "BeforeKubeAPIServer"
+	// +optional
+	Lifecycle *ControllerResourceLifecycle `json:"lifecycle,omitempty" protobuf:"bytes,6,opt,name=lifecycle"`
+	// WorkerlessSupported specifies whether this ControllerResource supports Workerless Shoot clusters.
+	// This field is only relevant when kind is "Extension".
+	// +optional
+	WorkerlessSupported *bool `json:"workerlessSupported,omitempty" protobuf:"varint,7,opt,name=workerlessSupported"`
 }
 
 // DeploymentRef contains information about `ControllerDeployment` references.
@@ -91,7 +104,7 @@ type ControllerRegistrationDeployment struct {
 	// An empty list means that all seeds are selected.
 	// +optional
 	SeedSelector *metav1.LabelSelector `json:"seedSelector,omitempty" protobuf:"bytes,4,opt,name=seedSelector"`
-	// DeploymentRefs holds references to `ControllerDeployments`. Only one element is support now.
+	// DeploymentRefs holds references to `ControllerDeployments`. Only one element is supported currently.
 	// +optional
 	DeploymentRefs []DeploymentRef `json:"deploymentRefs,omitempty" protobuf:"bytes,5,opt,name=deploymentRefs"`
 }
@@ -110,3 +123,26 @@ const (
 	// whether another resource requires it, but only when the respective seed has at least one shoot.
 	ControllerDeploymentPolicyAlwaysExceptNoShoots ControllerDeploymentPolicy = "AlwaysExceptNoShoots"
 )
+
+// ControllerResourceLifecycleStrategy is a string alias.
+type ControllerResourceLifecycleStrategy string
+
+const (
+	// BeforeKubeAPIServer specifies that a resource should be handled before the kube-apiserver.
+	BeforeKubeAPIServer ControllerResourceLifecycleStrategy = "BeforeKubeAPIServer"
+	// AfterKubeAPIServer specifies that a resource should be handled after the kube-apiserver.
+	AfterKubeAPIServer ControllerResourceLifecycleStrategy = "AfterKubeAPIServer"
+)
+
+// ControllerResourceLifecycle defines the lifecycle of a controller resource.
+type ControllerResourceLifecycle struct {
+	// Reconcile defines the strategy during reconciliation.
+	// +optional
+	Reconcile *ControllerResourceLifecycleStrategy `json:"reconcile,omitempty" protobuf:"bytes,1,opt,name=reconcile,casttype=ControllerResourceLifecycleStrategy"`
+	// Delete defines the strategy during deletion.
+	// +optional
+	Delete *ControllerResourceLifecycleStrategy `json:"delete,omitempty" protobuf:"bytes,2,opt,name=delete,casttype=ControllerResourceLifecycleStrategy"`
+	// Migrate defines the strategy during migration.
+	// +optional
+	Migrate *ControllerResourceLifecycleStrategy `json:"migrate,omitempty" protobuf:"bytes,3,opt,name=migrate,casttype=ControllerResourceLifecycleStrategy"`
+}

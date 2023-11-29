@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -69,4 +69,7 @@ const (
 	// OutdatedStatusError is a constant for a reason in a condition that indicates
 	// that the observed generation in a status is outdated.
 	OutdatedStatusError = "OutdatedStatus"
+	// ManagedResourceProgressingRolloutStuck is a constant for a reason in a condition that indicates
+	// managed resource progressing condition is stuck in the true state for more than the threshold time.
+	ManagedResourceProgressingRolloutStuck = "ProgressingRolloutStuck"
 )

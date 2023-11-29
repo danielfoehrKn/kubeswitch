@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -148,6 +148,8 @@ const (
 	ProjectMemberOwner = "owner"
 	// ProjectMemberUserAccessManager is a const for a role that provides permissions to manage human user(s, (groups)).
 	ProjectMemberUserAccessManager = "uam"
+	// ProjectMemberServiceAccountManager is a const for a role that provides permissions to manage service accounts and request tokens for them.
+	ProjectMemberServiceAccountManager = "serviceaccountmanager"
 	// ProjectMemberViewer is a const for a role that provides limited permissions to only view some resources.
 	ProjectMemberViewer = "viewer"
 	// ProjectMemberExtensionPrefix is a prefix for custom roles that are not known by Gardener.

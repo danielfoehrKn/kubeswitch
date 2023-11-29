@@ -1,4 +1,4 @@
-// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -53,7 +53,6 @@ func (o *OperatingSystemConfig) GetExtensionSpec() Spec {
 // GetExtensionPurpose implements Object.
 func (o *OperatingSystemConfigSpec) GetExtensionPurpose() *string {
 	return (*string)(&o.Purpose)
-
 }
 
 // GetExtensionStatus implements Object.
@@ -89,6 +88,7 @@ type OperatingSystemConfigSpec struct {
 	// are asked to use it when determining the .status.command of this resource. For example, if for CoreOS
 	// the reload-path might be "/var/lib/config"; then the controller shall set .status.command to
 	// "/usr/bin/coreos-cloudinit --from-file=/var/lib/config".
+	// TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is promoted to GA.
 	// +optional
 	ReloadConfigFilePath *string `json:"reloadConfigFilePath,omitempty"`
 	// Units is a list of unit for the operating system configuration (usually, a systemd unit).
@@ -109,7 +109,7 @@ type Unit struct {
 	Name string `json:"name"`
 	// Command is the unit's command.
 	// +optional
-	Command *string `json:"command,omitempty"`
+	Command *UnitCommand `json:"command,omitempty"`
 	// Enable describes whether the unit is enabled or not.
 	// +optional
 	Enable *bool `json:"enable,omitempty"`
@@ -121,6 +121,26 @@ type Unit struct {
 	// +patchStrategy=merge
 	// +optional
 	DropIns []DropIn `json:"dropIns,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	// FilePaths is a list of files the unit depends on. If any file changes a restart of the dependent unit will be
+	// triggered. For each FilePath there must exist a File with matching Path in OperatingSystemConfig.Spec.Files.
+	FilePaths []string `json:"filePaths,omitempty"`
+}
+
+// UnitCommand is a string alias.
+type UnitCommand string
+
+const (
+	// CommandStart is the 'start' command for a unit.
+	CommandStart UnitCommand = "start"
+	// CommandRestart is the 'restart' command for a unit.
+	CommandRestart UnitCommand = "restart"
+	// CommandStop is the 'stop' command for a unit.
+	CommandStop UnitCommand = "stop"
+)
+
+// UnitCommandPtr returns a pointer to the provided unit command.
+func UnitCommandPtr(c UnitCommand) *UnitCommand {
+	return &c
 }
 
 // DropIn is a drop-in configuration for a systemd unit.
@@ -156,6 +176,9 @@ type FileContent struct {
 	// This for example can be used to manipulate the clear-text content before it reaches the node.
 	// +optional
 	TransmitUnencoded *bool `json:"transmitUnencoded,omitempty"`
+	// ImageRef describes a container image which contains a file.
+	// +optional
+	ImageRef *FileContentImageRef `json:"imageRef,omitempty"`
 }
 
 // FileContentSecretRef contains keys for referencing a file content's data from a secret in the same namespace.
@@ -174,10 +197,28 @@ type FileContentInline struct {
 	Data string `json:"data"`
 }
 
+// FileContentImageRef describes a container image which contains a file
+type FileContentImageRef struct {
+	// Image contains the container image repository with tag.
+	Image string `json:"image"`
+	// FilePathInImage contains the path in the image to the file that should be extracted.
+	FilePathInImage string `json:"filePathInImage"`
+}
+
 // OperatingSystemConfigStatus is the status for a OperatingSystemConfig resource.
 type OperatingSystemConfigStatus struct {
 	// DefaultStatus is a structure containing common fields used by all extension resources.
 	DefaultStatus `json:",inline"`
+	// ExtensionUnits is a list of additional systemd units provided by the extension.
+	// +patchMergeKey=name
+	// +patchStrategy=merge
+	// +optional
+	ExtensionUnits []Unit `json:"extensionUnits,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	// ExtensionFiles is a list of additional files provided by the extension.
+	// +patchMergeKey=path
+	// +patchStrategy=merge
+	// +optional
+	ExtensionFiles []File `json:"extensionFiles,omitempty" patchStrategy:"merge" patchMergeKey:"path"`
 	// CloudConfig is a structure for containing the generated output for the given operating system
 	// config spec. It contains a reference to a secret as the result may contain confidential data.
 	// +optional
@@ -185,12 +226,19 @@ type OperatingSystemConfigStatus struct {
 	// Command is the command whose execution renews/reloads the cloud config on an existing VM, e.g.
 	// "/usr/bin/reload-cloud-config -from-file=<path>". The <path> is optionally provided by Gardener
 	// in the .spec.reloadConfigFilePath field.
+	// TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is promoted to GA.
 	// +optional
 	Command *string `json:"command,omitempty"`
 	// Units is a list of systemd unit names that are part of the generated Cloud Config and shall be
 	// restarted when a new version has been downloaded.
+	// TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is promoted to GA.
 	// +optional
 	Units []string `json:"units,omitempty"`
+	// Files is a list of file paths that are part of the generated Cloud Config and shall be
+	// written to the host's file system.
+	// TODO(rfranzke): Deprecate this field once UseGardenerNodeAgent feature gate is promoted to GA.
+	// +optional
+	Files []string `json:"files,omitempty"`
 }
 
 // CloudConfig contains the generated output for the given operating system
@@ -241,10 +289,8 @@ const ContainerDRuntimeContainersBinFolder = "/var/bin/containerruntimes"
 type FileCodecID string
 
 const (
+	// PlainFileCodecID is the plain file codec id.
+	PlainFileCodecID FileCodecID = ""
 	// B64FileCodecID is the base64 file codec id.
 	B64FileCodecID FileCodecID = "b64"
-	// GZIPFileCodecID is the gzip file codec id.
-	GZIPFileCodecID FileCodecID = "gzip"
-	// GZIPB64FileCodecID is the gzip combined with base64 codec id.
-	GZIPB64FileCodecID FileCodecID = "gzip+b64"
 )

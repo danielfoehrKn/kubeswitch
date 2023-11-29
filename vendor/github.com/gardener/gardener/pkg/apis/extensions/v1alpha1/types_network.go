@@ -1,4 +1,4 @@
-// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -75,6 +75,10 @@ type NetworkSpec struct {
 	PodCIDR string `json:"podCIDR"`
 	// ServiceCIDR defines the CIDR that will be used for services. This field is immutable.
 	ServiceCIDR string `json:"serviceCIDR"`
+	// IPFamilies specifies the IP protocol versions to use for shoot networking. This field is immutable.
+	// See https://github.com/gardener/gardener/blob/master/docs/usage/ipv6.md
+	// +optional
+	IPFamilies []IPFamily `json:"ipFamilies,omitempty"`
 }
 
 // NetworkStatus is the status for an Network resource.

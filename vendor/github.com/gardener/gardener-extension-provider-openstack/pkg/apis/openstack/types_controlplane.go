@@ -33,6 +33,8 @@ type ControlPlaneConfig struct {
 	// Zone is the OpenStack zone.
 	// Deprecated: Don't use anymore. Will be removed in a future version.
 	Zone *string
+	// Storage contains configuration for storage in the cluster.
+	Storage *Storage
 }
 
 const (
@@ -48,4 +50,16 @@ const (
 type CloudControllerManagerConfig struct {
 	// FeatureGates contains information about enabled feature gates.
 	FeatureGates map[string]bool
+}
+
+// Storage contains configuration for storage in the cluster.
+type Storage struct {
+	// CSIManila contains configuration for CSI Manila driver (support for NFS volumes)
+	CSIManila *CSIManila
+}
+
+// CSIManila contains configuration for CSI Manila driver (support for NFS volumes)
+type CSIManila struct {
+	// Enabled is the switch to enable the CSI Manila driver support
+	Enabled bool
 }

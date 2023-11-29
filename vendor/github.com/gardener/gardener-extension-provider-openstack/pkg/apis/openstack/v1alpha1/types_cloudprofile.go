@@ -37,6 +37,12 @@ type CloudProfileConfig struct {
 	// KeyStoneURL is the URL for auth{n,z} in OpenStack (pointing to KeyStone).
 	// +optional
 	KeyStoneURL string `json:"keystoneURL,omitempty"`
+	// KeystoneCACert is the CA Bundle for the KeyStoneURL.
+	// +optional
+	KeyStoneCACert *string `json:"keystoneCACert,omitempty"`
+	// KeyStoneForceInsecure is a flag to control whether the OpenStack client should perform no certificate validation.
+	// +optional
+	KeyStoneForceInsecure bool `json:"keystoneForceInsecure,omitempty"`
 	// KeyStoneURLs is a region-URL mapping for auth{n,z} in OpenStack (pointing to KeyStone).
 	// +optional
 	KeyStoneURLs []KeyStoneURL `json:"keystoneURLs,omitempty"`
@@ -51,8 +57,7 @@ type CloudProfileConfig struct {
 	// +optional
 	RescanBlockStorageOnResize *bool `json:"rescanBlockStorageOnResize,omitempty"`
 	// IgnoreVolumeAZ specifies whether the volumes AZ should be ignored when scheduling to nodes,
-	// to allow for differences between volume and compute zone naming. This setting only works for
-	// shoots with kubernetes version 1.20.x or newer.
+	// to allow for differences between volume and compute zone naming.
 	// +optional
 	IgnoreVolumeAZ *bool `json:"ignoreVolumeAZ,omitempty"`
 	// NodeVolumeAttachLimit specifies how many volumes can be attached to a node.
@@ -70,6 +75,9 @@ type CloudProfileConfig struct {
 	// ResolvConfOptions specifies options to be added to /etc/resolv.conf on workers
 	// +optional
 	ResolvConfOptions []string `json:"resolvConfOptions,omitempty"`
+	// StorageClasses defines storageclasses for the shoot
+	// +optional
+	StorageClasses []StorageClassDefinition `json:"storageClasses,omitempty"`
 }
 
 // Constraints is an object containing constraints for the shoots.
@@ -107,6 +115,8 @@ type KeyStoneURL struct {
 	Region string `json:"region"`
 	// URL is the keystone URL.
 	URL string `json:"url"`
+	// CACert is the CA Bundle for the KeyStoneURL.
+	CACert *string `json:"caCert,omitempty"`
 }
 
 // LoadBalancerClass defines a restricted network setting for generic LoadBalancer classes.
@@ -167,4 +177,31 @@ type RegionIDMapping struct {
 	Name string `json:"name"`
 	// ID is the ID for the machine image in the given region.
 	ID string `json:"id"`
+}
+
+// StorageClassDefinition is a definition of a storageClass
+type StorageClassDefinition struct {
+	// Name is the name of the storageclass
+	Name string `json:"name"`
+	// Default set the storageclass to the default one
+	// +optional
+	Default *bool `json:"default,omitempty"`
+	// Provisioner set the Provisioner inside the storageclass
+	// +optional
+	Provisioner *string `json:"provisioner,omitempty"`
+	// Parameters adds parameters to the storageclass (storageclass.parameters)
+	// +optional
+	Parameters map[string]string `json:"parameters,omitempty"`
+	// Annotations sets annotations for the storageclass
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
+	// Labels sets labels for the storageclass
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
+	// ReclaimPolicy sets reclaimPolicy for the storageclass
+	// +optional
+	ReclaimPolicy *string `json:"reclaimPolicy,omitempty"`
+	// VolumeBindingMode sets bindingMode for the storageclass
+	// +optional
+	VolumeBindingMode *string `json:"volumeBindingMode,omitempty"`
 }

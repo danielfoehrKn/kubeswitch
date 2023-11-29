@@ -1,4 +1,4 @@
-// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,10 +18,10 @@ package v1beta1
 import (
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-
 	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	"github.com/gardener/gardener/pkg/apis/core"
 )
 
 func addConversionFuncs(scheme *runtime.Scheme) error {
@@ -43,7 +43,7 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 		SchemeGroupVersion.WithKind("BackupEntry"),
 		func(label, value string) (string, string, error) {
 			switch label {
-			case "metadata.name", "metadata.namespace", core.BackupEntrySeedName:
+			case "metadata.name", "metadata.namespace", core.BackupEntrySeedName, core.BackupEntryBucketName:
 				return label, value, nil
 			default:
 				return "", "", fmt.Errorf("field label not supported: %s", label)
@@ -58,6 +58,20 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 		func(label, value string) (string, string, error) {
 			switch label {
 			case "metadata.name", core.RegistrationRefName, core.SeedRefName:
+				return label, value, nil
+			default:
+				return "", "", fmt.Errorf("field label not supported: %s", label)
+			}
+		},
+	); err != nil {
+		return err
+	}
+
+	if err := scheme.AddFieldLabelConversionFunc(
+		SchemeGroupVersion.WithKind("InternalSecret"),
+		func(label, value string) (string, string, error) {
+			switch label {
+			case "metadata.name", "metadata.namespace", core.InternalSecretType:
 				return label, value, nil
 			default:
 				return "", "", fmt.Errorf("field label not supported: %s", label)
@@ -93,6 +107,24 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 		},
 	); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func Convert_v1beta1_InternalSecret_To_core_InternalSecret(in *InternalSecret, out *core.InternalSecret, s conversion.Scope) error {
+	if err := autoConvert_v1beta1_InternalSecret_To_core_InternalSecret(in, out, s); err != nil {
+		return err
+	}
+
+	// StringData overwrites Data
+	if len(in.StringData) > 0 {
+		if out.Data == nil {
+			out.Data = make(map[string][]byte, len(in.StringData))
+		}
+		for k, v := range in.StringData {
+			out.Data[k] = []byte(v)
+		}
 	}
 
 	return nil

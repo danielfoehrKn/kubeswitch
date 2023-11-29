@@ -15,6 +15,7 @@
 package openstack
 
 import (
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -63,9 +64,25 @@ type ServerGroupDependency struct {
 type WorkerConfig struct {
 	metav1.TypeMeta
 
+	// NodeTemplate contains resource information of the machine which is used by Cluster Autoscaler to generate
+	// nodeTemplate during scaling a nodeGroup from zero.
+	NodeTemplate *extensionsv1alpha1.NodeTemplate
 	// ServerGroup contains configuration data for the worker pool's server group. If this object is present,
 	// OpenStack provider extension will try to create a new server group for instances of this worker pool.
 	ServerGroup *ServerGroup
+
+	// MachineLabels define key value pairs to add to machines.
+	MachineLabels []MachineLabel
+}
+
+// MachineLabel define key value pair to label machines.
+type MachineLabel struct {
+	// Name is the machine label key
+	Name string
+	// Value is the machine label value
+	Value string
+	// TriggerRollingOnUpdate controls if the machines should be rolled if the value changes
+	TriggerRollingOnUpdate bool
 }
 
 const (

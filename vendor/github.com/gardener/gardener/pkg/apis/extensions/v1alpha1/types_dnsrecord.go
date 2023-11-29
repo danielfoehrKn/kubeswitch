@@ -1,4 +1,4 @@
-// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -106,6 +106,8 @@ type DNSRecordType string
 const (
 	// DNSRecordTypeA specifies that the DNSRecord is of type A.
 	DNSRecordTypeA DNSRecordType = "A"
+	// DNSRecordTypeAAAA specifies that the DNSRecord is of type AAAA.
+	DNSRecordTypeAAAA DNSRecordType = "AAAA"
 	// DNSRecordTypeCNAME specifies that the DNSRecord is of type CNAME.
 	DNSRecordTypeCNAME DNSRecordType = "CNAME"
 	// DNSRecordTypeTXT specifies that the DNSRecord is of type TXT.

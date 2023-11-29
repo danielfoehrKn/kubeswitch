@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ type SecretBinding struct {
 	// +optional
 	Quotas []corev1.ObjectReference `json:"quotas,omitempty" protobuf:"bytes,3,rep,name=quotas"`
 	// Provider defines the provider type of the SecretBinding.
-	// This field is immutable when the SecretBindingProviderValidation feature gate is enabled.
+	// This field is immutable.
 	// +optional
 	Provider *SecretBindingProvider `json:"provider,omitempty" protobuf:"bytes,4,opt,name=provider"`
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +14,9 @@
 
 package v1beta1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 // ErrorCode is a string alias.
 type ErrorCode string
@@ -45,6 +47,10 @@ const (
 	ErrorConfigurationProblem ErrorCode = "ERR_CONFIGURATION_PROBLEM"
 	// ErrorRetryableConfigurationProblem indicates that the last error occurred due to a retryable configuration problem.
 	ErrorRetryableConfigurationProblem ErrorCode = "ERR_RETRYABLE_CONFIGURATION_PROBLEM"
+	// ErrorProblematicWebhook indicates that the last error occurred due to a webhook not following the Kubernetes
+	// best practices (https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#best-practices-and-warnings).
+	// It is classified as a non-retryable error code.
+	ErrorProblematicWebhook ErrorCode = "ERR_PROBLEMATIC_WEBHOOK"
 )
 
 // LastError indicates the last occurred error for an operation on a resource.
@@ -107,7 +113,7 @@ type LastOperation struct {
 	Progress int32 `json:"progress" protobuf:"varint,3,opt,name=progress"`
 	// Status of the last operation, one of Aborted, Processing, Succeeded, Error, Failed.
 	State LastOperationState `json:"state" protobuf:"bytes,4,opt,name=state,casttype=LastOperationState"`
-	// Type of the last operation, one of Create, Reconcile, Delete.
+	// Type of the last operation, one of Create, Reconcile, Delete, Migrate, Restore.
 	Type LastOperationType `json:"type" protobuf:"bytes,5,opt,name=type,casttype=LastOperationType"`
 }
 
@@ -131,22 +137,48 @@ const (
 )
 
 const (
-	// EventReconciling indicates that the a Reconcile operation started.
+	// EventReconciling indicates that the Reconcile operation started.
 	EventReconciling = "Reconciling"
-	// EventReconciled indicates that the a Reconcile operation was successful.
+	// EventReconciled indicates that the Reconcile operation was successful.
 	EventReconciled = "Reconciled"
-	// EventReconcileError indicates that the a Reconcile operation failed.
+	// EventReconcileError indicates that the Reconcile operation failed.
 	EventReconcileError = "ReconcileError"
-	// EventDeleting indicates that the a Delete operation started.
+	// EventDeleting indicates that the Delete operation started.
 	EventDeleting = "Deleting"
-	// EventDeleted indicates that the a Delete operation was successful.
+	// EventDeleted indicates that the Delete operation was successful.
 	EventDeleted = "Deleted"
-	// EventDeleteError indicates that the a Delete operation failed.
+	// EventDeleteError indicates that the Delete operation failed.
 	EventDeleteError = "DeleteError"
-	// EventPrepareMigration indicates that a Prepare Migration operation started.
+	// EventPrepareMigration indicates that the Prepare Migration operation started.
 	EventPrepareMigration = "PrepareMigration"
-	// EventMigrationPrepared indicates that Migration preparation was successful.
+	// EventMigrationPrepared indicates that the Migration preparation was successful.
 	EventMigrationPrepared = "MigrationPrepared"
-	// EventMigrationPreparationFailed indicates that Migration preparation failed.
+	// EventMigrationPreparationFailed indicates that the Migration preparation failed.
 	EventMigrationPreparationFailed = "MigrationPreparationFailed"
+)
+
+// HighAvailability specifies the configuration settings for high availability for a resource. Typical
+// usages could be to configure HA for shoot control plane or for seed system components.
+type HighAvailability struct {
+	// FailureTolerance holds information about failure tolerance level of a highly available resource.
+	FailureTolerance FailureTolerance `json:"failureTolerance" protobuf:"bytes,1,name=failureTolerance"`
+}
+
+// FailureTolerance describes information about failure tolerance level of a highly available resource.
+type FailureTolerance struct {
+	// Type specifies the type of failure that the highly available resource can tolerate
+	Type FailureToleranceType `json:"type" protobuf:"bytes,1,name=type"`
+}
+
+// FailureToleranceType specifies the type of failure that a highly available
+// shoot control plane that can tolerate.
+type FailureToleranceType string
+
+const (
+	// FailureToleranceTypeNode specifies that a highly available resource can tolerate the
+	// failure of one or more nodes within a single-zone setup and still be available.
+	FailureToleranceTypeNode FailureToleranceType = "node"
+	// FailureToleranceTypeZone specifies that a highly available resource can tolerate the
+	// failure of one or more zones within a multi-zone setup and still be available.
+	FailureToleranceTypeZone FailureToleranceType = "zone"
 )
