@@ -19,7 +19,7 @@
 # as needed. If the required tool (version) is not built/installed yet, make will make sure to build/install it.
 # The *_VERSION variables in this file contain the "default" values, but can be overwritten in the top level make file.
 
-ifeq ($(strip $(shell go list -m)),github.com/gardener/gardener)
+ifeq ($(strip $(shell go list -m)),github.com/danielfoehrkn/kubeswitch)
 TOOLS_PKG_PATH             := ./hack/tools
 endif
 
