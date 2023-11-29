@@ -1,6 +1,6 @@
 # Command completion 
 
-**Note**: this is typically not needed, as when installing the shell function mannually via [source the shell function](#source-the-shell-function), the completion script is already included.
+**Note**: this is typically not needed, as when installing the shell function manually via [source the shell function](#source-the-shell-function), the completion script is already included.
 
 Install the completion script by running:
 
