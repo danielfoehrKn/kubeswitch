@@ -50,24 +50,24 @@ var _ = Describe("ValidateConfig", func() {
 			{
 				Name: "name",
 				Type: "type",
-				Path: pointer.StringPtr("my-path"),
+				Path: pointer.String("my-path"),
 			},
 		}
 
 		new := types.Config{
 			Kind:              "SwitchConfig",
 			Version:           "v1alpha1",
-			KubeconfigName:    pointer.StringPtr("name"),
+			KubeconfigName:    pointer.String("name"),
 			RefreshIndexAfter: &refreshIndexAfter,
 			Hooks:             hooks,
 			KubeconfigStores: []types.KubeconfigStore{
 				{
-					ID:    pointer.StringPtr("default"),
+					ID:    pointer.String("default"),
 					Kind:  types.StoreKindFilesystem,
 					Paths: []string{"path", "other-path"},
 				},
 				{
-					ID:     pointer.StringPtr("default"),
+					ID:     pointer.String("default"),
 					Kind:   types.StoreKindVault,
 					Paths:  []string{"path", "other-path"},
 					Config: types.StoreConfigVault{VaultAPIAddress: "vault-api"},

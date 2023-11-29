@@ -29,7 +29,7 @@ import (
 func ValidateConfig(config *types.Config) field.ErrorList {
 	var (
 		errors     = field.ErrorList{}
-		storeKinds = sets.String{}
+		storeKinds = sets.Set[string]{}
 		storesPath = field.NewPath("kubeconfigStores")
 		usesIndex  = false
 	)

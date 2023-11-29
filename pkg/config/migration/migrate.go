@@ -34,13 +34,13 @@ func ConvertConfiguration(old types.ConfigOld) types.Config {
 	}
 
 	filesystemStore := types.KubeconfigStore{
-		ID:    pointer.StringPtr("default"),
+		ID:    pointer.String("default"),
 		Kind:  types.StoreKindFilesystem,
 		Paths: []string{},
 	}
 
 	vaultStore := types.KubeconfigStore{
-		ID:    pointer.StringPtr("default"),
+		ID:    pointer.String("default"),
 		Kind:  types.StoreKindVault,
 		Paths: []string{},
 	}

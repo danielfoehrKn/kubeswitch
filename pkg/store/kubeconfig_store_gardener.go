@@ -618,9 +618,9 @@ func (s *GardenerStore) sendKubeconfigPaths(channel chan SearchResult, shoots []
 
 		var kubeconfigPath string
 
-		// check for shooted seed annotation
+		// check if the shoot is a managed seed
 		// check that the Shoot is not already added through the managed Seed to avoid duplicates
-		if gardenerstore.IsShootedSeed(shoot) {
+		if gardenerstore.IsManagedSeed(shoot) {
 			// seed resource of a Shooted seed should have the same name as the Seed
 			kubeconfigPath = gardenerstore.GetSeedIdentifier(landscapeName, shoot.Name)
 		} else {

@@ -16,7 +16,6 @@ package gardener
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -49,7 +48,7 @@ func GetStoreConfig(store types.KubeconfigStore) (*types.StoreConfigGardener, er
 	storeConfig := &types.StoreConfigGardener{}
 	buf, err := yaml.Marshal(store.Config)
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("failed to unmarshal store config: %v", err)
 	}
 
 	err = yaml.Unmarshal(buf, storeConfig)
@@ -136,10 +135,14 @@ func ParseIdentifier(path string) (string, GardenerResource, string, string, str
 	}
 }
 
-// IsShootedSeed determines if this Shoot is a Shooted seed based on an annotation
-func IsShootedSeed(shoot gardencorev1beta1.Shoot) bool {
-	if shoot.Namespace == v1beta1constants.GardenNamespace && shoot.Annotations != nil {
-		return shoot.Annotations[v1beta1constants.AnnotationShootUseAsSeed] != ""
+// IsManagedSeed determines if this Shoot is a Shooted seed based on an annotation
+func IsManagedSeed(shoot gardencorev1beta1.Shoot) bool {
+	if shoot.Namespace == v1beta1constants.GardenNamespace && shoot.Status.Conditions != nil {
+		for _, condition := range shoot.Status.Conditions {
+			if condition.Type == gardencorev1beta1.SeedGardenletReady {
+				return true
+			}
+		}
 	}
 	return false
 }

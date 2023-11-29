@@ -176,13 +176,13 @@ var _ = Describe("ValidateConfig", func() {
 					Kind:              types.StoreKindVault,
 					RefreshIndexAfter: &minute,
 					Paths:             []string{"ab"},
-					ID:                pointer.StringPtr("id-one"),
+					ID:                pointer.String("id-one"),
 				},
 				{
 					Kind:              types.StoreKindVault,
 					RefreshIndexAfter: &minute,
 					Paths:             []string{"ab"},
-					ID:                pointer.StringPtr("id-two"),
+					ID:                pointer.String("id-two"),
 				},
 			},
 		}
@@ -220,14 +220,14 @@ var _ = Describe("ValidateConfig", func() {
 						Kind: types.StoreKindGardener,
 						Config: types.StoreConfigGardener{
 							GardenerAPIKubeconfigPath: "my-path-to-gardener-kubeconfig",
-							LandscapeName:             pointer.StringPtr("dev"),
+							LandscapeName:             pointer.String("dev"),
 						},
 					},
 					{
 						Kind: types.StoreKindGardener,
 						Config: types.StoreConfigGardener{
 							GardenerAPIKubeconfigPath: "my-path-to-gardener-kubeconfig",
-							LandscapeName:             pointer.StringPtr("canary"),
+							LandscapeName:             pointer.String("canary"),
 						},
 					},
 				},
@@ -355,7 +355,7 @@ var _ = Describe("ValidateConfig", func() {
 						Kind: types.StoreKindGardener,
 						Config: types.StoreConfigGardener{
 							GardenerAPIKubeconfigPath: "xy",
-							LandscapeName:             pointer.StringPtr(""),
+							LandscapeName:             pointer.String(""),
 						},
 					},
 				},
@@ -380,7 +380,7 @@ var _ = Describe("ValidateConfig", func() {
 					{
 						Name: "my-hooks",
 						Type: types.HookTypeExecutable,
-						Path: pointer.StringPtr("my-path"),
+						Path: pointer.String("my-path"),
 					},
 				},
 			}
