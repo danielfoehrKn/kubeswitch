@@ -19,6 +19,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/bombsimon/logrusr/v4"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
 	"github.com/danielfoehrkn/kubeswitch/pkg"
 
 	"github.com/danielfoehrkn/kubeswitch/pkg/cache"
@@ -271,6 +274,10 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 			s.GetLogger().Logger.SetLevel(logrus.DebugLevel)
 		}
 
+		// set 'logr' log implementation for the controller-runtime (otherwise controller-runtime code cannot log)
+		log := logrusr.New(s.GetLogger().Logger)
+		logf.SetLogger(log)
+
 		// Add cache to the store
 		// defaults to in-memory cache -> prevents duplicate reads of the same kubeconfig
 		if cacheCfg := kubeconfigStoreFromConfig.Cache; cacheCfg == nil {
@@ -315,11 +322,11 @@ func getStoreFromFlagAndEnv(config *types.Config) *types.KubeconfigStore {
 	}
 
 	return &types.KubeconfigStore{
-		ID:             pointer.StringPtr("env-and-flag"),
+		ID:             pointer.String("env-and-flag"),
 		Kind:           types.StoreKind(storageBackend),
-		KubeconfigName: pointer.StringPtr(kubeconfigName),
+		KubeconfigName: pointer.String(kubeconfigName),
 		Paths:          paths,
-		ShowPrefix:     pointer.BoolPtr(false),
+		ShowPrefix:     pointer.Bool(false),
 	}
 }
 
