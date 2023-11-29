@@ -4,10 +4,14 @@ package eks
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	internalauth "github.com/aws/aws-sdk-go-v2/internal/auth"
 	"github.com/aws/aws-sdk-go-v2/service/eks/types"
+	smithyendpoints "github.com/aws/smithy-go/endpoints"
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
@@ -15,23 +19,21 @@ import (
 // Creates an Amazon EKS control plane. The Amazon EKS control plane consists of
 // control plane instances that run the Kubernetes software, such as etcd and the
 // API server. The control plane runs in an account managed by Amazon Web Services,
-// and the Kubernetes API is exposed via the Amazon EKS API server endpoint. Each
-// Amazon EKS cluster control plane is single-tenant and unique and runs on its own
+// and the Kubernetes API is exposed by the Amazon EKS API server endpoint. Each
+// Amazon EKS cluster control plane is single tenant and unique. It runs on its own
 // set of Amazon EC2 instances. The cluster control plane is provisioned across
 // multiple Availability Zones and fronted by an Elastic Load Balancing Network
 // Load Balancer. Amazon EKS also provisions elastic network interfaces in your VPC
 // subnets to provide connectivity from the control plane instances to the nodes
-// (for example, to support kubectl exec, logs, and proxy data flows). Amazon EKS
-// nodes run in your Amazon Web Services account and connect to your cluster's
-// control plane via the Kubernetes API server endpoint and a certificate file that
-// is created for your cluster. Cluster creation typically takes several minutes.
-// After you create an Amazon EKS cluster, you must configure your Kubernetes
-// tooling to communicate with the API server and launch nodes into your cluster.
-// For more information, see Managing Cluster Authentication
-// (https://docs.aws.amazon.com/eks/latest/userguide/managing-auth.html) and
-// Launching Amazon EKS nodes
-// (https://docs.aws.amazon.com/eks/latest/userguide/launch-workers.html) in the
-// Amazon EKS User Guide.
+// (for example, to support kubectl exec , logs , and proxy data flows). Amazon
+// EKS nodes run in your Amazon Web Services account and connect to your cluster's
+// control plane over the Kubernetes API server endpoint and a certificate file
+// that is created for your cluster. In most cases, it takes several minutes to
+// create a cluster. After you create an Amazon EKS cluster, you must configure
+// your Kubernetes tooling to communicate with the API server and launch nodes into
+// your cluster. For more information, see Managing Cluster Authentication (https://docs.aws.amazon.com/eks/latest/userguide/managing-auth.html)
+// and Launching Amazon EKS nodes (https://docs.aws.amazon.com/eks/latest/userguide/launch-workers.html)
+// in the Amazon EKS User Guide.
 func (c *Client) CreateCluster(ctx context.Context, params *CreateClusterInput, optFns ...func(*Options)) (*CreateClusterOutput, error) {
 	if params == nil {
 		params = &CreateClusterInput{}
@@ -54,24 +56,21 @@ type CreateClusterInput struct {
 	// This member is required.
 	Name *string
 
-	// The VPC configuration used by the cluster control plane. Amazon EKS VPC
+	// The VPC configuration that's used by the cluster control plane. Amazon EKS VPC
 	// resources have specific requirements to work properly with Kubernetes. For more
-	// information, see Cluster VPC Considerations
-	// (https://docs.aws.amazon.com/eks/latest/userguide/network_reqs.html) and Cluster
-	// Security Group Considerations
-	// (https://docs.aws.amazon.com/eks/latest/userguide/sec-group-reqs.html) in the
-	// Amazon EKS User Guide. You must specify at least two subnets. You can specify up
-	// to five security groups, but we recommend that you use a dedicated security
-	// group for your cluster control plane.
+	// information, see Cluster VPC Considerations (https://docs.aws.amazon.com/eks/latest/userguide/network_reqs.html)
+	// and Cluster Security Group Considerations (https://docs.aws.amazon.com/eks/latest/userguide/sec-group-reqs.html)
+	// in the Amazon EKS User Guide. You must specify at least two subnets. You can
+	// specify up to five security groups. However, we recommend that you use a
+	// dedicated security group for your cluster control plane.
 	//
 	// This member is required.
 	ResourcesVpcConfig *types.VpcConfigRequest
 
-	// The Amazon Resource Name (ARN) of the IAM role that provides permissions for the
-	// Kubernetes control plane to make calls to Amazon Web Services API operations on
-	// your behalf. For more information, see Amazon EKS Service IAM Role
-	// (https://docs.aws.amazon.com/eks/latest/userguide/service_IAM_role.html) in the
-	// Amazon EKS User Guide .
+	// The Amazon Resource Name (ARN) of the IAM role that provides permissions for
+	// the Kubernetes control plane to make calls to Amazon Web Services API operations
+	// on your behalf. For more information, see Amazon EKS Service IAM Role (https://docs.aws.amazon.com/eks/latest/userguide/service_IAM_role.html)
+	// in the Amazon EKS User Guide .
 	//
 	// This member is required.
 	RoleArn *string
@@ -88,20 +87,26 @@ type CreateClusterInput struct {
 
 	// Enable or disable exporting the Kubernetes control plane logs for your cluster
 	// to CloudWatch Logs. By default, cluster control plane logs aren't exported to
-	// CloudWatch Logs. For more information, see Amazon EKS Cluster control plane logs
-	// (https://docs.aws.amazon.com/eks/latest/userguide/control-plane-logs.html) in
-	// the Amazon EKS User Guide . CloudWatch Logs ingestion, archive storage, and data
-	// scanning rates apply to exported control plane logs. For more information, see
-	// CloudWatch Pricing (http://aws.amazon.com/cloudwatch/pricing/).
+	// CloudWatch Logs. For more information, see Amazon EKS Cluster control plane logs (https://docs.aws.amazon.com/eks/latest/userguide/control-plane-logs.html)
+	// in the Amazon EKS User Guide . CloudWatch Logs ingestion, archive storage, and
+	// data scanning rates apply to exported control plane logs. For more information,
+	// see CloudWatch Pricing (http://aws.amazon.com/cloudwatch/pricing/) .
 	Logging *types.Logging
 
+	// An object representing the configuration of your local Amazon EKS cluster on an
+	// Amazon Web Services Outpost. Before creating a local cluster on an Outpost,
+	// review Local clusters for Amazon EKS on Amazon Web Services Outposts (https://docs.aws.amazon.com/eks/latest/userguide/eks-outposts-local-cluster-overview.html)
+	// in the Amazon EKS User Guide. This object isn't available for creating Amazon
+	// EKS clusters on the Amazon Web Services cloud.
+	OutpostConfig *types.OutpostConfigRequest
+
 	// The metadata to apply to the cluster to assist with categorization and
-	// organization. Each tag consists of a key and an optional value, both of which
-	// you define.
+	// organization. Each tag consists of a key and an optional value. You define both.
 	Tags map[string]string
 
 	// The desired Kubernetes version for your cluster. If you don't specify a value
-	// here, the latest version available in Amazon EKS is used.
+	// here, the default version available in Amazon EKS is used. The default version
+	// might not be the latest version available.
 	Version *string
 
 	noSmithyDocumentSerde
@@ -125,6 +130,9 @@ func (c *Client) addOperationCreateClusterMiddlewares(stack *middleware.Stack, o
 	}
 	err = stack.Deserialize.Add(&awsRestjson1_deserializeOpCreateCluster{}, middleware.After)
 	if err != nil {
+		return err
+	}
+	if err = addlegacyEndpointContextSetter(stack, options); err != nil {
 		return err
 	}
 	if err = addSetLoggerMiddleware(stack, options); err != nil {
@@ -154,13 +162,16 @@ func (c *Client) addOperationCreateClusterMiddlewares(stack *middleware.Stack, o
 	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
-	if err = addClientUserAgent(stack); err != nil {
+	if err = addClientUserAgent(stack, options); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddErrorCloseResponseBodyMiddleware(stack); err != nil {
 		return err
 	}
 	if err = smithyhttp.AddCloseResponseBodyMiddleware(stack); err != nil {
+		return err
+	}
+	if err = addCreateClusterResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
 	if err = addIdempotencyToken_opCreateClusterMiddleware(stack, options); err != nil {
@@ -172,6 +183,9 @@ func (c *Client) addOperationCreateClusterMiddlewares(stack *middleware.Stack, o
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opCreateCluster(options.Region), middleware.Before); err != nil {
 		return err
 	}
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
+		return err
+	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
 		return err
 	}
@@ -179,6 +193,9 @@ func (c *Client) addOperationCreateClusterMiddlewares(stack *middleware.Stack, o
 		return err
 	}
 	if err = addRequestResponseLogging(stack, options); err != nil {
+		return err
+	}
+	if err = addendpointDisableHTTPSMiddleware(stack, options); err != nil {
 		return err
 	}
 	return nil
@@ -224,4 +241,127 @@ func newServiceMetadataMiddleware_opCreateCluster(region string) *awsmiddleware.
 		SigningName:   "eks",
 		OperationName: "CreateCluster",
 	}
+}
+
+type opCreateClusterResolveEndpointMiddleware struct {
+	EndpointResolver EndpointResolverV2
+	BuiltInResolver  builtInParameterResolver
+}
+
+func (*opCreateClusterResolveEndpointMiddleware) ID() string {
+	return "ResolveEndpointV2"
+}
+
+func (m *opCreateClusterResolveEndpointMiddleware) HandleSerialize(ctx context.Context, in middleware.SerializeInput, next middleware.SerializeHandler) (
+	out middleware.SerializeOutput, metadata middleware.Metadata, err error,
+) {
+	if awsmiddleware.GetRequiresLegacyEndpoints(ctx) {
+		return next.HandleSerialize(ctx, in)
+	}
+
+	req, ok := in.Request.(*smithyhttp.Request)
+	if !ok {
+		return out, metadata, fmt.Errorf("unknown transport type %T", in.Request)
+	}
+
+	if m.EndpointResolver == nil {
+		return out, metadata, fmt.Errorf("expected endpoint resolver to not be nil")
+	}
+
+	params := EndpointParameters{}
+
+	m.BuiltInResolver.ResolveBuiltIns(&params)
+
+	var resolvedEndpoint smithyendpoints.Endpoint
+	resolvedEndpoint, err = m.EndpointResolver.ResolveEndpoint(ctx, params)
+	if err != nil {
+		return out, metadata, fmt.Errorf("failed to resolve service endpoint, %w", err)
+	}
+
+	req.URL = &resolvedEndpoint.URI
+
+	for k := range resolvedEndpoint.Headers {
+		req.Header.Set(
+			k,
+			resolvedEndpoint.Headers.Get(k),
+		)
+	}
+
+	authSchemes, err := internalauth.GetAuthenticationSchemes(&resolvedEndpoint.Properties)
+	if err != nil {
+		var nfe *internalauth.NoAuthenticationSchemesFoundError
+		if errors.As(err, &nfe) {
+			// if no auth scheme is found, default to sigv4
+			signingName := "eks"
+			signingRegion := m.BuiltInResolver.(*builtInResolver).Region
+			ctx = awsmiddleware.SetSigningName(ctx, signingName)
+			ctx = awsmiddleware.SetSigningRegion(ctx, signingRegion)
+
+		}
+		var ue *internalauth.UnSupportedAuthenticationSchemeSpecifiedError
+		if errors.As(err, &ue) {
+			return out, metadata, fmt.Errorf(
+				"This operation requests signer version(s) %v but the client only supports %v",
+				ue.UnsupportedSchemes,
+				internalauth.SupportedSchemes,
+			)
+		}
+	}
+
+	for _, authScheme := range authSchemes {
+		switch authScheme.(type) {
+		case *internalauth.AuthenticationSchemeV4:
+			v4Scheme, _ := authScheme.(*internalauth.AuthenticationSchemeV4)
+			var signingName, signingRegion string
+			if v4Scheme.SigningName == nil {
+				signingName = "eks"
+			} else {
+				signingName = *v4Scheme.SigningName
+			}
+			if v4Scheme.SigningRegion == nil {
+				signingRegion = m.BuiltInResolver.(*builtInResolver).Region
+			} else {
+				signingRegion = *v4Scheme.SigningRegion
+			}
+			if v4Scheme.DisableDoubleEncoding != nil {
+				// The signer sets an equivalent value at client initialization time.
+				// Setting this context value will cause the signer to extract it
+				// and override the value set at client initialization time.
+				ctx = internalauth.SetDisableDoubleEncoding(ctx, *v4Scheme.DisableDoubleEncoding)
+			}
+			ctx = awsmiddleware.SetSigningName(ctx, signingName)
+			ctx = awsmiddleware.SetSigningRegion(ctx, signingRegion)
+			break
+		case *internalauth.AuthenticationSchemeV4A:
+			v4aScheme, _ := authScheme.(*internalauth.AuthenticationSchemeV4A)
+			if v4aScheme.SigningName == nil {
+				v4aScheme.SigningName = aws.String("eks")
+			}
+			if v4aScheme.DisableDoubleEncoding != nil {
+				// The signer sets an equivalent value at client initialization time.
+				// Setting this context value will cause the signer to extract it
+				// and override the value set at client initialization time.
+				ctx = internalauth.SetDisableDoubleEncoding(ctx, *v4aScheme.DisableDoubleEncoding)
+			}
+			ctx = awsmiddleware.SetSigningName(ctx, *v4aScheme.SigningName)
+			ctx = awsmiddleware.SetSigningRegion(ctx, v4aScheme.SigningRegionSet[0])
+			break
+		case *internalauth.AuthenticationSchemeNone:
+			break
+		}
+	}
+
+	return next.HandleSerialize(ctx, in)
+}
+
+func addCreateClusterResolveEndpointMiddleware(stack *middleware.Stack, options Options) error {
+	return stack.Serialize.Insert(&opCreateClusterResolveEndpointMiddleware{
+		EndpointResolver: options.EndpointResolverV2,
+		BuiltInResolver: &builtInResolver{
+			Region:       options.Region,
+			UseDualStack: options.EndpointOptions.UseDualStackEndpoint,
+			UseFIPS:      options.EndpointOptions.UseFIPSEndpoint,
+			Endpoint:     options.BaseEndpoint,
+		},
+	}, "ResolveEndpoint", middleware.After)
 }

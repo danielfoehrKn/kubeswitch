@@ -5,6 +5,7 @@
 /hack/hooks
 
 .vscode
+.devcontainer
 .idea
 .DS_Store
 .cache_ggshield

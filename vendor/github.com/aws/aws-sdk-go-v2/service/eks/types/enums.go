@@ -43,6 +43,7 @@ const (
 	AddonStatusDeleting     AddonStatus = "DELETING"
 	AddonStatusDeleteFailed AddonStatus = "DELETE_FAILED"
 	AddonStatusDegraded     AddonStatus = "DEGRADED"
+	AddonStatusUpdateFailed AddonStatus = "UPDATE_FAILED"
 )
 
 // Values returns all known values for AddonStatus. Note that this can be expanded
@@ -57,6 +58,7 @@ func (AddonStatus) Values() []AddonStatus {
 		"DELETING",
 		"DELETE_FAILED",
 		"DEGRADED",
+		"UPDATE_FAILED",
 	}
 }
 
@@ -64,10 +66,18 @@ type AMITypes string
 
 // Enum values for AMITypes
 const (
-	AMITypesAl2X8664    AMITypes = "AL2_x86_64"
-	AMITypesAl2X8664Gpu AMITypes = "AL2_x86_64_GPU"
-	AMITypesAl2Arm64    AMITypes = "AL2_ARM_64"
-	AMITypesCustom      AMITypes = "CUSTOM"
+	AMITypesAl2X8664                AMITypes = "AL2_x86_64"
+	AMITypesAl2X8664Gpu             AMITypes = "AL2_x86_64_GPU"
+	AMITypesAl2Arm64                AMITypes = "AL2_ARM_64"
+	AMITypesCustom                  AMITypes = "CUSTOM"
+	AMITypesBottlerocketArm64       AMITypes = "BOTTLEROCKET_ARM_64"
+	AMITypesBottlerocketX8664       AMITypes = "BOTTLEROCKET_x86_64"
+	AMITypesBottlerocketArm64Nvidia AMITypes = "BOTTLEROCKET_ARM_64_NVIDIA"
+	AMITypesBottlerocketX8664Nvidia AMITypes = "BOTTLEROCKET_x86_64_NVIDIA"
+	AMITypesWindowsCore2019X8664    AMITypes = "WINDOWS_CORE_2019_x86_64"
+	AMITypesWindowsFull2019X8664    AMITypes = "WINDOWS_FULL_2019_x86_64"
+	AMITypesWindowsCore2022X8664    AMITypes = "WINDOWS_CORE_2022_x86_64"
+	AMITypesWindowsFull2022X8664    AMITypes = "WINDOWS_FULL_2022_x86_64"
 )
 
 // Values returns all known values for AMITypes. Note that this can be expanded in
@@ -79,6 +89,14 @@ func (AMITypes) Values() []AMITypes {
 		"AL2_x86_64_GPU",
 		"AL2_ARM_64",
 		"CUSTOM",
+		"BOTTLEROCKET_ARM_64",
+		"BOTTLEROCKET_x86_64",
+		"BOTTLEROCKET_ARM_64_NVIDIA",
+		"BOTTLEROCKET_x86_64_NVIDIA",
+		"WINDOWS_CORE_2019_x86_64",
+		"WINDOWS_FULL_2019_x86_64",
+		"WINDOWS_CORE_2022_x86_64",
+		"WINDOWS_FULL_2022_x86_64",
 	}
 }
 
@@ -97,6 +115,32 @@ func (CapacityTypes) Values() []CapacityTypes {
 	return []CapacityTypes{
 		"ON_DEMAND",
 		"SPOT",
+	}
+}
+
+type ClusterIssueCode string
+
+// Enum values for ClusterIssueCode
+const (
+	ClusterIssueCodeAccessDenied          ClusterIssueCode = "AccessDenied"
+	ClusterIssueCodeClusterUnreachable    ClusterIssueCode = "ClusterUnreachable"
+	ClusterIssueCodeConfigurationConflict ClusterIssueCode = "ConfigurationConflict"
+	ClusterIssueCodeInternalFailure       ClusterIssueCode = "InternalFailure"
+	ClusterIssueCodeResourceLimitExceeded ClusterIssueCode = "ResourceLimitExceeded"
+	ClusterIssueCodeResourceNotFound      ClusterIssueCode = "ResourceNotFound"
+)
+
+// Values returns all known values for ClusterIssueCode. Note that this can be
+// expanded in the future, and so it is only as up to date as the client. The
+// ordering of this slice is not guaranteed to be stable across updates.
+func (ClusterIssueCode) Values() []ClusterIssueCode {
+	return []ClusterIssueCode{
+		"AccessDenied",
+		"ClusterUnreachable",
+		"ConfigurationConflict",
+		"InternalFailure",
+		"ResourceLimitExceeded",
+		"ResourceNotFound",
 	}
 }
 
@@ -135,9 +179,9 @@ const (
 	ConfigStatusActive   ConfigStatus = "ACTIVE"
 )
 
-// Values returns all known values for ConfigStatus. Note that this can be expanded
-// in the future, and so it is only as up to date as the client. The ordering of
-// this slice is not guaranteed to be stable across updates.
+// Values returns all known values for ConfigStatus. Note that this can be
+// expanded in the future, and so it is only as up to date as the client. The
+// ordering of this slice is not guaranteed to be stable across updates.
 func (ConfigStatus) Values() []ConfigStatus {
 	return []ConfigStatus{
 		"CREATING",
@@ -201,9 +245,9 @@ const (
 	ErrorCodeK8sResourceNotFound          ErrorCode = "K8sResourceNotFound"
 )
 
-// Values returns all known values for ErrorCode. Note that this can be expanded in
-// the future, and so it is only as up to date as the client. The ordering of this
-// slice is not guaranteed to be stable across updates.
+// Values returns all known values for ErrorCode. Note that this can be expanded
+// in the future, and so it is only as up to date as the client. The ordering of
+// this slice is not guaranteed to be stable across updates.
 func (ErrorCode) Values() []ErrorCode {
 	return []ErrorCode{
 		"SubnetNotFound",
@@ -250,6 +294,24 @@ func (FargateProfileStatus) Values() []FargateProfileStatus {
 	}
 }
 
+type IpFamily string
+
+// Enum values for IpFamily
+const (
+	IpFamilyIpv4 IpFamily = "ipv4"
+	IpFamilyIpv6 IpFamily = "ipv6"
+)
+
+// Values returns all known values for IpFamily. Note that this can be expanded in
+// the future, and so it is only as up to date as the client. The ordering of this
+// slice is not guaranteed to be stable across updates.
+func (IpFamily) Values() []IpFamily {
+	return []IpFamily{
+		"ipv4",
+		"ipv6",
+	}
+}
+
 type LogType string
 
 // Enum values for LogType
@@ -278,24 +340,39 @@ type NodegroupIssueCode string
 
 // Enum values for NodegroupIssueCode
 const (
-	NodegroupIssueCodeAutoScalingGroupNotFound             NodegroupIssueCode = "AutoScalingGroupNotFound"
-	NodegroupIssueCodeAutoScalingGroupInvalidConfiguration NodegroupIssueCode = "AutoScalingGroupInvalidConfiguration"
-	NodegroupIssueCodeEc2SecurityGroupNotFound             NodegroupIssueCode = "Ec2SecurityGroupNotFound"
-	NodegroupIssueCodeEc2SecurityGroupDeletionFailure      NodegroupIssueCode = "Ec2SecurityGroupDeletionFailure"
-	NodegroupIssueCodeEc2LaunchTemplateNotFound            NodegroupIssueCode = "Ec2LaunchTemplateNotFound"
-	NodegroupIssueCodeEc2LaunchTemplateVersionMismatch     NodegroupIssueCode = "Ec2LaunchTemplateVersionMismatch"
-	NodegroupIssueCodeEc2SubnetNotFound                    NodegroupIssueCode = "Ec2SubnetNotFound"
-	NodegroupIssueCodeEc2SubnetInvalidConfiguration        NodegroupIssueCode = "Ec2SubnetInvalidConfiguration"
-	NodegroupIssueCodeIamInstanceProfileNotFound           NodegroupIssueCode = "IamInstanceProfileNotFound"
-	NodegroupIssueCodeIamLimitExceeded                     NodegroupIssueCode = "IamLimitExceeded"
-	NodegroupIssueCodeIamNodeRoleNotFound                  NodegroupIssueCode = "IamNodeRoleNotFound"
-	NodegroupIssueCodeNodeCreationFailure                  NodegroupIssueCode = "NodeCreationFailure"
-	NodegroupIssueCodeAsgInstanceLaunchFailures            NodegroupIssueCode = "AsgInstanceLaunchFailures"
-	NodegroupIssueCodeInstanceLimitExceeded                NodegroupIssueCode = "InstanceLimitExceeded"
-	NodegroupIssueCodeInsufficientFreeAddresses            NodegroupIssueCode = "InsufficientFreeAddresses"
-	NodegroupIssueCodeAccessDenied                         NodegroupIssueCode = "AccessDenied"
-	NodegroupIssueCodeInternalFailure                      NodegroupIssueCode = "InternalFailure"
-	NodegroupIssueCodeClusterUnreachable                   NodegroupIssueCode = "ClusterUnreachable"
+	NodegroupIssueCodeAutoScalingGroupNotFound              NodegroupIssueCode = "AutoScalingGroupNotFound"
+	NodegroupIssueCodeAutoScalingGroupInvalidConfiguration  NodegroupIssueCode = "AutoScalingGroupInvalidConfiguration"
+	NodegroupIssueCodeEc2SecurityGroupNotFound              NodegroupIssueCode = "Ec2SecurityGroupNotFound"
+	NodegroupIssueCodeEc2SecurityGroupDeletionFailure       NodegroupIssueCode = "Ec2SecurityGroupDeletionFailure"
+	NodegroupIssueCodeEc2LaunchTemplateNotFound             NodegroupIssueCode = "Ec2LaunchTemplateNotFound"
+	NodegroupIssueCodeEc2LaunchTemplateVersionMismatch      NodegroupIssueCode = "Ec2LaunchTemplateVersionMismatch"
+	NodegroupIssueCodeEc2SubnetNotFound                     NodegroupIssueCode = "Ec2SubnetNotFound"
+	NodegroupIssueCodeEc2SubnetInvalidConfiguration         NodegroupIssueCode = "Ec2SubnetInvalidConfiguration"
+	NodegroupIssueCodeIamInstanceProfileNotFound            NodegroupIssueCode = "IamInstanceProfileNotFound"
+	NodegroupIssueCodeEc2SubnetMissingIpv6Assignment        NodegroupIssueCode = "Ec2SubnetMissingIpv6Assignment"
+	NodegroupIssueCodeIamLimitExceeded                      NodegroupIssueCode = "IamLimitExceeded"
+	NodegroupIssueCodeIamNodeRoleNotFound                   NodegroupIssueCode = "IamNodeRoleNotFound"
+	NodegroupIssueCodeNodeCreationFailure                   NodegroupIssueCode = "NodeCreationFailure"
+	NodegroupIssueCodeAsgInstanceLaunchFailures             NodegroupIssueCode = "AsgInstanceLaunchFailures"
+	NodegroupIssueCodeInstanceLimitExceeded                 NodegroupIssueCode = "InstanceLimitExceeded"
+	NodegroupIssueCodeInsufficientFreeAddresses             NodegroupIssueCode = "InsufficientFreeAddresses"
+	NodegroupIssueCodeAccessDenied                          NodegroupIssueCode = "AccessDenied"
+	NodegroupIssueCodeInternalFailure                       NodegroupIssueCode = "InternalFailure"
+	NodegroupIssueCodeClusterUnreachable                    NodegroupIssueCode = "ClusterUnreachable"
+	NodegroupIssueCodeAmiIdNotFound                         NodegroupIssueCode = "AmiIdNotFound"
+	NodegroupIssueCodeAutoScalingGroupOptInRequired         NodegroupIssueCode = "AutoScalingGroupOptInRequired"
+	NodegroupIssueCodeAutoScalingGroupRateLimitExceeded     NodegroupIssueCode = "AutoScalingGroupRateLimitExceeded"
+	NodegroupIssueCodeEc2LaunchTemplateDeletionFailure      NodegroupIssueCode = "Ec2LaunchTemplateDeletionFailure"
+	NodegroupIssueCodeEc2LaunchTemplateInvalidConfiguration NodegroupIssueCode = "Ec2LaunchTemplateInvalidConfiguration"
+	NodegroupIssueCodeEc2LaunchTemplateMaxLimitExceeded     NodegroupIssueCode = "Ec2LaunchTemplateMaxLimitExceeded"
+	NodegroupIssueCodeEc2SubnetListTooLong                  NodegroupIssueCode = "Ec2SubnetListTooLong"
+	NodegroupIssueCodeIamThrottling                         NodegroupIssueCode = "IamThrottling"
+	NodegroupIssueCodeNodeTerminationFailure                NodegroupIssueCode = "NodeTerminationFailure"
+	NodegroupIssueCodePodEvictionFailure                    NodegroupIssueCode = "PodEvictionFailure"
+	NodegroupIssueCodeSourceEc2LaunchTemplateNotFound       NodegroupIssueCode = "SourceEc2LaunchTemplateNotFound"
+	NodegroupIssueCodeLimitExceeded                         NodegroupIssueCode = "LimitExceeded"
+	NodegroupIssueCodeUnknown                               NodegroupIssueCode = "Unknown"
+	NodegroupIssueCodeAutoScalingGroupInstanceRefreshActive NodegroupIssueCode = "AutoScalingGroupInstanceRefreshActive"
 )
 
 // Values returns all known values for NodegroupIssueCode. Note that this can be
@@ -312,6 +389,7 @@ func (NodegroupIssueCode) Values() []NodegroupIssueCode {
 		"Ec2SubnetNotFound",
 		"Ec2SubnetInvalidConfiguration",
 		"IamInstanceProfileNotFound",
+		"Ec2SubnetMissingIpv6Assignment",
 		"IamLimitExceeded",
 		"IamNodeRoleNotFound",
 		"NodeCreationFailure",
@@ -321,6 +399,20 @@ func (NodegroupIssueCode) Values() []NodegroupIssueCode {
 		"AccessDenied",
 		"InternalFailure",
 		"ClusterUnreachable",
+		"AmiIdNotFound",
+		"AutoScalingGroupOptInRequired",
+		"AutoScalingGroupRateLimitExceeded",
+		"Ec2LaunchTemplateDeletionFailure",
+		"Ec2LaunchTemplateInvalidConfiguration",
+		"Ec2LaunchTemplateMaxLimitExceeded",
+		"Ec2SubnetListTooLong",
+		"IamThrottling",
+		"NodeTerminationFailure",
+		"PodEvictionFailure",
+		"SourceEc2LaunchTemplateNotFound",
+		"LimitExceeded",
+		"Unknown",
+		"AutoScalingGroupInstanceRefreshActive",
 	}
 }
 
@@ -358,6 +450,7 @@ type ResolveConflicts string
 const (
 	ResolveConflictsOverwrite ResolveConflicts = "OVERWRITE"
 	ResolveConflictsNone      ResolveConflicts = "NONE"
+	ResolveConflictsPreserve  ResolveConflicts = "PRESERVE"
 )
 
 // Values returns all known values for ResolveConflicts. Note that this can be
@@ -367,6 +460,7 @@ func (ResolveConflicts) Values() []ResolveConflicts {
 	return []ResolveConflicts{
 		"OVERWRITE",
 		"NONE",
+		"PRESERVE",
 	}
 }
 
@@ -460,9 +554,9 @@ const (
 	UpdateStatusSuccessful UpdateStatus = "Successful"
 )
 
-// Values returns all known values for UpdateStatus. Note that this can be expanded
-// in the future, and so it is only as up to date as the client. The ordering of
-// this slice is not guaranteed to be stable across updates.
+// Values returns all known values for UpdateStatus. Note that this can be
+// expanded in the future, and so it is only as up to date as the client. The
+// ordering of this slice is not guaranteed to be stable across updates.
 func (UpdateStatus) Values() []UpdateStatus {
 	return []UpdateStatus{
 		"InProgress",
