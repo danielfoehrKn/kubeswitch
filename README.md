@@ -145,6 +145,20 @@ You can also wrap the command(s) into a script and execute it via `switch exec`:
 switch exec "*-dev-?" -- bash script.sh
 ```
 
+For inline shell script execution, you need to specify the default shell in the `SwitchConfig` file:
+
+```yaml
+# ~/.kube/switch-config.yaml
+kind: SwitchConfig
+execShell: "/bin/bash"
+```
+
+Then you can run shell commands like so:
+```sh
+# executes /bin/bash -c 'for i in 1 2 3; do sleep 1; echo "hi $i"; done'
+switch exec "*-dev-?" -- 'for i in 1 2 3; do sleep 1; echo "hi $i"; done'
+```
+
 ## Kubeconfig stores
 
 Multiple Kubeconfig stores are supported.

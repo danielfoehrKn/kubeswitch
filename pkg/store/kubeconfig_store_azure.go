@@ -123,7 +123,7 @@ func (s *AzureStore) StartSearch(channel chan SearchResult) {
 			}
 		}
 
-		s.Logger.Debugf("search done for AKS resource groups")
+		s.Logger.Debugf("Search done for AKS resource groups")
 		return
 	}
 
@@ -137,7 +137,7 @@ func (s *AzureStore) StartSearch(channel chan SearchResult) {
 		s.Logger.Debugf("next page found")
 		s.returnSearchResultsForClusters(channel, pager.PageResponse().ManagedClusterListResult.Value)
 	}
-	s.Logger.Debugf("search done for AKS")
+	s.Logger.Debugf("Search done for AKS")
 }
 
 func handleAzureError(channel chan SearchResult, err error) {
@@ -152,7 +152,7 @@ func handleAzureError(channel chan SearchResult, err error) {
 
 	if err != nil {
 		channel <- SearchResult{
-			Error: fmt.Errorf("failed to list AKS clusters: %w", err),
+			Error: fmt.Errorf("Failed to list AKS clusters: %w", err),
 		}
 		return
 	}
@@ -166,7 +166,7 @@ func (s *AzureStore) returnSearchResultsForClusters(channel chan SearchResult, m
 		}
 
 		if cluster.Resource.Name == nil {
-			s.Logger.Debugf("resource name for cluster %q not set", *cluster.Resource.Name)
+			s.Logger.Debugf("Resource name for cluster %q not set", *cluster.Resource.Name)
 			continue
 		}
 

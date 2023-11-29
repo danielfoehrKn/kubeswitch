@@ -274,10 +274,6 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 			s.GetLogger().Logger.SetLevel(logrus.DebugLevel)
 		}
 
-		// set 'logr' log implementation for the controller-runtime (otherwise controller-runtime code cannot log)
-		log := logrusr.New(s.GetLogger().Logger)
-		logf.SetLogger(log)
-
 		// Add cache to the store
 		// defaults to in-memory cache -> prevents duplicate reads of the same kubeconfig
 		if cacheCfg := kubeconfigStoreFromConfig.Cache; cacheCfg == nil {
@@ -290,6 +286,11 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 		}
 		stores = append(stores, s)
 	}
+
+	// set 'logr' log implementation for the controller-runtime (otherwise controller-runtime code cannot log)
+	log := logrusr.New(logrus.New())
+	logf.SetLogger(log)
+
 	return stores, config, nil
 }
 

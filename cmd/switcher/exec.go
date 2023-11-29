@@ -50,7 +50,7 @@ var (
 			// split additional args from the command and populate args after "--"
 			cmdArgs := util.SplitAdditionalArgs(&args)
 			if len(cmdArgs) >= 1 && len(args[0]) > 0 {
-				return exec.ExecuteCommand(args[0], cmdArgs, stores, config, stateDirectory, noIndex)
+				return exec.ExecuteCommand(args[0], cmdArgs, stores, config, stateDirectory, noIndex, showDebugLogs)
 			}
 			return fmt.Errorf("please provide a search string and the command to execute on each cluster")
 		},
@@ -58,5 +58,11 @@ var (
 )
 
 func init() {
+	execCmd.Flags().BoolVar(
+		&showDebugLogs,
+		"debug",
+		false,
+		"show debug logs")
+
 	rootCommand.AddCommand(execCmd)
 }

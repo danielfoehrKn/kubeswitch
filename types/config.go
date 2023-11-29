@@ -62,6 +62,10 @@ type Config struct {
 	// default: true
 	// + optional
 	ShowPreview *bool `yaml:"showPreview"`
+	// ExecShell configures the shell to be used for switch exec -- "command"
+	// If a shell (bash, zsh, sh) is provided, the command is executed like so
+	// --> bash -c "your_command"
+	ExecShell *string `yaml:"execShell"`
 	// RefreshIndexAfter is the global default for how how often
 	// the index for this kubeconfig store shall be refreshed.
 	// Not setting this field will cause kubeswitch to not use an index

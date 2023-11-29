@@ -446,7 +446,7 @@ func (s *GardenerStore) GetKubeconfigForPath(path string) ([]byte, error) {
 		}
 		fallthrough
 	case gardenerstore.GardenerResourceShoot:
-		s.Logger.Debugf("getting kubeconfig for %s (%s/%s)", resource, namespace, name)
+		s.Logger.Debugf("Getting kubeconfig for %s (%s/%s)", resource, namespace, name)
 
 		shoot, _ := s.readFromCachePathToShoot(path)
 		caClusterSecretName := fmt.Sprintf("%s:%s.%s", namespace, name, gardenclient.ShootProjectSecretSuffixCACluster)

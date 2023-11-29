@@ -43,6 +43,8 @@ require (
 	sigs.k8s.io/controller-runtime v0.16.3
 )
 
+require github.com/t-tomalak/logrus-easy-formatter v0.0.0-20190827215021-c074f06c5816
+
 require (
 	cloud.google.com/go/compute v1.19.1 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect

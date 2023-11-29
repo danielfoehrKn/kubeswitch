@@ -183,7 +183,7 @@ func (s *EKSStore) StartSearch(channel chan SearchResult) {
 			}
 		}
 	}
-	s.GetLogger().Debugf("search done for EKS")
+	s.GetLogger().Debugf("Search done for EKS")
 }
 
 // ParseIdentifier takes a kubeconfig identifier and
