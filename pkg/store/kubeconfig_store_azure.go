@@ -255,13 +255,32 @@ func (s *AzureStore) GetKubeconfigForPath(path string) ([]byte, error) {
 
 	s.Logger.Debugf("AKS: GetKubeconfigForPath for group : %q and cluster: %q", resourceGroup, clusterName)
 
-	// Documentation: support user credentials in the future
-	resp, err := s.AksClient.ListClusterAdminCredentials(ctx, resourceGroup, clusterName, nil)
+	resp, err := s.AksClient.Get(ctx, resourceGroup, clusterName, nil)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to obtain kubeconfig for AKS cluster %q in resource group %q: %w", clusterName, resourceGroup, err)
 	}
 
-	for _, kubeconfig := range resp.Kubeconfigs {
+	var kubeconfigs []*armcontainerservice.CredentialResult
+
+	// Check if we need to list the user or the admin credential
+	if resp.Properties.AADProfile != nil {
+		resp_user, err := s.AksClient.ListClusterUserCredentials(ctx, resourceGroup, clusterName, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to obtain kubeconfig for AKS cluster %q in resource group %q: %w", clusterName, resourceGroup, err)
+		}
+
+		kubeconfigs = resp_user.Kubeconfigs
+	} else {
+		resp_admin, err := s.AksClient.ListClusterAdminCredentials(ctx, resourceGroup, clusterName, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to obtain kubeconfig for AKS cluster %q in resource group %q: %w", clusterName, resourceGroup, err)
+		}
+
+		kubeconfigs = resp_admin.Kubeconfigs
+	}
+
+	for _, kubeconfig := range kubeconfigs {
 		if kubeconfig != nil && len(kubeconfig.Value) > 0 {
 			return kubeconfig.Value, err
 		}
