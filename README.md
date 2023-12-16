@@ -119,7 +119,7 @@ In addition, use
 
 ## List and search for contexts
 
-You can list all your indexed contexts by issuing the following command: `switch list-commands`. 
+You can list all your indexed contexts by issuing the following command: `switch list-contexts`. 
 And if you want to search for only parts of those contexts, you can use wildcard search:
 
 ```sh
