@@ -68,7 +68,7 @@ function switch(){
   local switchTmpDirectory="$HOME/.kube/.switch_tmp/config"
   if [[ -n "$KUBECONFIG" && "$KUBECONFIG" == *"$switchTmpDirectory"* ]]
   then
-    rm -f "$KUBECONFIG"
+    \rm -f "$KUBECONFIG"
   fi
 
   export KUBECONFIG="$KUBECONFIG_PATH"
