@@ -187,18 +187,18 @@ function kubeswitch
 		$EXECUTABLE_PATH = "switcher_windows_amd64.exe"
 	
 		if (-not $opts) {
-		Write-Host "no options provided"
-			Write-Host $EXECUTABLE_PATH $opts
+		Write-Output "no options provided"
+			Write-Output $EXECUTABLE_PATH $opts
 			$RESPONSE = & $EXECUTABLE_PATH 
 		} 
 		else{
-		Write-Host "options provided:" $opts
-			 Write-Host $EXECUTABLE_PATH $opts
+		Write-Output "options provided:" $opts
+			 Write-Output $EXECUTABLE_PATH $opts
 			$RESPONSE = & $EXECUTABLE_PATH  $opts
 		}
 	
 		if ($LASTEXITCODE -ne 0 -or -not $RESPONSE) {
-			Write-Host $RESPONSE
+			Write-Output $RESPONSE
 			return $LASTEXITCODE
 		}
 	
@@ -206,30 +206,30 @@ function kubeswitch
 		# distinguish it from other responses which just need to write to STDOUT
 		$prefix = "__ "
 		if (-not (has_prefix $prefix $RESPONSE)) {
-			Write-Host $RESPONSE
+			Write-Output $RESPONSE
 			return
 		}
 	
 	
 		$RESPONSE = $RESPONSE -replace $prefix, ""
-		Write-Host $RESPONSE
+		Write-Output $RESPONSE
 		$remainder = $RESPONSE
-		Write-Host $remainder
-		Write-Host $remainder.split(",")[0]
-		Write-Host $remainder.split(",")[1]
+		Write-Output $remainder
+		Write-Output $remainder.split(",")[0]
+		Write-Output $remainder.split(",")[1]
 		$KUBECONFIG_PATH = $remainder.split(",")[0]
 		$KUBECONFIG_PATH = $KUBECONFIG_PATH -replace '\\', '/'
 		$KUBECONFIG_PATH = $KUBECONFIG_PATH -replace "C:", ""
-		Write-Host $KUBECONFIG_PATH
+		Write-Output $KUBECONFIG_PATH
 		$SELECTED_CONTEXT = $remainder.split(",")[1]
 	
 		if (-not $KUBECONFIG_PATH) { 
-			Write-Host $RESPONSE
+			Write-Output $RESPONSE
 			return
 		}
 	
 		if (-not $SELECTED_CONTEXT) {
-			Write-Host $RESPONSE
+			Write-Output $RESPONSE
 			return
 		}
 	
@@ -239,7 +239,7 @@ function kubeswitch
 		}
 	
 		$env:KUBECONFIG = $KUBECONFIG_PATH
-		Write-Host "switched to context $SELECTED_CONTEXT"
+		Write-Output "switched to context $SELECTED_CONTEXT"
 	}
 	
 	#Env variable HOME doesn't exist on windows, we create it from USERPROFILE
