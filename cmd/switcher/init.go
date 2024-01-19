@@ -273,7 +273,7 @@ var (
 				return root.GenFishCompletion(os.Stdout, true)
 			case "powershell":
 				fmt.Println(powershellScript)
-				return root.GenFishCompletion(os.Stdout, true)
+				return root.GenPowerShellCompletion(os.Stdout)
 			}
 			return fmt.Errorf("unsupported shell type: %s", args[0])
 		},
