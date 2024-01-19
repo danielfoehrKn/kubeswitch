@@ -36,6 +36,11 @@ VERSION=0.8.0                   # Pick the current version.
 curl -L -o /usr/local/bin/switcher https://github.com/danielfoehrKn/kubeswitch/releases/download/${VERSION}/switcher_${OS}_amd64
 chmod +x /usr/local/bin/switcher
 ```
+If you are using Windows, go to the release webpage using you browser and download the windows binary: <https://github.com/danielfoehrKn/kubeswitch/releases/>\
+Then copy it to a folder available in your path. To add a folder to your path, you can use the ``Environment Variables`` tool for the Windows' PowerToys: <https://learn.microsoft.com/en-us/windows/powertoys/environment-variables>\
+If you need to add a folder to the path for the current powershell session, you can run ``$env:Path += ';C:\myfolder'``
+
+
 
 Next, follow [required: source the shell function](#required-source-the-shell-function).
 
@@ -84,10 +89,23 @@ function s --wraps switcher
         kubeswitch $argv;
 end
 ```
+### Powershell
+Powershell shell have a built-in `switch` function. Hence, differently from `zsh` shells, the kubeswitch function is called `kubeswitch`.
+
+```powershell
+switcher_windows_amd64.exe init powershell >> $PROFILE
+
+# optionally use alias `s` instead of `kubeswitch` (add to $PROFILE)
+echo "" >> $PROFILE
+echo "Set-Alias -Name s -Value kubeswitch" >> $PROFILE
+
+# source your profile again
+. $PROFILE
+```
 
 ## Check that it works
 
-If you installed kubeswitch correctly, you can run the command `switch` (zsh, bash) or `kubeswitch` (fish) or alternatively the alias `s` from the terminal.
+If you installed kubeswitch correctly, you can run the command `switch` (zsh, bash) or `kubeswitch` (fish, powershell) or alternatively the alias `s` from the terminal.
 In case the terminal can't find the function, you might need to open another terminal or re-source your config file (`.zshrc`,`.bashrc`,...).
 
 That should display the contexts the tool can find with the default configuration.
