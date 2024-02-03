@@ -92,8 +92,13 @@ end
 ### Powershell
 Powershell shell have a built-in `switch` function. Hence, differently from `zsh` shells, the kubeswitch function is called `kubeswitch`.
 
+Embeding the powershell script in the code to be able to use `switcher_windows_amd64.exe init powershell` was causing EDR (antivirus) softwares to flag switcher_windows_amd64.exe as malware. On corporate computers, the users usualy don't have the privileges to create an exemption in the EDR software. 
+To work around this issue, you will need to manually copy the script from [this file](powershell_script.ps1)
+
 ```powershell
-switcher_windows_amd64.exe init powershell >> $PROFILE
+# edit your $PROFILE file and paste 
+# the content of "powershell_script.ps1" in it. 
+notepad $PROFILE
 
 # optionally use alias `s` instead of `kubeswitch` (add to $PROFILE)
 echo "" >> $PROFILE
