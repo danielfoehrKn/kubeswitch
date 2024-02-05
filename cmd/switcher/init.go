@@ -165,12 +165,12 @@ function kubeswitch
     end`
 
 	powershellScript string = `
-	Embeding the powershell script in the code 	to be able to use 
-	"switcher_windows_amd64.exe init powershell" 
-	was causing EDR (antivirus) softwares to flag switcher_windows_amd64.exe as malware. 
-	On corporate computers, the users usualy don't have the privileges to create an exemption in the EDR software. 
-	To work around this issue, you will need to manually copy the script from the 
-	kubeswitch repository, in the "docs" folder.  
+	# Embeding the powershell script in the code to be able to use 
+	# switcher_windows_amd64.exe init powershell" 
+	# was causing EDR (antivirus) softwares to flag switcher_windows_amd64.exe as malware. 
+	# On corporate computers, the users usualy don't have the privileges to create an exemption in the EDR software. 
+	# To work around this issue, you will need to manually copy the script from the 
+	# kubeswitch repository, in the "docs" folder.  
 	`
 )
 
@@ -200,7 +200,7 @@ var (
 				return root.GenFishCompletion(os.Stdout, true)
 			case "powershell":
 				fmt.Println(powershellScript)
-				return root.GenPowerShellCompletion(os.Stdout)
+				// return root.GenPowerShellCompletion(os.Stdout)
 			}
 			return fmt.Errorf("unsupported shell type: %s", args[0])
 		},
