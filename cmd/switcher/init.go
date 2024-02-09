@@ -179,22 +179,19 @@ function has_prefix {
 }
 
 function kubeswitch {
-	param (
-		[string]$opts
-	)
 
 	#You need to have switcher_windows_amd64.exe in your PATH, or you need to change the value of EXECUTABLE_PATH here
 	$EXECUTABLE_PATH = "switcher_windows_amd64.exe"
 
-	if (-not $opts) {
+	if (-not $args) {
 	Write-Output "no options provided"
-		Write-Output $EXECUTABLE_PATH $opts
+		Write-Output $EXECUTABLE_PATH $args
 		$RESPONSE = & $EXECUTABLE_PATH 
 	} 
 	else{
-	Write-Output "options provided:" $opts
-			Write-Output $EXECUTABLE_PATH $opts
-		$RESPONSE = & $EXECUTABLE_PATH  $opts
+	Write-Output "options provided:" $args
+			Write-Output $EXECUTABLE_PATH $args
+		$RESPONSE = & $EXECUTABLE_PATH  $args
 	}
 
 	if ($LASTEXITCODE -ne 0 -or -not $RESPONSE) {

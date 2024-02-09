@@ -95,9 +95,14 @@ Powershell shell have a built-in `switch` function. Hence, differently from `zsh
 ```powershell
 switcher_windows_amd64.exe init powershell >> $PROFILE
 
+# add this for the autocomplete to work
+echo 'Register-ArgumentCompleter -CommandName ''switcher_windows_amd64'' -ScriptBlock $__switcherCompleterBlock' >> $PROFILE
+echo 'Register-ArgumentCompleter -CommandName ''kubeswitch'' -ScriptBlock $__switcherCompleterBlock' >> $PROFILE
+
 # optionally use alias `s` instead of `kubeswitch` (add to $PROFILE)
 echo "" >> $PROFILE
 echo "Set-Alias -Name s -Value kubeswitch" >> $PROFILE
+echo 'Register-ArgumentCompleter -CommandName ''s'' -ScriptBlock $__switcherCompleterBlock' >> $PROFILE
 
 # source your profile again
 . $PROFILE

@@ -21,4 +21,7 @@ echo 'kubeswitch completion fish | source' >> ~/.config/fish/config.fish
 ### Powershell
 ```powershell
 echo 'kubeswitch completion powershell' >> $PROFILE
+echo 'Register-ArgumentCompleter -CommandName ''switcher_windows_amd64'' -ScriptBlock $__switcherCompleterBlock' >> $PROFILE
+echo 'Register-ArgumentCompleter -CommandName ''kubeswitch'' -ScriptBlock $__switcherCompleterBlock' >> $PROFILE
+. $PROFILE
 ```
