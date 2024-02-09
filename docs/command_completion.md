@@ -17,3 +17,8 @@ echo 'source <(switch completion zsh)' >> ~/.zshrc
 ```sh
 echo 'kubeswitch completion fish | source' >> ~/.config/fish/config.fish
 ```
+
+### Powershell
+```powershell
+echo 'kubeswitch completion powershell' >> $PROFILE
+```
