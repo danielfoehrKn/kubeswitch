@@ -24,11 +24,11 @@ var (
 	setName string
 
 	completionCmd = &cobra.Command{
-		Use:                   "completion [bash|zsh|fish]",
+		Use:                   "completion [bash|zsh|fish|powershell]",
 		Short:                 "generate completion script",
 		Long:                  "load the completion script for switch into the current shell",
 		DisableFlagsInUseLine: true,
-		ValidArgs:             []string{"bash", "zsh", "fish"},
+		ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
 		Args:                  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root := cmd.Root()
@@ -42,6 +42,8 @@ var (
 				return root.GenZshCompletion(os.Stdout)
 			case "fish":
 				return root.GenFishCompletion(os.Stdout, true)
+			case "powershell":
+				return root.GenPowerShellCompletion(os.Stdout)
 			}
 			return fmt.Errorf("unsupported shell type: %s", args[0])
 		},
