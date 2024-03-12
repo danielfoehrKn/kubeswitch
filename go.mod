@@ -43,7 +43,11 @@ require (
 	sigs.k8s.io/controller-runtime v0.16.3
 )
 
-require github.com/t-tomalak/logrus-easy-formatter v0.0.0-20190827215021-c074f06c5816
+require (
+	github.com/ovh/go-ovh v1.4.3
+	github.com/scaleway/scaleway-sdk-go v1.0.0-beta.21
+	github.com/t-tomalak/logrus-easy-formatter v0.0.0-20190827215021-c074f06c5816
+)
 
 require (
 	cloud.google.com/go/compute v1.19.1 // indirect
@@ -109,12 +113,10 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/nsf/termbox-go v0.0.0-20201124104050-ed494de23a00 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
-	github.com/ovh/go-ovh v1.4.3 // indirect
 	github.com/pkg/browser v0.0.0-20180916011732-0a3d74bf9ce4 // indirect
 	github.com/rancher/wrangler v0.7.4-security1 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
-	github.com/scaleway/scaleway-sdk-go v1.0.0-beta.21 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/crypto v0.15.0 // indirect
