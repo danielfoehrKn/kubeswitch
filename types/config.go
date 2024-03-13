@@ -239,6 +239,7 @@ type StoreConfigOVH struct {
 	OVHApplicationKey    string `yaml:"application_key"`
 	OVHApplicationSecret string `yaml:"application_secret"`
 	OVHConsumerKey       string `yaml:"consumer_key"`
+	OVHEndpoint          string `yaml:"endpoint"`
 }
 
 type StoreConfigScaleway struct {

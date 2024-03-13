@@ -50,8 +50,12 @@ func NewOVHStore(store types.KubeconfigStore) (*OVHStore, error) {
 	if len(ovhConsumerKey) == 0 {
 		return nil, fmt.Errorf("When using the OVH kubeconfig store, the consumer key for OVH has to be provided via a SwitchConfig file")
 	}
+	ovhEndpoint := ovhStoreConfig.OVHEndpoint
+	if len(ovhEndpoint) == 0 {
+		ovhEndpoint = "ovh-eu"
+	}
 
-	ovhClient, err := ovh.NewClient("ovh-eu", ovhApplicationKey, ovhApplicationSecret, ovhConsumerKey)
+	ovhClient, err := ovh.NewClient(ovhEndpoint, ovhApplicationKey, ovhApplicationSecret, ovhConsumerKey)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to initialize OVH client due to error: %w", err)
 	}
