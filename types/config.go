@@ -43,8 +43,10 @@ const (
 	// StoreKindEKS is an identifier for the EKS store
 	StoreKindEKS StoreKind = "eks"
 	// StoreKindRancher is an identifier for the Rancher store
-	StoreKindRancher  StoreKind = "rancher"
-	StoreKindOVH      StoreKind = "ovh"
+	StoreKindRancher StoreKind = "rancher"
+	// StoreKindOVH is an identifier for the OVH store
+	StoreKindOVH StoreKind = "ovh"
+	// StoreKindScaleway is an identifier for the Scaleway store
 	StoreKindScaleway StoreKind = "scaleway"
 )
 

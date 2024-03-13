@@ -94,7 +94,12 @@ func (s *ScalewayStore) GetContextPrefix(path string) string {
 	if s.GetStoreConfig().ShowPrefix != nil && !*s.GetStoreConfig().ShowPrefix {
 		return ""
 	}
-	return path
+
+	if s.GetStoreConfig().ID != nil {
+		return *s.GetStoreConfig().ID
+	}
+
+	return string(types.StoreKindScaleway)
 }
 
 func (r *ScalewayStore) GetKind() types.StoreKind {

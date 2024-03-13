@@ -82,7 +82,12 @@ func (r *OVHStore) GetContextPrefix(path string) string {
 	if r.GetStoreConfig().ShowPrefix != nil && !*r.GetStoreConfig().ShowPrefix {
 		return ""
 	}
-	return path
+
+	if r.GetStoreConfig().ID != nil {
+		return *r.GetStoreConfig().ID
+	}
+
+	return string(types.StoreKindOVH)
 }
 
 func (r *OVHStore) GetKind() types.StoreKind {
