@@ -460,6 +460,9 @@ github.com/onsi/gomega/matchers/support/goraph/edge
 github.com/onsi/gomega/matchers/support/goraph/node
 github.com/onsi/gomega/matchers/support/goraph/util
 github.com/onsi/gomega/types
+# github.com/ovh/go-ovh v1.4.3
+## explicit; go 1.18
+github.com/ovh/go-ovh/ovh
 # github.com/pkg/browser v0.0.0-20180916011732-0a3d74bf9ce4
 ## explicit
 github.com/pkg/browser
@@ -487,6 +490,20 @@ github.com/rivo/uniseg
 # github.com/ryanuber/go-glob v1.0.0
 ## explicit
 github.com/ryanuber/go-glob
+# github.com/scaleway/scaleway-sdk-go v1.0.0-beta.21
+## explicit; go 1.17
+github.com/scaleway/scaleway-sdk-go/api/account/v3
+github.com/scaleway/scaleway-sdk-go/api/k8s/v1
+github.com/scaleway/scaleway-sdk-go/internal/async
+github.com/scaleway/scaleway-sdk-go/internal/auth
+github.com/scaleway/scaleway-sdk-go/internal/errors
+github.com/scaleway/scaleway-sdk-go/internal/generic
+github.com/scaleway/scaleway-sdk-go/internal/marshaler
+github.com/scaleway/scaleway-sdk-go/internal/parameter
+github.com/scaleway/scaleway-sdk-go/logger
+github.com/scaleway/scaleway-sdk-go/namegenerator
+github.com/scaleway/scaleway-sdk-go/scw
+github.com/scaleway/scaleway-sdk-go/validation
 # github.com/sirupsen/logrus v1.9.0
 ## explicit; go 1.13
 github.com/sirupsen/logrus
@@ -719,6 +736,9 @@ google.golang.org/protobuf/types/known/timestamppb
 # gopkg.in/inf.v0 v0.9.1
 ## explicit
 gopkg.in/inf.v0
+# gopkg.in/ini.v1 v1.67.0
+## explicit
+gopkg.in/ini.v1
 # gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
 ## explicit
 gopkg.in/tomb.v1
