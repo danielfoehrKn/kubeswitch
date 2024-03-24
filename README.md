@@ -170,7 +170,7 @@ To search over multiple directories and setup Kubeconfig stores (such as Vault),
 
 ## Kubeconfig cache
 
-An cache for kubeconfig files can be added to a store to prevent loading from remote on each invocation of `kubeswitch`.
+A cache for kubeconfig files can be added to a store to prevent loading from remote on each invocation of `kubeswitch`.
 The kubeconfig file will be cached after first download.
 
 To see how to configure the cache, [please see here](docs/kubeconfig_cache.md).
