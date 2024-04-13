@@ -41,6 +41,12 @@ jobs:
           files: 'hack/switch/switcher_linux_amd64'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           release-tag: ${{ steps.build_binary_files.outputs.latest_release_filtered_tag }}
+      - name: Upload Linux (ARM) binaries to release
+        uses: AButler/upload-release-assets@v2.0
+        with:
+          files: 'hack/switch/switcher_linux_arm64'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          release-tag: ${{ steps.build_binary_files.outputs.latest_release_filtered_tag }}
       - name: Upload switch script to release
         uses: AButler/upload-release-assets@v2.0
         with:
