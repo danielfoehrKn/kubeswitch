@@ -87,7 +87,7 @@ function switch(){
   local switchTmpDirectory="$HOME/.kube/.switch_tmp/config"
   if [[ -n "$KUBECONFIG" && "$KUBECONFIG" == *"$switchTmpDirectory"* ]]
   then
-	rm -f "$KUBECONFIG"
+	\rm -f "$KUBECONFIG"
   fi
 
   export KUBECONFIG="$KUBECONFIG_PATH"
@@ -154,7 +154,7 @@ function kubeswitch
 
 	set -l switchTmpDirectory "$HOME/.kube/.switch_tmp/config"
 	if test -n "$KUBECONFIG"; and string match -q "*$switchTmpDirectory*" -- "$KUBECONFIG"
-	  rm -f "$KUBECONFIG"
+	  \rm -f "$KUBECONFIG"
 	end
 
 	set -gx KUBECONFIG "$KUBECONFIG_PATH"
