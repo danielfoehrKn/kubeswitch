@@ -72,7 +72,9 @@ echo 'source <(switcher init zsh)' >> ~/.zshrc
 
 # optionally use alias `s` instead of `switch`
 echo 'source <(alias s=switch)' >> ~/.zshrc
-echo 'source <(compdef _switcher switch)' >> ~/.zshrc
+
+# optionally use command completion
+echo 'source <(switch completion zsh)' >> ~/.zshrc
 ```
 ### Fish
 Fish shell have a built-in `switch` function. Hence, differently from `zsh` shells, the kubeswitch function is called `kubeswitch`.
