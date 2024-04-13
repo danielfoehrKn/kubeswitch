@@ -60,11 +60,12 @@ jobs:
           mac_sha256sum=$(sha256sum hack/switch/switcher_darwin_amd64 | awk '{print $1}')
           mac_arm_sha256sum=$(sha256sum hack/switch/switcher_darwin_arm64 | awk '{print $1}')
           linux_sha256sum=$(sha256sum hack/switch/switcher_linux_amd64 | awk '{print $1}')
+          linux_arm_sha256sum=$(sha256sum hack/switch/switcher_linux_arm64 | awk '{print $1}')
           switch_script_sha256sum=$(sha256sum hack/switch/switch.sh | awk '{print $1}')
 
-          echo '{"event_type": "update", "client_payload": { "tag": "'"${{ steps.build_binary_files.outputs.latest_release_filtered_tag }}"'", "mac_sha": "'"$mac_sha256sum"'", "mac_arm_sha": "'"$mac_arm_sha256sum"'", "linux_sha": "'"$linux_sha256sum"'", "switch_script_sha": "'"$switch_script_sha256sum"'"}}'
+          echo '{"event_type": "update", "client_payload": { "tag": "'"${{ steps.build_binary_files.outputs.latest_release_filtered_tag }}"'", "mac_sha": "'"$mac_sha256sum"'", "mac_arm_sha": "'"$mac_arm_sha256sum"'", "linux_sha": "'"$linux_sha256sum"'", "linux_arm_sha": "'"$linux_arm_sha256sum"'", "switch_script_sha": "'"$switch_script_sha256sum"'"}}'
 
           curl -X POST https://api.github.com/repos/danielfoehrKn/homebrew-switch/dispatches \
           -H 'Accept: application/vnd.github.everest-preview+json' \
           -u "$ACCESS_TOKEN" \
-          --data '{"event_type": "update", "client_payload": { "tag": "'"${{ steps.build_binary_files.outputs.latest_release_filtered_tag }}"'", "mac_sha": "'"$mac_sha256sum"'", "mac_arm_sha": "'"$mac_arm_sha256sum"'", "linux_sha": "'"$linux_sha256sum"'", "switch_script_sha": "'"$switch_script_sha256sum"'"}}'
+          --data '{"event_type": "update", "client_payload": { "tag": "'"${{ steps.build_binary_files.outputs.latest_release_filtered_tag }}"'", "mac_sha": "'"$mac_sha256sum"'", "mac_arm_sha": "'"$mac_arm_sha256sum"'", "linux_sha": "'"$linux_sha256sum"'", "linux_arm_sha": "'"$linux_arm_sha256sum"'", "switch_script_sha": "'"$switch_script_sha256sum"'"}}'
