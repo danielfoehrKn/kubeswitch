@@ -43,7 +43,11 @@ require (
 	sigs.k8s.io/controller-runtime v0.16.3
 )
 
-require github.com/t-tomalak/logrus-easy-formatter v0.0.0-20190827215021-c074f06c5816
+require (
+	github.com/ovh/go-ovh v1.4.3
+	github.com/scaleway/scaleway-sdk-go v1.0.0-beta.21
+	github.com/t-tomalak/logrus-easy-formatter v0.0.0-20190827215021-c074f06c5816
+)
 
 require (
 	cloud.google.com/go/compute v1.19.1 // indirect
@@ -129,6 +133,7 @@ require (
 	google.golang.org/grpc v1.56.3 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
+	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	k8s.io/component-base v0.28.3 // indirect
 	k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9 // indirect
