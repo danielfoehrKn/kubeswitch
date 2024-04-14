@@ -18,6 +18,8 @@ Designed as a [drop-in replacement](#difference-to-kubectx) for [kubectx](https:
   - [Azure Kubernetes Service (AKS)](docs/stores/azure/azure.md)
   - [Gardener](docs/stores/gardener/gardener.md)
   - [Google Kubernetes Engine (GKE)](docs/stores/gke/gke.md)
+  - [OVH](docs/stores/ovh/ovh.md)
+  - Scaleway (documentation tbd)
   - [Hashicorp Vault](docs/stores/vault/use_vault_store.md)
   - [Local filesystem](docs/stores/filesystem/filesystem.md)
   - [Rancher](docs/stores/rancher/rancher.md)
