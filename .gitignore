@@ -25,3 +25,5 @@ hack/tools/bin/
 
 /hack/switch/switcher_linux_arm64
 /hack/switch/switcher_linux_arm64.tar.gz
+
+/hack/switch/switcher_windows*
