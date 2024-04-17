@@ -24,7 +24,7 @@ import (
 type StoreKind string
 
 // ValidStoreKinds contains all valid store kinds
-var ValidStoreKinds = sets.NewString(string(StoreKindVault), string(StoreKindFilesystem), string(StoreKindGardener), string(StoreKindGKE), string(StoreKindAzure), string(StoreKindEKS), string(StoreKindRancher), string(StoreKindOVH), string(StoreKindScaleway))
+var ValidStoreKinds = sets.NewString(string(StoreKindVault), string(StoreKindFilesystem), string(StoreKindGardener), string(StoreKindGKE), string(StoreKindAzure), string(StoreKindEKS), string(StoreKindRancher), string(StoreKindOVH), string(StoreKindScaleway), string(StoreKindDigitalOcean))
 
 // ValidConfigVersions contains all valid config versions
 var ValidConfigVersions = sets.NewString("v1alpha1")
@@ -48,6 +48,8 @@ const (
 	StoreKindOVH StoreKind = "ovh"
 	// StoreKindScaleway is an identifier for the Scaleway store
 	StoreKindScaleway StoreKind = "scaleway"
+	// StoreKindDigitalOcean is an identifier for the Azure store
+	StoreKindDigitalOcean StoreKind = "digitalocean"
 )
 
 type Config struct {
@@ -70,7 +72,7 @@ type Config struct {
 	// If a shell (bash, zsh, sh) is provided, the command is executed like so
 	// --> bash -c "your_command"
 	ExecShell *string `yaml:"execShell"`
-	// RefreshIndexAfter is the global default for how how often
+	// RefreshIndexAfter is the global default for how often
 	// the index for this kubeconfig store shall be refreshed.
 	// Not setting this field will cause kubeswitch to not use an index
 	// Can be overridden in the individual kubeconfig store configuration
@@ -93,7 +95,7 @@ type KubeconfigStore struct {
 	// KubeconfigName defines how the kubeconfig is identified in the backing store
 	// For the Filesystem store, this is the name of the file that contains the kubeconfig
 	// For the Vault store, this is the secret key
-	// For the Gardener store this field is not used
+	// For other stores this field is not used
 	// + optional
 	KubeconfigName *string `yaml:"kubeconfigName"`
 	// Paths contains the paths to search for in the backing store

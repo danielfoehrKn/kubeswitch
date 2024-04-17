@@ -193,7 +193,10 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 		return nil, nil, fmt.Errorf("you need to point kubeswitch to a kubeconfig file. This can be done by setting the environment variable KUBECONFIG, setting the flag --kubeconfig-path, having a default kubeconfig file at ~/.kube/config or providing a switch configuration file")
 	}
 
-	var stores []store.KubeconfigStore
+	var (
+		stores                          []store.KubeconfigStore
+		digitalOceanStoreAddedViaConfig bool
+	)
 	for _, kubeconfigStoreFromConfig := range config.KubeconfigStores {
 		var s store.KubeconfigStore
 
@@ -284,6 +287,16 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 				return nil, nil, err
 			}
 			s = scalewayStore
+		case types.StoreKindDigitalOcean:
+			doStore, err := store.NewDigitalOceanStore(kubeconfigStoreFromConfig)
+			if err != nil {
+				if kubeconfigStoreFromConfig.Required != nil && !*kubeconfigStoreFromConfig.Required {
+					continue
+				}
+				return nil, nil, err
+			}
+			s = doStore
+			digitalOceanStoreAddedViaConfig = true
 		default:
 			return nil, nil, fmt.Errorf("unknown store %q", kubeconfigStoreFromConfig.Kind)
 		}
@@ -303,6 +316,26 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 			return nil, nil, err
 		}
 		stores = append(stores, s)
+	}
+
+	// the Digital Ocean store is enabled by default for a seamless experience for `doctl` users (automatically discovers the `doctl` config file with stored credentials)
+	// this is optional, so don't care about errors
+	if !digitalOceanStoreAddedViaConfig {
+		doStore, _ := store.NewDigitalOceanStore(types.KubeconfigStore{
+			ID:   pointer.String("doDefaultStore"),
+			Kind: types.StoreKindDigitalOcean,
+			// for users with outdated `doctl` configs, don't show errors if they have no explicitly enabled the DO backing store
+			Required:   pointer.Bool(false),
+			ShowPrefix: pointer.Bool(true),
+		})
+		if doStore != nil {
+			// we found a valid `doctl` config, hence add Digital Ocean as a backing store with default configuration
+			s, err := cache.New("memory", doStore, nil)
+			if err != nil {
+				return nil, nil, err
+			}
+			stores = append(stores, s)
+		}
 	}
 
 	// set 'logr' log implementation for the controller-runtime (otherwise controller-runtime code cannot log)

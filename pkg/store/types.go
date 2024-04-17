@@ -17,6 +17,9 @@ package store
 import (
 	"sync"
 
+	"github.com/danielfoehrkn/kubeswitch/pkg/store/doks"
+	"github.com/digitalocean/doctl/do"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	eks "github.com/aws/aws-sdk-go-v2/service/eks/types"
@@ -39,8 +42,15 @@ import (
 // given the contained kubeconfig path, the store knows how to retrieve and return the
 // actual kubeconfig
 type SearchResult struct {
+	// KubeconfigPath is the kubeconfig path in the backing store which most of the time encodes enough information to
+	// retrieve the kubeconfig associated with it.
 	KubeconfigPath string
-	Error          error
+	// Tags contains the additional metadata that the store wants to associate with a context name.
+	// This metadata is later handed over in the getKubeconfigForPath() function when retrieving the kubeconfig bytes for the path and might contain
+	// information necessary to retrieve the kubeconfig from the backing store (such a unique ID for the cluster required for the API)
+	Tags map[string]string
+	// Error is an error which occured when trying to discover kubeconfig paths in the backing store
+	Error error
 }
 
 type KubeconfigStore interface {
@@ -67,7 +77,8 @@ type KubeconfigStore interface {
 
 	// GetKubeconfigForPath returns the byte representation of the kubeconfig
 	// the kubeconfig has to fetch the kubeconfig from its backing store (e.g., uses the HTTP API)
-	GetKubeconfigForPath(path string) ([]byte, error)
+	// Optional tags might help identify the cluster in the backing store, but typically such information is already encoded in the kubeconfig path (implementation specific)
+	GetKubeconfigForPath(path string, tags map[string]string) ([]byte, error)
 
 	// GetLogger returns the logger of the store
 	GetLogger() *logrus.Entry
@@ -79,7 +90,7 @@ type KubeconfigStore interface {
 // Previewer can be optionally implemented by stores to show custom preview content
 // before the kubeconfig
 type Previewer interface {
-	GetSearchPreview(path string) (string, error)
+	GetSearchPreview(path string, optionalTags map[string]string) (string, error)
 }
 
 type FilesystemStore struct {
@@ -179,4 +190,16 @@ type ScalewayStore struct {
 	KubeconfigStore    types.KubeconfigStore
 	Client             *scw.Client
 	DiscoveredClusters map[string]ScalewayKube
+}
+
+type DigitalOceanStore struct {
+	Logger *logrus.Entry
+	// DiscoveredClustersMutex is a mutex allow many reads, one write mutex to synchronize writes
+	// to the DiscoveredClusters map.
+	// This can happen when a goroutine still discovers clusters while another goroutine computes the preview for a missing cluster.
+	DiscoveredClustersMutex                   sync.RWMutex
+	ContextNameAndClusterNameToClusterIDMutex sync.RWMutex
+	KubeconfigStore                           types.KubeconfigStore
+	ContextToKubernetesService                map[string]do.KubernetesService
+	Config                                    doks.DoctlConfig
 }
