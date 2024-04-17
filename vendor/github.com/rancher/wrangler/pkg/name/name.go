@@ -36,6 +36,10 @@ func suffix(str, end string) bool {
 	return strings.HasSuffix(str, end)
 }
 
+// Limit the length of a string to count characters. If the string's length is
+// greater or equal to count, it will be truncated and a hash will be appended
+// to the end.
+// Warning: runtime error for count <= 5: https://go.dev/play/p/UAbpZIOvIYo
 func Limit(s string, count int) string {
 	if len(s) < count {
 		return s
@@ -51,9 +55,16 @@ func Hex(s string, length int) string {
 
 func SafeConcatName(name ...string) string {
 	fullPath := strings.Join(name, "-")
-	if len(fullPath) > 63 {
-		digest := sha256.Sum256([]byte(fullPath))
+	if len(fullPath) < 64 {
+		return fullPath
+	}
+	digest := sha256.Sum256([]byte(fullPath))
+	// since we cut the string in the middle, the last char may not be compatible with what is expected in k8s
+	// we are checking and if necessary removing the last char
+	c := fullPath[56]
+	if 'a' <= c && c <= 'z' || '0' <= c && c <= '9' {
 		return fullPath[0:57] + "-" + hex.EncodeToString(digest[0:])[0:5]
 	}
-	return fullPath
+
+	return fullPath[0:56] + "-" + hex.EncodeToString(digest[0:])[0:6]
 }

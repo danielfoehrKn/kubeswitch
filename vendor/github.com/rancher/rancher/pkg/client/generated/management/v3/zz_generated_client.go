@@ -7,72 +7,58 @@ import (
 type Client struct {
 	clientbase.APIBaseClient
 
-	NodePool                                NodePoolOperations
-	Node                                    NodeOperations
-	NodeDriver                              NodeDriverOperations
-	NodeTemplate                            NodeTemplateOperations
-	Project                                 ProjectOperations
-	GlobalRole                              GlobalRoleOperations
-	GlobalRoleBinding                       GlobalRoleBindingOperations
-	RoleTemplate                            RoleTemplateOperations
-	PodSecurityPolicyTemplate               PodSecurityPolicyTemplateOperations
-	PodSecurityPolicyTemplateProjectBinding PodSecurityPolicyTemplateProjectBindingOperations
-	ClusterRoleTemplateBinding              ClusterRoleTemplateBindingOperations
-	ProjectRoleTemplateBinding              ProjectRoleTemplateBindingOperations
-	Cluster                                 ClusterOperations
-	ClusterRegistrationToken                ClusterRegistrationTokenOperations
-	Catalog                                 CatalogOperations
-	Template                                TemplateOperations
-	CatalogTemplate                         CatalogTemplateOperations
-	CatalogTemplateVersion                  CatalogTemplateVersionOperations
-	TemplateVersion                         TemplateVersionOperations
-	TemplateContent                         TemplateContentOperations
-	Group                                   GroupOperations
-	GroupMember                             GroupMemberOperations
-	SamlToken                               SamlTokenOperations
-	Principal                               PrincipalOperations
-	User                                    UserOperations
-	AuthConfig                              AuthConfigOperations
-	LdapConfig                              LdapConfigOperations
-	Token                                   TokenOperations
-	DynamicSchema                           DynamicSchemaOperations
-	Preference                              PreferenceOperations
-	ProjectNetworkPolicy                    ProjectNetworkPolicyOperations
-	ClusterLogging                          ClusterLoggingOperations
-	ProjectLogging                          ProjectLoggingOperations
-	Setting                                 SettingOperations
-	Feature                                 FeatureOperations
-	ClusterAlert                            ClusterAlertOperations
-	ProjectAlert                            ProjectAlertOperations
-	Notifier                                NotifierOperations
-	ClusterAlertGroup                       ClusterAlertGroupOperations
-	ProjectAlertGroup                       ProjectAlertGroupOperations
-	ClusterAlertRule                        ClusterAlertRuleOperations
-	ProjectAlertRule                        ProjectAlertRuleOperations
-	ComposeConfig                           ComposeConfigOperations
-	ProjectCatalog                          ProjectCatalogOperations
-	ClusterCatalog                          ClusterCatalogOperations
-	MultiClusterApp                         MultiClusterAppOperations
-	MultiClusterAppRevision                 MultiClusterAppRevisionOperations
-	GlobalDns                               GlobalDnsOperations
-	GlobalDnsProvider                       GlobalDnsProviderOperations
-	KontainerDriver                         KontainerDriverOperations
-	EtcdBackup                              EtcdBackupOperations
-	ClusterScan                             ClusterScanOperations
-	MonitorMetric                           MonitorMetricOperations
-	ClusterMonitorGraph                     ClusterMonitorGraphOperations
-	ProjectMonitorGraph                     ProjectMonitorGraphOperations
-	CloudCredential                         CloudCredentialOperations
-	ManagementSecret                        ManagementSecretOperations
-	ClusterTemplate                         ClusterTemplateOperations
-	ClusterTemplateRevision                 ClusterTemplateRevisionOperations
-	RkeK8sSystemImage                       RkeK8sSystemImageOperations
-	RkeK8sServiceOption                     RkeK8sServiceOptionOperations
-	RkeAddon                                RkeAddonOperations
-	CisConfig                               CisConfigOperations
-	CisBenchmarkVersion                     CisBenchmarkVersionOperations
-	FleetWorkspace                          FleetWorkspaceOperations
-	RancherUserNotification                 RancherUserNotificationOperations
+	NodePool                                  NodePoolOperations
+	Node                                      NodeOperations
+	NodeDriver                                NodeDriverOperations
+	NodeTemplate                              NodeTemplateOperations
+	PodSecurityAdmissionConfigurationTemplate PodSecurityAdmissionConfigurationTemplateOperations
+	Project                                   ProjectOperations
+	GlobalRole                                GlobalRoleOperations
+	GlobalRoleBinding                         GlobalRoleBindingOperations
+	RoleTemplate                              RoleTemplateOperations
+	PodSecurityPolicyTemplate                 PodSecurityPolicyTemplateOperations
+	PodSecurityPolicyTemplateProjectBinding   PodSecurityPolicyTemplateProjectBindingOperations
+	ClusterRoleTemplateBinding                ClusterRoleTemplateBindingOperations
+	ProjectRoleTemplateBinding                ProjectRoleTemplateBindingOperations
+	Cluster                                   ClusterOperations
+	ClusterRegistrationToken                  ClusterRegistrationTokenOperations
+	Catalog                                   CatalogOperations
+	Template                                  TemplateOperations
+	CatalogTemplate                           CatalogTemplateOperations
+	CatalogTemplateVersion                    CatalogTemplateVersionOperations
+	TemplateVersion                           TemplateVersionOperations
+	TemplateContent                           TemplateContentOperations
+	Group                                     GroupOperations
+	GroupMember                               GroupMemberOperations
+	SamlToken                                 SamlTokenOperations
+	Principal                                 PrincipalOperations
+	User                                      UserOperations
+	AuthConfig                                AuthConfigOperations
+	LdapConfig                                LdapConfigOperations
+	Token                                     TokenOperations
+	DynamicSchema                             DynamicSchemaOperations
+	Preference                                PreferenceOperations
+	ProjectNetworkPolicy                      ProjectNetworkPolicyOperations
+	Setting                                   SettingOperations
+	Feature                                   FeatureOperations
+	ComposeConfig                             ComposeConfigOperations
+	ProjectCatalog                            ProjectCatalogOperations
+	ClusterCatalog                            ClusterCatalogOperations
+	MultiClusterApp                           MultiClusterAppOperations
+	MultiClusterAppRevision                   MultiClusterAppRevisionOperations
+	GlobalDns                                 GlobalDnsOperations
+	GlobalDnsProvider                         GlobalDnsProviderOperations
+	KontainerDriver                           KontainerDriverOperations
+	EtcdBackup                                EtcdBackupOperations
+	CloudCredential                           CloudCredentialOperations
+	ManagementSecret                          ManagementSecretOperations
+	ClusterTemplate                           ClusterTemplateOperations
+	ClusterTemplateRevision                   ClusterTemplateRevisionOperations
+	RkeK8sSystemImage                         RkeK8sSystemImageOperations
+	RkeK8sServiceOption                       RkeK8sServiceOptionOperations
+	RkeAddon                                  RkeAddonOperations
+	FleetWorkspace                            FleetWorkspaceOperations
+	RancherUserNotification                   RancherUserNotificationOperations
 }
 
 func NewClient(opts *clientbase.ClientOpts) (*Client, error) {
@@ -89,6 +75,7 @@ func NewClient(opts *clientbase.ClientOpts) (*Client, error) {
 	client.Node = newNodeClient(client)
 	client.NodeDriver = newNodeDriverClient(client)
 	client.NodeTemplate = newNodeTemplateClient(client)
+	client.PodSecurityAdmissionConfigurationTemplate = newPodSecurityAdmissionConfigurationTemplateClient(client)
 	client.Project = newProjectClient(client)
 	client.GlobalRole = newGlobalRoleClient(client)
 	client.GlobalRoleBinding = newGlobalRoleBindingClient(client)
@@ -116,17 +103,8 @@ func NewClient(opts *clientbase.ClientOpts) (*Client, error) {
 	client.DynamicSchema = newDynamicSchemaClient(client)
 	client.Preference = newPreferenceClient(client)
 	client.ProjectNetworkPolicy = newProjectNetworkPolicyClient(client)
-	client.ClusterLogging = newClusterLoggingClient(client)
-	client.ProjectLogging = newProjectLoggingClient(client)
 	client.Setting = newSettingClient(client)
 	client.Feature = newFeatureClient(client)
-	client.ClusterAlert = newClusterAlertClient(client)
-	client.ProjectAlert = newProjectAlertClient(client)
-	client.Notifier = newNotifierClient(client)
-	client.ClusterAlertGroup = newClusterAlertGroupClient(client)
-	client.ProjectAlertGroup = newProjectAlertGroupClient(client)
-	client.ClusterAlertRule = newClusterAlertRuleClient(client)
-	client.ProjectAlertRule = newProjectAlertRuleClient(client)
 	client.ComposeConfig = newComposeConfigClient(client)
 	client.ProjectCatalog = newProjectCatalogClient(client)
 	client.ClusterCatalog = newClusterCatalogClient(client)
@@ -136,10 +114,6 @@ func NewClient(opts *clientbase.ClientOpts) (*Client, error) {
 	client.GlobalDnsProvider = newGlobalDnsProviderClient(client)
 	client.KontainerDriver = newKontainerDriverClient(client)
 	client.EtcdBackup = newEtcdBackupClient(client)
-	client.ClusterScan = newClusterScanClient(client)
-	client.MonitorMetric = newMonitorMetricClient(client)
-	client.ClusterMonitorGraph = newClusterMonitorGraphClient(client)
-	client.ProjectMonitorGraph = newProjectMonitorGraphClient(client)
 	client.CloudCredential = newCloudCredentialClient(client)
 	client.ManagementSecret = newManagementSecretClient(client)
 	client.ClusterTemplate = newClusterTemplateClient(client)
@@ -147,8 +121,6 @@ func NewClient(opts *clientbase.ClientOpts) (*Client, error) {
 	client.RkeK8sSystemImage = newRkeK8sSystemImageClient(client)
 	client.RkeK8sServiceOption = newRkeK8sServiceOptionClient(client)
 	client.RkeAddon = newRkeAddonClient(client)
-	client.CisConfig = newCisConfigClient(client)
-	client.CisBenchmarkVersion = newCisBenchmarkVersionClient(client)
 	client.FleetWorkspace = newFleetWorkspaceClient(client)
 	client.RancherUserNotification = newRancherUserNotificationClient(client)
 

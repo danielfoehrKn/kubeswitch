@@ -1,6 +1,8 @@
 module github.com/danielfoehrkn/kubeswitch
 
-go 1.21
+go 1.22
+
+toolchain go1.22.1
 
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.1.0
@@ -27,8 +29,8 @@ require (
 	github.com/onsi/ginkgo/v2 v2.13.0
 	github.com/onsi/gomega v1.29.0
 	github.com/pkg/errors v0.9.1
-	github.com/rancher/norman v0.0.0-20220621173721-cba80063e705
-	github.com/rancher/rancher/pkg/client v0.0.0-20220712195127-2c2137347e42
+	github.com/rancher/norman v0.0.0-20240205154641-a6a6cf569608
+	github.com/rancher/rancher/pkg/client v0.0.0-20240416202124-a6da228939da
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.7.0
 	golang.org/x/tools v0.13.0
@@ -154,7 +156,7 @@ require (
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
-	github.com/rancher/wrangler v0.7.4-security1 // indirect
+	github.com/rancher/wrangler v1.1.1-0.20230831050635-df1bd5aae9df // indirect
 	github.com/rivo/uniseg v0.4.2 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/spf13/afero v1.9.5 // indirect

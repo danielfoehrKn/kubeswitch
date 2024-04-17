@@ -10,6 +10,7 @@ const (
 	AzureADConfigFieldAuthEndpoint        = "authEndpoint"
 	AzureADConfigFieldCreated             = "created"
 	AzureADConfigFieldCreatorID           = "creatorId"
+	AzureADConfigFieldDeviceAuthEndpoint  = "deviceAuthEndpoint"
 	AzureADConfigFieldEnabled             = "enabled"
 	AzureADConfigFieldEndpoint            = "endpoint"
 	AzureADConfigFieldGraphEndpoint       = "graphEndpoint"
@@ -18,6 +19,7 @@ const (
 	AzureADConfigFieldOwnerReferences     = "ownerReferences"
 	AzureADConfigFieldRancherURL          = "rancherUrl"
 	AzureADConfigFieldRemoved             = "removed"
+	AzureADConfigFieldStatus              = "status"
 	AzureADConfigFieldTenantID            = "tenantId"
 	AzureADConfigFieldTokenEndpoint       = "tokenEndpoint"
 	AzureADConfigFieldType                = "type"
@@ -33,6 +35,7 @@ type AzureADConfig struct {
 	AuthEndpoint        string            `json:"authEndpoint,omitempty" yaml:"authEndpoint,omitempty"`
 	Created             string            `json:"created,omitempty" yaml:"created,omitempty"`
 	CreatorID           string            `json:"creatorId,omitempty" yaml:"creatorId,omitempty"`
+	DeviceAuthEndpoint  string            `json:"deviceAuthEndpoint,omitempty" yaml:"deviceAuthEndpoint,omitempty"`
 	Enabled             bool              `json:"enabled,omitempty" yaml:"enabled,omitempty"`
 	Endpoint            string            `json:"endpoint,omitempty" yaml:"endpoint,omitempty"`
 	GraphEndpoint       string            `json:"graphEndpoint,omitempty" yaml:"graphEndpoint,omitempty"`
@@ -41,6 +44,7 @@ type AzureADConfig struct {
 	OwnerReferences     []OwnerReference  `json:"ownerReferences,omitempty" yaml:"ownerReferences,omitempty"`
 	RancherURL          string            `json:"rancherUrl,omitempty" yaml:"rancherUrl,omitempty"`
 	Removed             string            `json:"removed,omitempty" yaml:"removed,omitempty"`
+	Status              *AuthConfigStatus `json:"status,omitempty" yaml:"status,omitempty"`
 	TenantID            string            `json:"tenantId,omitempty" yaml:"tenantId,omitempty"`
 	TokenEndpoint       string            `json:"tokenEndpoint,omitempty" yaml:"tokenEndpoint,omitempty"`
 	Type                string            `json:"type,omitempty" yaml:"type,omitempty"`

@@ -780,11 +780,17 @@ github.com/rancher/lasso v0.0.0-20200905045615-7fcb07d6a20b/go.mod h1:OhBBBO1pBw
 github.com/rancher/lasso v0.0.0-20220519004610-700f167d8324/go.mod h1:T6WoUopOHBWTGjnphruTJAgoZ+dpm6llvn6GDYaa7Kw=
 github.com/rancher/norman v0.0.0-20220621173721-cba80063e705 h1:KyMXS1PgBxeCwdVWnYQbkKrJCghdgLfNmJTzWh/+514=
 github.com/rancher/norman v0.0.0-20220621173721-cba80063e705/go.mod h1:1G96Zmvnx1FSzCwr/9I6weg/247dH5mDyT2ng/cR7ug=
+github.com/rancher/norman v0.0.0-20240205154641-a6a6cf569608 h1:azL/n2grvuyGqmDvnpgRoH6mmpgodiGwjv1uZwiO7HE=
+github.com/rancher/norman v0.0.0-20240205154641-a6a6cf569608/go.mod h1:Sm2Xqai+aecgmJ86ygyEe+TdPMLkauEpykSstBAu4Ko=
 github.com/rancher/rancher/pkg/client v0.0.0-20220712195127-2c2137347e42 h1:AbSHH9bpSX1JFQOPqjxQQaT7nYHxTWBr9MTrK9ZYZTU=
 github.com/rancher/rancher/pkg/client v0.0.0-20220712195127-2c2137347e42/go.mod h1:hktAkB1fridbo/4n4UHF/2g4ERiqlnl+U5655Zy8kLk=
+github.com/rancher/rancher/pkg/client v0.0.0-20240416202124-a6da228939da h1:CVSBn8SZyjKQeAppBVzZuuh81qviOpK+MfJ2QVYX96c=
+github.com/rancher/rancher/pkg/client v0.0.0-20240416202124-a6da228939da/go.mod h1:oxtAx2+1kHbx21JlWy/SNeixhmv6sc+MhMvlflPexcM=
 github.com/rancher/wrangler v0.6.2-0.20200820173016-2068de651106/go.mod h1:iKqQcYs4YSDjsme52OZtQU4jHPmLlIiM93aj2c8c/W8=
 github.com/rancher/wrangler v0.7.4-security1 h1:RQR56EZVQ/ow96pK9otKjSqs1jEQeVl2Mb2yElPbkHA=
 github.com/rancher/wrangler v0.7.4-security1/go.mod h1:goezjesEKwMxHLfltdjg9DW0xWV7txQee6vOuSDqXAI=
+github.com/rancher/wrangler v1.1.1-0.20230831050635-df1bd5aae9df h1:WJ+aaUICHPX8HeLmHE9JL/RFHhilMfcJlqmhgpc7gJU=
+github.com/rancher/wrangler v1.1.1-0.20230831050635-df1bd5aae9df/go.mod h1:4T80p+rLh2OLbjCjdExIjRHKNBgK9NUAd7eIU/gRPKk=
 github.com/remyoudompheng/bigfft v0.0.0-20170806203942-52369c62f446/go.mod h1:uYEyJGbgTkfkS4+E/PavXkNJcbFIpEtjt2B0KDQ5+9M=
 github.com/rivo/uniseg v0.1.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=
 github.com/rivo/uniseg v0.2.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=
