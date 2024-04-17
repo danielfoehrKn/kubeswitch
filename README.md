@@ -16,13 +16,14 @@ Designed as a [drop-in replacement](#difference-to-kubectx) for [kubectx](https:
 - **Unified search over multiple providers**
   - [Amazon Elastic Kubernetes Service (EKS)](docs/stores/eks/eks.md)
   - [Azure Kubernetes Service (AKS)](docs/stores/azure/azure.md)
+  - [DigitalOcean Kubernetes (DOKS)](docs/stores/digitalocean/digitalocean.md)
   - [Gardener](docs/stores/gardener/gardener.md)
   - [Google Kubernetes Engine (GKE)](docs/stores/gke/gke.md)
-  - [OVH](docs/stores/ovh/ovh.md)
-  - Scaleway (documentation tbd)
   - [Hashicorp Vault](docs/stores/vault/use_vault_store.md)
   - [Local filesystem](docs/stores/filesystem/filesystem.md)
+  - [OVH](docs/stores/ovh/ovh.md)
   - [Rancher](docs/stores/rancher/rancher.md)
+  - Scaleway (documentation tbd)
   - Your favorite Cloud Provider or Managed Kubernetes Platform is not supported yet? Looking for contributions!
 - **Change the namespace**
 - **Change to any context and namespace from the history**
@@ -330,4 +331,4 @@ Define multiple search paths using the [configuration file](docs/kubeconfig_stor
 
 ### Future Plans
 
-- Support more Cloud Providers and Managed Kubernetes Platforms (Rancher, ...)
+- Support more Cloud Providers and Managed Kubernetes Platforms
