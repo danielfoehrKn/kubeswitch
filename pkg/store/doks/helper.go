@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	// is the name of the default `doctl` config file
+	// defaultConfigName is the name of the default `doctl` config file
 	defaultConfigName = "config.yaml"
 )
 

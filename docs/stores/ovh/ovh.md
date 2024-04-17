@@ -4,10 +4,10 @@ To use the OVH store a token should be created on OVH's website. In order to cre
 
 In order to create this token you also need to specify the scope of the application. The required permissions for this plugin to work are the following:
 
-- GET /cloud/project
-- GET /cloud/project/*/kube
-- GET /cloud/project/*/kube/*
-- POST /cloud/project/*/kube/*/kubeconfig
+- `GET /cloud/project`
+- `GET /cloud/project/*/kube`
+- `GET /cloud/project/*/kube/*`
+- `POST /cloud/project/*/kube/*/kubeconfig`
 
 Searching over multiple OVH instances is supported, but may require `showPrefix` to be set to `true` in the `SwitchConfig` file to avoid name collisions.
 

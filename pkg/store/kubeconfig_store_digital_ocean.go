@@ -48,10 +48,9 @@ const (
 )
 
 // NewDigitalOceanStore creates a new DigitalOcean store
-// TODO: add configuration for optional do config files
 func NewDigitalOceanStore(store types.KubeconfigStore) (*DigitalOceanStore, error) {
 	doctlConfig, err := doks.GetDoctlConfiguration()
-	// as the DO store is enabled by default to provide a seamless experience when already using `doctl`, it is perfectly find that the doctl config file does not exist (the user might simply not use `doctl`)
+	// as the DO store is enabled by default to provide a seamless experience when already using `doctl`, it is perfectly fine that the doctl config file does not exist (the user might simply not use `doctl`)
 	if os.IsNotExist(err) {
 		return nil, nil
 	}
@@ -206,9 +205,9 @@ func (s *DigitalOceanStore) GetContextPrefix(path string) string {
 		// fallback and hope that the generated context name is unique
 		return "do_"
 	}
-	// the DigitalOcean store encodes the path with semantic information
-	// <context-name/account-name>--<region>--<cluster-name>
-	// just use this semantic information as a prefix & remove the double dashes
+	// the DigitalOcean store encodes the path with semantic information do_<context-name/account-name>.
+	// However, the cluster is NOT identified via the information in the search path unlike in other stores.
+	// The metadata tags with the cluster ID is used for this pupose instead. The search path is simply for users to be able to differentiate DOKS clusters.
 	return fmt.Sprintf("do_%s", doctlContextName)
 }
 

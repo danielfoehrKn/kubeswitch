@@ -30,10 +30,13 @@ type DoctlConfig struct {
 	ApiUrl           string            `yaml:"api-url"`
 }
 
+// Kubeconfig is the kubeconfig sub-section of the `doctl` config file
 type Kubeconfig struct {
+	// SaveConfig contains configuration when saving the DOKS kubeconfig via `doctl`
 	SaveConfig Save `yaml:"save"`
 }
 
+// Save contains configuration when saving the DOKS kubeconfig via `doctl`
 type Save struct {
 	// ExpirySeconds is the expiratio nseconds for tokens used as authentication of created kubeconfigs
 	// The default value is 0, in which case DO's default will be taken (defaults to 7days)
