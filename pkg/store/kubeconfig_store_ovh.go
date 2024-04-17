@@ -154,7 +154,7 @@ func (r *OVHStore) StartSearch(channel chan SearchResult) {
 	}
 }
 
-func (r *OVHStore) GetKubeconfigForPath(path string) ([]byte, error) {
+func (r *OVHStore) GetKubeconfigForPath(path string, _ map[string]string) ([]byte, error) {
 	r.Logger.Debugf("OVH: getting secret for path %q", path)
 
 	var cluster OVHKube

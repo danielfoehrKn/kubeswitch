@@ -35,6 +35,9 @@ type DiscoveredContext struct {
 	Name string
 	// Alias is a custom alias defined for this context name
 	Alias string
+	// Tags contains the additional metadata that the store wants to associate with a context name.
+	// This metadata is later handed over in the getKubeconfigForPath() function when retrieving the kubeconfig bytes for the path
+	Tags map[string]string
 	// Store is a reference to the backing store that contains the kubeconfig
 	Store *store.KubeconfigStore
 	// Error is an error that occured during the search
@@ -104,11 +107,17 @@ func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir str
 				defer wgResultChannel.Done()
 
 				// directly set from pre-computed index
-				content := index.GetContent()
+				content, tags := index.GetContent()
 				for contextName, path := range content {
+					tagsForContextName := make(map[string]string)
+					if tagsForCtx, ok := tags[contextName]; ok {
+						tagsForContextName = tagsForCtx
+					}
+
 					resultChannel <- DiscoveredContext{
 						Path:  path,
 						Name:  contextName,
+						Tags:  tagsForContextName,
 						Alias: aliasutil.GetContextForAlias(contextName, contextToAliasMapping),
 						Store: &store,
 						Error: nil,
@@ -133,6 +142,10 @@ func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir str
 			// to write it to the index. Do not use the global "ContextToPathMapping"
 			// as this contains contexts names from all stores combined
 			localContextToPathMapping := make(map[string]string)
+			// remember additional metadata tags that a store wants to associate with a discovered context name
+			// also written to the index file
+			localContextToTagsMapping := make(map[string]map[string]string)
+
 			for channelResult := range storeSearchChannel {
 				if channelResult.Error != nil {
 					// Required defines if errors when initializing this store should be logged
@@ -146,7 +159,7 @@ func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir str
 					continue
 				}
 
-				bytes, err := store.GetKubeconfigForPath(channelResult.KubeconfigPath)
+				bytes, err := store.GetKubeconfigForPath(channelResult.KubeconfigPath, channelResult.Tags)
 				if err != nil {
 					// do not throw Error, try to parse the other files
 					// this will happen a lot when using vault as storage because the secrets key value needs to match the desired kubeconfig name
@@ -173,12 +186,16 @@ func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir str
 					resultChannel <- DiscoveredContext{
 						Path:  channelResult.KubeconfigPath,
 						Name:  contextName,
+						Tags:  channelResult.Tags,
 						Alias: aliasutil.GetContextForAlias(contextName, contextToAliasMapping),
 						Store: &store,
 						Error: nil,
 					}
 					// add to local contextToPath map to write the index for this store only
 					localContextToPathMapping[contextName] = channelResult.KubeconfigPath
+					if len(channelResult.Tags) > 0 {
+						localContextToTagsMapping[contextName] = channelResult.Tags
+					}
 				}
 			}
 
@@ -187,7 +204,7 @@ func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir str
 
 			// write store index file now that the path discovery is complete
 			if len(localContextToPathMapping) > 0 {
-				writeIndex(store, &index, localContextToPathMapping)
+				writeIndex(store, &index, localContextToPathMapping, localContextToTagsMapping)
 			}
 		}(kubeconfigStore, c, *searchIndex)
 	}

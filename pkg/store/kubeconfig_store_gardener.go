@@ -407,7 +407,7 @@ func (s *GardenerStore) GetControlplaneKubeconfigForShoot(shootName, project str
 	return bytes, shoot.Spec.SeedName, nil
 }
 
-func (s *GardenerStore) GetKubeconfigForPath(path string) ([]byte, error) {
+func (s *GardenerStore) GetKubeconfigForPath(path string, _ map[string]string) ([]byte, error) {
 	if !s.IsInitialized() {
 		if err := s.InitializeGardenerStore(); err != nil {
 			return nil, fmt.Errorf("failed to initialize Gardener store: %w", err)
@@ -498,7 +498,7 @@ func (s *GardenerStore) GetKubeconfigForPath(path string) ([]byte, error) {
 	return config.GetBytes()
 }
 
-func (s *GardenerStore) GetSearchPreview(path string) (string, error) {
+func (s *GardenerStore) GetSearchPreview(path string, optionalTags map[string]string) (string, error) {
 	// To improve UX, we return an error immediately and load the store in the background
 	if !s.IsInitialized() {
 		go func() {
@@ -655,7 +655,7 @@ func (s *GardenerStore) sendKubeconfigPaths(channel chan SearchResult, shoots []
 }
 
 func (s *GardenerStore) createGardenKubeconfigAlias(gardenKubeconfigPath string) error {
-	bytes, err := s.GetKubeconfigForPath(gardenKubeconfigPath)
+	bytes, err := s.GetKubeconfigForPath(gardenKubeconfigPath, nil)
 	if err != nil {
 		return err
 	}

@@ -76,11 +76,11 @@ func (i *SearchIndex) HasKind(kind types.StoreKind) bool {
 	return i.content != nil && i.content.Kind == kind
 }
 
-func (i *SearchIndex) GetContent() map[string]string {
+func (i *SearchIndex) GetContent() (map[string]string, map[string]map[string]string) {
 	if i.content == nil {
-		return nil
+		return nil, nil
 	}
-	return i.content.ContextToPathMapping
+	return i.content.ContextToPathMapping, i.content.ContextToTags
 }
 
 // LoadIndexFromFile takes a filename and de-serializes the contents into an SearchIndex object.

@@ -113,7 +113,7 @@ func (c *fileCache) suffix() string {
 // GetKubeconfigForPath returns the kubeconfig for the given path.
 // First, it checks if the kubeconfig is already available in cache.
 // If not, it is loaded from the upstream store and stored in cache
-func (c *fileCache) GetKubeconfigForPath(path string) ([]byte, error) {
+func (c *fileCache) GetKubeconfigForPath(path string, tags map[string]string) ([]byte, error) {
 	c.logger.Debugf("Looking for '%s'", path)
 
 	// check if kubeconfig is already available in the cache
@@ -128,7 +128,7 @@ func (c *fileCache) GetKubeconfigForPath(path string) ([]byte, error) {
 	}
 	c.logger.Debugf("kubeconfig not found in cache '%s'", path)
 	// kubeconfig not found in cache, load from upstream store
-	kubeconfig, err := c.upstream.GetKubeconfigForPath(path)
+	kubeconfig, err := c.upstream.GetKubeconfigForPath(path, tags)
 	if err != nil { // if the upstream returns an error, the result is not cached
 		return kubeconfig, err
 	}
@@ -191,4 +191,14 @@ func (c *fileCache) GetLogger() *logrus.Entry {
 }
 func (c *fileCache) GetStoreConfig() types.KubeconfigStore {
 	return c.upstream.GetStoreConfig()
+}
+
+func (c *fileCache) GetSearchPreview(path string, optionalTags map[string]string) (string, error) {
+	previewer, ok := c.upstream.(store.Previewer)
+	if !ok {
+		// if the wrapped store is not a previewer, simply return an empty string, hence causing no visual distortion
+		return "", nil
+	}
+
+	return previewer.GetSearchPreview(path, optionalTags)
 }

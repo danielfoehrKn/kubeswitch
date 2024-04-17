@@ -43,6 +43,9 @@ var (
 	contextToPathMapping     = make(map[string]string)
 	contextToPathMappingLock = sync.RWMutex{}
 
+	pathToTagsMapping     = make(map[string]map[string]string)
+	pathToTagsMappingLock = sync.RWMutex{}
+
 	pathToKubeconfig     = make(map[string]string)
 	pathToKubeconfigLock = sync.RWMutex{}
 
@@ -94,6 +97,8 @@ func Switcher(stores []store.KubeconfigStore, config *types.Config, stateDir str
 			// add to global contextToPath map
 			// required to map back from selected context -> path
 			writeToContextToPathMapping(contextName, discoveredContext.Path)
+			// required to map back from kubeconfig path -> tags
+			writeToPathToTagsMapping(discoveredContext.Path, discoveredContext.Tags)
 			// associate (path -> store)
 			// required to map back from selected context -> path -> store -> store.getKubeconfig(path)
 			writeToPathToStoreID(discoveredContext.Path, kubeconfigStore.GetID())
@@ -123,8 +128,11 @@ func Switcher(stores []store.KubeconfigStore, config *types.Config, stateDir str
 	// get the store for the store ID
 	store := kindToStore[storeID]
 
+	// get the tags associated with the selected kubeconfig path
+	tags := readFromPathToTagsMapping(kubeconfigPath)
+
 	// use the store to get the kubeconfig for the selected kubeconfig path
-	kubeconfigData, err := store.GetKubeconfigForPath(kubeconfigPath)
+	kubeconfigData, err := store.GetKubeconfigForPath(kubeconfigPath, tags)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -170,10 +178,11 @@ func Switcher(stores []store.KubeconfigStore, config *types.Config, stateDir str
 
 // writeIndex tries to write the Index file for the kubeconfig store
 // if it fails to do so, it logs a warning, but does not panic
-func writeIndex(store store.KubeconfigStore, searchIndex *index.SearchIndex, ctxToPathMapping map[string]string) {
+func writeIndex(store store.KubeconfigStore, searchIndex *index.SearchIndex, ctxToPathMapping map[string]string, ctxToTagsMapping map[string]map[string]string) {
 	index := types.Index{
 		Kind:                 store.GetKind(),
 		ContextToPathMapping: ctxToPathMapping,
+		ContextToTags:        ctxToTagsMapping,
 	}
 
 	if err := searchIndex.Write(index); err != nil {
@@ -229,13 +238,14 @@ func getFuzzyFinderOptions(storeIDToStore map[string]store.KubeconfigStore, show
 			hotReloadLock.RUnlock()
 
 			path := readFromContextToPathMapping(currentContextName)
+			tags := readFromPathToTagsMapping(path)
 			storeID := readFromPathToStoreID(path)
 			kubeconfigStore := storeIDToStore[storeID]
 
 			var storeSpecificPreview *string
 			previewer, ok := kubeconfigStore.(store.Previewer)
 			if ok {
-				pr, err := previewer.GetSearchPreview(path)
+				pr, err := previewer.GetSearchPreview(path, tags)
 				if err != nil {
 					log.Debugf("failed to get preview for store %s: %v", kubeconfigStore.GetID(), err)
 					return ""
@@ -243,7 +253,7 @@ func getFuzzyFinderOptions(storeIDToStore map[string]store.KubeconfigStore, show
 				storeSpecificPreview = &pr
 			}
 
-			preview, err := getSanitizedKubeconfigForKubeconfigPath(kubeconfigStore, path)
+			preview, err := getSanitizedKubeconfigForKubeconfigPath(kubeconfigStore, path, tags)
 			if err != nil {
 				log.Debugf("failed to get kubeconfig preview: %v", err)
 				return ""
@@ -266,14 +276,14 @@ func getFuzzyFinderOptions(storeIDToStore map[string]store.KubeconfigStore, show
 	return options
 }
 
-func getSanitizedKubeconfigForKubeconfigPath(kubeconfigStore store.KubeconfigStore, path string) (string, error) {
+func getSanitizedKubeconfigForKubeconfigPath(kubeconfigStore store.KubeconfigStore, path string, tags map[string]string) (string, error) {
 	// during first run without index, the files are already read in the getContextsForKubeconfigPath and saved in-memory
 	kubeconfig := readFromPathToKubeconfig(path)
 	if len(kubeconfig) > 0 {
 		return kubeconfig, nil
 	}
 
-	data, err := kubeconfigStore.GetKubeconfigForPath(path)
+	data, err := kubeconfigStore.GetKubeconfigForPath(path, tags)
 	if err != nil {
 		return "", fmt.Errorf("could not read kubeconfig with path '%s': %v", path, err)
 	}
@@ -316,6 +326,18 @@ func writeToContextToPathMapping(key, value string) {
 	contextToPathMappingLock.Lock()
 	defer contextToPathMappingLock.Unlock()
 	contextToPathMapping[key] = value
+}
+
+func readFromPathToTagsMapping(key string) map[string]string {
+	pathToTagsMappingLock.RLock()
+	defer pathToTagsMappingLock.RUnlock()
+	return pathToTagsMapping[key]
+}
+
+func writeToPathToTagsMapping(key string, value map[string]string) {
+	pathToTagsMappingLock.Lock()
+	defer pathToTagsMappingLock.Unlock()
+	pathToTagsMapping[key] = value
 }
 
 func readFromPathToStoreID(key string) string {

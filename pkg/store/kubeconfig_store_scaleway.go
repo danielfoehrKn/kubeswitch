@@ -169,7 +169,7 @@ func (s *ScalewayStore) StartSearch(channel chan SearchResult) {
 	}
 }
 
-func (s *ScalewayStore) GetKubeconfigForPath(path string) ([]byte, error) {
+func (s *ScalewayStore) GetKubeconfigForPath(path string, _ map[string]string) ([]byte, error) {
 	s.Logger.Debugf("Scaleway: getting secret for path %q", path)
 
 	var cluster ScalewayKube

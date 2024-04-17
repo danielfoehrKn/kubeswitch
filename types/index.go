@@ -23,6 +23,10 @@ type Index struct {
 	// ContextToPathMapping contains the actual index, mapping the context name
 	// to the kubeconfig path in the backing store
 	ContextToPathMapping map[string]string `yaml:"contextToPathMapping"`
+	// ContextToTags contains optional metadata ("tags") for a context name
+	// For instance, the digital ocean store uses this as the getKubceonfigForPath() requires to know the cluster_ID of a DOKS cluster, which
+	// for beauty reasons is not stored in the visible kubeconfig_path. The cluster_ID for a context_name is stored as a tag instead.
+	ContextToTags map[string]map[string]string `yaml:"contextToTags"`
 }
 
 // IndexState defines how the state of an index for a kubeconfig store is written

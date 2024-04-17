@@ -245,7 +245,7 @@ func (s *GKEStore) GetLogger() *logrus.Entry {
 	return s.Logger
 }
 
-func (s *GKEStore) GetKubeconfigForPath(path string) ([]byte, error) {
+func (s *GKEStore) GetKubeconfigForPath(path string, _ map[string]string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 

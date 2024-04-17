@@ -200,7 +200,7 @@ func parseEksIdentifier(path string) (string, string, string, error) {
 	}
 }
 
-func (s *EKSStore) GetKubeconfigForPath(path string) ([]byte, error) {
+func (s *EKSStore) GetKubeconfigForPath(path string, _ map[string]string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -283,7 +283,7 @@ func (s *EKSStore) GetKubeconfigForPath(path string) ([]byte, error) {
 	return bytes, err
 }
 
-func (s *EKSStore) GetSearchPreview(path string) (string, error) {
+func (s *EKSStore) GetSearchPreview(path string, optionalTags map[string]string) (string, error) {
 	if !s.IsInitialized() {
 		// this takes too long, initialize concurrently
 		go func() {

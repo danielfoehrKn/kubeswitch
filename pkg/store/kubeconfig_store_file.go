@@ -107,7 +107,7 @@ func (s *FilesystemStore) searchDirectory(wg *sync.WaitGroup, searchPath string,
 	}
 }
 
-func (s *FilesystemStore) GetKubeconfigForPath(path string) ([]byte, error) {
+func (s *FilesystemStore) GetKubeconfigForPath(path string, _ map[string]string) ([]byte, error) {
 	return os.ReadFile(path)
 }
 

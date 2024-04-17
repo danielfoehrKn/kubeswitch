@@ -137,7 +137,7 @@ func (r *RancherStore) StartSearch(channel chan SearchResult) {
 	}
 }
 
-func (r *RancherStore) GetKubeconfigForPath(path string) ([]byte, error) {
+func (r *RancherStore) GetKubeconfigForPath(path string, _ map[string]string) ([]byte, error) {
 	r.Logger.Debugf("Rancher: getting secret for path %q", path)
 
 	if err := r.initClient(); err != nil {

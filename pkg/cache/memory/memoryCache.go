@@ -40,13 +40,13 @@ type memoryCache struct {
 // GetKubeconfigForPath implements the store.KubeconfigStore interface.
 // It is a wrapper around a KubeConfigCache.
 // It intercepts calls to GetKubeconfigForPath and caches the result in memory.
-func (c *memoryCache) GetKubeconfigForPath(path string) ([]byte, error) {
+func (c *memoryCache) GetKubeconfigForPath(path string, tags map[string]string) ([]byte, error) {
 	if val, ok := c.cache[path]; ok {
 		c.GetLogger().Debugf("GetKubeconfigForPath: %s found in cache", path)
 		return val, nil
 	}
 	c.GetLogger().Debugf("GetKubeconfigForPath: %s not cached", path)
-	kube, err := c.upstream.GetKubeconfigForPath(path)
+	kube, err := c.upstream.GetKubeconfigForPath(path, tags)
 	if err != nil {
 		return kube, err
 	}
@@ -77,6 +77,17 @@ func (c *memoryCache) StartSearch(channel chan store.SearchResult) {
 func (c *memoryCache) GetLogger() *logrus.Entry {
 	return c.upstream.GetLogger()
 }
+
 func (c *memoryCache) GetStoreConfig() types.KubeconfigStore {
 	return c.upstream.GetStoreConfig()
+}
+
+func (c *memoryCache) GetSearchPreview(path string, optionalTags map[string]string) (string, error) {
+	previewer, ok := c.upstream.(store.Previewer)
+	if !ok {
+		// if the wrapped store is not a previewer, simply return an empty string, hence causing no visual distortion
+		return "", nil
+	}
+
+	return previewer.GetSearchPreview(path, optionalTags)
 }

@@ -58,7 +58,7 @@ func SetContext(desiredContext string, stores []store.KubeconfigStore, config *t
 
 		matchesContextWithoutPrefix := desiredContext == contextWithoutPrefix
 		if desiredContext == discoveredContext.Name || matchesContextWithoutPrefix || desiredContext == discoveredContext.Alias {
-			kubeconfigData, err := kubeconfigStore.GetKubeconfigForPath(discoveredContext.Path)
+			kubeconfigData, err := kubeconfigStore.GetKubeconfigForPath(discoveredContext.Path, discoveredContext.Tags)
 			if err != nil {
 				return nil, nil, err
 			}

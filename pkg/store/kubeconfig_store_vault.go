@@ -258,7 +258,7 @@ func getBytesFromSecretValue(v interface{}) ([]byte, error) {
 	return bytes, nil
 }
 
-func (s *VaultStore) GetKubeconfigForPath(path string) ([]byte, error) {
+func (s *VaultStore) GetKubeconfigForPath(path string, _ map[string]string) ([]byte, error) {
 
 	// Checking secret engine version. If it's v2, we should shim /metadata/
 	// to secret path if necessary.
