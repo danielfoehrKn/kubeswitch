@@ -10,7 +10,7 @@ Please make sure that the `gcloud` tool is installed and on your `PATH`.
 Next, create the GKE store configuration in the `kubeswitch` configuration file.
 The only currently supported `authenticationType` is `gcloud`.
 
-```
+```yaml
 cat ~/.kube/switch-config.yaml
 
 kind: SwitchConfig
@@ -34,7 +34,7 @@ By using `kubeswitch` you are essentially reusing the valid credentials (`JWT` t
 As OIDC id tokens have an expiration date, these credentials can expire.
 `kubeswitch` detects failed requests against the GCP API and triggers a re-authentication via `gcloud` (this will open the default Web browser).
 
-```
+```bash
 switch
 INFO[0014] Sucessfully obtained application default credentials.  store=gke
 switched to context "gke_landscaper".

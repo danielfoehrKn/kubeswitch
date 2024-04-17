@@ -110,7 +110,7 @@ It should have
 
 ### Example configuration
 
-```
+```yaml
 cat ~/.kube/switch-config.yaml
 
 kind: SwitchConfig
@@ -142,7 +142,7 @@ You can also define the namespaces in the `paths` field.
 
 Please see the example below.
 
-```
+```yaml
 cat ~/.kube/switch-config.yaml
 
 kind: SwitchConfig

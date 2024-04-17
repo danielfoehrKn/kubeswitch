@@ -19,7 +19,7 @@ To search the directory `~/.kube/switch` on the local filesystem  use the flag `
 You do not need to specify `--store filesystem` as the flag `--store`  defaults to `filesystem`.
 This flag only supports **one path**, to supply multiple directories, use the [`SwitchConfig`file](#set-up-the-configuration-file-switchconfig).
 
-```
+```bash
 switch --kubeconfig-path ~/.kube/my-path
 ```
 
@@ -27,7 +27,7 @@ switch --kubeconfig-path ~/.kube/my-path
 
 The flag `--kubeconfig-path` also accepts a file as an argument.
 
-```
+```bash
 switch --kubeconfig-path ~/.kube/my-path/my-kubeconfig-file.yaml
 ```
 
@@ -38,7 +38,7 @@ switch --kubeconfig-path ~/.kube/my-path/my-kubeconfig-file.yaml
 `kubeswitch` can search over **multiple** directories and combine the search results.
 The `path` field accepts both directories and filepaths.
 
-```
+```yaml
 $ cat ~/.kube/switch-config.yaml
 kind: SwitchConfig
 version: v1alpha1
