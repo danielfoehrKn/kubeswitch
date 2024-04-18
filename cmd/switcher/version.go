@@ -16,6 +16,9 @@ package switcher
 import (
 	"fmt"
 	"runtime"
+	"slices"
+
+	"github.com/danielfoehrkn/kubeswitch/types"
 
 	"github.com/spf13/cobra"
 )
@@ -28,17 +31,29 @@ var (
 		Example: "switch version",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Printf(`Switch:
-		version     : %s
-		build date  : %s
-		go version  : %s
-		go compiler : %s
-		platform    : %s/%s
-`, version, buildDate, runtime.Version(), runtime.Compiler, runtime.GOOS, runtime.GOARCH)
+		version       : %s
+		build date    : %s
+		go version    : %s
+		go compiler   : %s
+		platform      : %s/%s
+		backing-stores: %s
+`, version, buildDate, runtime.Version(), runtime.Compiler, runtime.GOOS, runtime.GOARCH, getSupportedStores())
 
 			return nil
 		},
 	}
 )
+
+// getSupportedStores returns a string of supported backing stores
+func getSupportedStores() string {
+	validStoreKinds := types.ValidStoreKinds.List()
+	slices.Sort(validStoreKinds)
+	validStoreKindsString := "["
+	for _, kind := range validStoreKinds {
+		validStoreKindsString = fmt.Sprintf("%s %s", validStoreKindsString, kind)
+	}
+	return fmt.Sprintf("%s ]", validStoreKindsString)
+}
 
 func init() {
 	rootCommand.AddCommand(versionCmd)
