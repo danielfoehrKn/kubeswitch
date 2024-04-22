@@ -154,7 +154,7 @@ function kubeswitch
 
 	set -l switchTmpDirectory "$HOME/.kube/.switch_tmp/config"
 	if test -n "$KUBECONFIG"; and string match -q "*$switchTmpDirectory*" -- "$KUBECONFIG"
-	  \rm -f "$KUBECONFIG"
+	  command rm -f "$KUBECONFIG"
 	end
 
 	set -gx KUBECONFIG "$KUBECONFIG_PATH"
