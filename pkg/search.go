@@ -199,13 +199,13 @@ func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir str
 				}
 			}
 
-			// reading from this store is finished, decrease wait counter
-			wgResultChannel.Done()
-
 			// write store index file now that the path discovery is complete
 			if len(localContextToPathMapping) > 0 {
 				writeIndex(store, &index, localContextToPathMapping, localContextToTagsMapping)
 			}
+
+			// reading from this store is finished, decrease wait counter
+			wgResultChannel.Done()
 		}(kubeconfigStore, c, *searchIndex)
 	}
 
