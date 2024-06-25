@@ -299,6 +299,10 @@ func (s *VaultStore) GetKubeconfigForPath(path string, _ map[string]string) ([]b
 				if err != nil {
 					return nil, fmt.Errorf("cannot read kubeconfig from %q: %v", secretsPath, err)
 				}
+				if len(bytes) == 0 {
+					s.Logger.Debugf("vault: data is empty from %q", secretsPath)
+					return nil, fmt.Errorf("kubeconfig is empty from %q", secretsPath)
+				}
 				return bytes, nil
 			}
 		}
