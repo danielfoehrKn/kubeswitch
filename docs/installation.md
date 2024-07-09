@@ -10,7 +10,7 @@ Instead, use the sourced shell function as described in [source the shell functi
 
 Install the `switcher` binary with `homebrew`.
 ```
-$ brew install danielfoehrkn/switch/switch
+brew install danielfoehrkn/switch/switch
 ```
 
 Next, follow [required: source the shell function](#required-source-the-shell-function).
@@ -20,8 +20,8 @@ Next, follow [required: source the shell function](#required-source-the-shell-fu
 
 Mac users can also install both `switch.sh` and `switcher` from [MacPorts](https://www.macports.org)
 ```
-$ sudo port selfupdate
-$ sudo port install kubeswitch
+sudo port selfupdate
+sudo port install kubeswitch
 ```
 
 Next, follow [required: source the shell function](#required-source-the-shell-function).
@@ -47,7 +47,7 @@ Next, follow [required: source the shell function](#required-source-the-shell-fu
 ### Option 3 - From source
 
 ```
-$ go get github.com/danielfoehrkn/kubeswitch
+go get github.com/danielfoehrkn/kubeswitch
 ```
 
 From the repository root run `make build-switcher`.
