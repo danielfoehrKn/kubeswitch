@@ -22,12 +22,16 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/danielfoehrkn/kubeswitch/types"
 	"github.com/karrick/godirwalk"
 	"github.com/sirupsen/logrus"
+
+	"github.com/danielfoehrkn/kubeswitch/types"
 )
 
-func NewFilesystemStore(kubeconfigName string, kubeconfigStore types.KubeconfigStore) (*FilesystemStore, error) {
+func NewFilesystemStore(
+	kubeconfigName string,
+	kubeconfigStore types.KubeconfigStore,
+) (*FilesystemStore, error) {
 	return &FilesystemStore{
 		Logger:          logrus.New().WithField("store", types.StoreKindFilesystem),
 		KubeconfigStore: kubeconfigStore,
@@ -80,7 +84,11 @@ func (s *FilesystemStore) StartSearch(channel chan SearchResult) {
 	wg.Wait()
 }
 
-func (s *FilesystemStore) searchDirectory(wg *sync.WaitGroup, searchPath string, channel chan SearchResult) {
+func (s *FilesystemStore) searchDirectory(
+	wg *sync.WaitGroup,
+	searchPath string,
+	channel chan SearchResult,
+) {
 	defer wg.Done()
 
 	if err := godirwalk.Walk(searchPath, &godirwalk.Options{
@@ -138,7 +146,7 @@ func (s *FilesystemStore) VerifyKubeconfigPaths() error {
 
 		info, err := os.Stat(kubeconfigPath)
 		if os.IsNotExist(err) {
-			return fmt.Errorf("the configured kubeconfig directory %q does not exist", path)
+			continue
 		} else if err != nil {
 			return fmt.Errorf("failed to read from the configured kubeconfig directory %q: %v", path, err)
 		}
@@ -151,7 +159,10 @@ func (s *FilesystemStore) VerifyKubeconfigPaths() error {
 	}
 
 	if len(validKubeconfigDirectories) == 0 && len(validKubeconfigFilepaths) == 0 {
-		return fmt.Errorf("none of the %d specified kubeconfig path(s) exist. Either specifiy an existing path via flag '--kubeconfig-path' or in the switch config file", len(s.KubeconfigStore.Paths))
+		return fmt.Errorf(
+			"none of the %d specified kubeconfig path(s) exist. Either specifiy an existing path via flag '--kubeconfig-path' or in the switch config file",
+			len(s.KubeconfigStore.Paths),
+		)
 	}
 	s.kubeconfigDirectories = validKubeconfigDirectories
 	s.kubeconfigFilepaths = validKubeconfigFilepaths
