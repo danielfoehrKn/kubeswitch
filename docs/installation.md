@@ -69,7 +69,7 @@ echo 'source <(switcher init bash)' >> ~/.bashrc
 
 # optionally use alias `s` instead of `switch`
 echo 'alias s=switch' >> ~/.bashrc
-echo 'complete -o default -F _switcher s' >> ~/.bashrc
+echo 'complete -o default -F __start_switcher s' >> ~/.bashrc
 ```
 ### Zsh
 ```sh
