@@ -106,7 +106,8 @@ func (s *FilesystemStore) searchDirectory(
 			}
 			return nil
 		},
-		Unsorted: false, // (optional) set true for faster yet non-deterministic enumeration
+		Unsorted:            false, // (optional) set true for faster yet non-deterministic enumeration
+		FollowSymbolicLinks: true,
 	}); err != nil {
 		channel <- SearchResult{
 			KubeconfigPath: "",
