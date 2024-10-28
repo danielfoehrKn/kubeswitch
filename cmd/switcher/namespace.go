@@ -19,7 +19,8 @@ import (
 )
 
 var (
-	namespaceCommand = &cobra.Command{
+	checkExistence   bool = true
+	namespaceCommand      = &cobra.Command{
 		Use:     "namespace",
 		Aliases: []string{"ns"},
 		Short:   "Change the current namespace",
@@ -33,7 +34,7 @@ var (
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 1 && len(args[0]) > 0 {
-				return ns.SwitchToNamespace(args[0], getKubeconfigPathFromFlag())
+				return ns.SwitchToNamespace(args[0], getKubeconfigPathFromFlag(), checkExistence)
 			}
 
 			return ns.SwitchNamespace(getKubeconfigPathFromFlag(), stateDirectory, noIndex)
@@ -49,7 +50,7 @@ var (
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return ns.SwitchToNamespace("default", getKubeconfigPathFromFlag())
+			return ns.SwitchToNamespace("default", getKubeconfigPathFromFlag(), false)
 		},
 		SilenceErrors: true,
 	}
@@ -57,6 +58,7 @@ var (
 
 func init() {
 	setCommonFlags(namespaceCommand)
+	namespaceCommand.Flags().BoolVar(&checkExistence, "check-existence", true, "Check if the namespace exists before switching to it (default true)")
 	rootCommand.AddCommand(namespaceCommand)
 	rootCommand.AddCommand(unsetNamespaceCommand)
 }
