@@ -72,14 +72,14 @@ func GetGardenClient(config *types.StoreConfigGardener) (client.Client, error) {
 
 	restConfig, err := clientConfig.ClientConfig()
 	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("unable to create rest config: %v", err))
+		return nil, fmt.Errorf("unable to create rest config: %v", err)
 	}
 
 	k8sclient, err := client.New(restConfig, client.Options{
 		Scheme: scheme,
 	})
 	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("unable to create garden client: %v", err))
+		return nil, fmt.Errorf("unable to create garden client: %v", err)
 	}
 	return k8sclient, nil
 }

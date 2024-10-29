@@ -213,7 +213,7 @@ func (s *DigitalOceanStore) GetContextPrefix(path string) string {
 
 // IsInitialized checks if the store has been initialized with clients already
 func (s *DigitalOceanStore) IsInitialized() bool {
-	return s.ContextToKubernetesService != nil && len(s.ContextToKubernetesService) > 0
+	return len(s.ContextToKubernetesService) > 0
 }
 
 func (s *DigitalOceanStore) GetID() string {

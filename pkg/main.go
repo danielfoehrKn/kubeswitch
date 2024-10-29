@@ -70,7 +70,9 @@ func Switcher(stores []store.KubeconfigStore, config *types.Config, stateDir str
 		return nil, nil, err
 	}
 
+	// here we asynchronously read from the result channel until the wait group is done (call wg.Done for all stores)
 	go func(channel chan DiscoveredContext) {
+		// read from result channel until
 		for discoveredContext := range channel {
 			if discoveredContext.Error != nil {
 				// aggregate the errors during the search to show after the selection screen

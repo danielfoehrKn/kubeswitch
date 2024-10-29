@@ -312,14 +312,14 @@ func getClient(kubeconfigPath string) (client.Client, error) {
 
 	restConfig, err := clientConfig.ClientConfig()
 	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("unable to create rest config: %v", err))
+		return nil, fmt.Errorf("unable to create rest config: %v", err)
 	}
 
 	client, err := client.New(restConfig, client.Options{
 		Scheme: scheme,
 	})
 	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("unable to create kubernetes client: %v", err))
+		return nil, fmt.Errorf("unable to create kubernetes client: %v", err)
 	}
 	return client, nil
 }
