@@ -315,6 +315,10 @@ func getClient(kubeconfigPath string) (client.Client, error) {
 		return nil, fmt.Errorf("unable to create rest config: %v", err)
 	}
 
+	// increase QPS and Burst to avoid rate limiting, these values are the same as kubectl uses
+	restConfig.QPS = 50.0
+	restConfig.Burst = 300
+
 	client, err := client.New(restConfig, client.Options{
 		Scheme: scheme,
 	})
