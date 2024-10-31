@@ -54,26 +54,28 @@ var (
 )
 
 // SwitchToNamespace takes a target namespace and - given that the namespace exists - sets it on the current kubeconfig file
-func SwitchToNamespace(targetNamespace, kubeconfigPathFromFlag string) error {
+func SwitchToNamespace(targetNamespace, kubeconfigPathFromFlag string, checkExistence bool) error {
 	kubeconfigPath, err := getKubeconfigPath(kubeconfigPathFromFlag)
 	if err != nil {
 		return err
 	}
 
-	c, err := getClient(kubeconfigPath)
-	if err != nil {
-		return fmt.Errorf("failed to retrieve current namespaces: %v", err)
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	ns := corev1.Namespace{}
-	if err := c.Get(ctx, client.ObjectKey{Name: targetNamespace}, &ns); err != nil {
-		if apierrors.IsNotFound(err) {
-			return fmt.Errorf("namespace %q not found", targetNamespace)
+	if checkExistence {
+		c, err := getClient(kubeconfigPath)
+		if err != nil {
+			return fmt.Errorf("failed to retrieve current namespaces: %v", err)
 		}
-		return fmt.Errorf("failed to find namespace %q: %v", targetNamespace, err)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		ns := corev1.Namespace{}
+		if err := c.Get(ctx, client.ObjectKey{Name: targetNamespace}, &ns); err != nil {
+			if apierrors.IsNotFound(err) {
+				return fmt.Errorf("namespace %q not found", targetNamespace)
+			}
+			return fmt.Errorf("failed to find namespace %q: %v", targetNamespace, err)
+		}
 	}
 
 	kubeconfig, err := kubeconfigutil.NewKubeconfigForPath(kubeconfigPath)
