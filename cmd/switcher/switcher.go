@@ -297,6 +297,15 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 			}
 			s = doStore
 			digitalOceanStoreAddedViaConfig = true
+		case types.StoreKindAkamai:
+			akamaiStore, err := store.NewAkamaiStore(kubeconfigStoreFromConfig)
+			if err != nil {
+				if kubeconfigStoreFromConfig.Required != nil && !*kubeconfigStoreFromConfig.Required {
+					continue
+				}
+				return nil, nil, err
+			}
+			s = akamaiStore
 		default:
 			return nil, nil, fmt.Errorf("unknown store %q", kubeconfigStoreFromConfig.Kind)
 		}

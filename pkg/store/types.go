@@ -28,6 +28,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	vaultapi "github.com/hashicorp/vault/api"
+	"github.com/linode/linodego"
 	"github.com/ovh/go-ovh/ovh"
 	"github.com/rancher/norman/clientbase"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
@@ -202,4 +203,11 @@ type DigitalOceanStore struct {
 	KubeconfigStore                           types.KubeconfigStore
 	ContextToKubernetesService                map[string]do.KubernetesService
 	Config                                    doks.DoctlConfig
+}
+
+type AkamaiStore struct {
+	Logger          *logrus.Entry
+	KubeconfigStore types.KubeconfigStore
+	Client          *linodego.Client
+	Config          *types.StoreConfigAkamai
 }
