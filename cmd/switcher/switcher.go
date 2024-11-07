@@ -306,6 +306,15 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 				return nil, nil, err
 			}
 			s = akamaiStore
+		case types.StoreKindCapi:
+			capiStore, err := store.NewCapiStore(kubeconfigStoreFromConfig, stateDirectory)
+			if err != nil {
+				if kubeconfigStoreFromConfig.Required != nil && !*kubeconfigStoreFromConfig.Required {
+					continue
+				}
+				return nil, nil, err
+			}
+			s = capiStore
 		default:
 			return nil, nil, fmt.Errorf("unknown store %q", kubeconfigStoreFromConfig.Kind)
 		}

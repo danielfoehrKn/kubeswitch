@@ -24,7 +24,7 @@ import (
 type StoreKind string
 
 // ValidStoreKinds contains all valid store kinds
-var ValidStoreKinds = sets.NewString(string(StoreKindVault), string(StoreKindFilesystem), string(StoreKindGardener), string(StoreKindGKE), string(StoreKindAzure), string(StoreKindEKS), string(StoreKindRancher), string(StoreKindOVH), string(StoreKindScaleway), string(StoreKindDigitalOcean), string(StoreKindAkamai))
+var ValidStoreKinds = sets.NewString(string(StoreKindVault), string(StoreKindFilesystem), string(StoreKindGardener), string(StoreKindGKE), string(StoreKindAzure), string(StoreKindEKS), string(StoreKindRancher), string(StoreKindOVH), string(StoreKindScaleway), string(StoreKindDigitalOcean), string(StoreKindAkamai), string(StoreKindCapi))
 
 // ValidConfigVersions contains all valid config versions
 var ValidConfigVersions = sets.NewString("v1alpha1")
@@ -52,6 +52,8 @@ const (
 	StoreKindDigitalOcean StoreKind = "digitalocean"
 	// StoreKindAkamai is an identifier for the Akamai store
 	StoreKindAkamai StoreKind = "akamai"
+	// StoreKindCapi is an identifier for the CAPI store
+	StoreKindCapi StoreKind = "capi"
 )
 
 type Config struct {
@@ -255,4 +257,10 @@ type StoreConfigScaleway struct {
 
 type StoreConfigAkamai struct {
 	LinodeToken string `yaml:"linode_token"`
+}
+
+type StoreConfigCapi struct {
+	// KubeconfigPath is the path on the local filesystem pointing to the kubeconfig
+	// for the management cluster
+	KubeconfigPath string `yaml:"kubeconfigPath"`
 }
