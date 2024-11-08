@@ -24,7 +24,7 @@ import (
 type StoreKind string
 
 // ValidStoreKinds contains all valid store kinds
-var ValidStoreKinds = sets.NewString(string(StoreKindVault), string(StoreKindFilesystem), string(StoreKindGardener), string(StoreKindGKE), string(StoreKindAzure), string(StoreKindEKS), string(StoreKindRancher), string(StoreKindOVH), string(StoreKindScaleway), string(StoreKindDigitalOcean))
+var ValidStoreKinds = sets.NewString(string(StoreKindVault), string(StoreKindFilesystem), string(StoreKindGardener), string(StoreKindGKE), string(StoreKindAzure), string(StoreKindEKS), string(StoreKindRancher), string(StoreKindOVH), string(StoreKindScaleway), string(StoreKindDigitalOcean), string(StoreKindAkamai))
 
 // ValidConfigVersions contains all valid config versions
 var ValidConfigVersions = sets.NewString("v1alpha1")
@@ -50,6 +50,8 @@ const (
 	StoreKindScaleway StoreKind = "scaleway"
 	// StoreKindDigitalOcean is an identifier for the Azure store
 	StoreKindDigitalOcean StoreKind = "digitalocean"
+	// StoreKindAkamai is an identifier for the Akamai store
+	StoreKindAkamai StoreKind = "akamai"
 )
 
 type Config struct {
@@ -249,4 +251,8 @@ type StoreConfigScaleway struct {
 	ScalewayAccessKey      string `yaml:"access_key"`
 	ScalewaySecretKey      string `yaml:"secret_key"`
 	ScalewayRegion         string `yaml:"region"`
+}
+
+type StoreConfigAkamai struct {
+	LinodeToken string `yaml:"linode_token"`
 }
