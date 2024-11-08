@@ -28,7 +28,7 @@ import (
 	"github.com/danielfoehrkn/kubeswitch/pkg/util"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	switchconfig "github.com/danielfoehrkn/kubeswitch/pkg/config"
 	"github.com/danielfoehrkn/kubeswitch/pkg/config/validation"
@@ -340,11 +340,11 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 	// this is optional, so don't care about errors
 	if !digitalOceanStoreAddedViaConfig {
 		doStore, _ := store.NewDigitalOceanStore(types.KubeconfigStore{
-			ID:   pointer.String("doDefaultStore"),
+			ID:   ptr.To("doDefaultStore"),
 			Kind: types.StoreKindDigitalOcean,
 			// for users with outdated `doctl` configs, don't show errors if they have no explicitly enabled the DO backing store
-			Required:   pointer.Bool(false),
-			ShowPrefix: pointer.Bool(true),
+			Required:   ptr.To(false),
+			ShowPrefix: ptr.To(true),
 		})
 		if doStore != nil {
 			// we found a valid `doctl` config, hence add Digital Ocean as a backing store with default configuration
@@ -392,11 +392,11 @@ func getStoreFromFlagAndEnv(config *types.Config) *types.KubeconfigStore {
 	}
 
 	return &types.KubeconfigStore{
-		ID:             pointer.String("env-and-flag"),
+		ID:             ptr.To("env-and-flag"),
 		Kind:           types.StoreKind(storageBackend),
-		KubeconfigName: pointer.String(kubeconfigName),
+		KubeconfigName: ptr.To(kubeconfigName),
 		Paths:          paths,
-		ShowPrefix:     pointer.Bool(false),
+		ShowPrefix:     ptr.To(false),
 	}
 }
 
