@@ -17,10 +17,9 @@ package migration_test
 import (
 	"time"
 
-	"k8s.io/utils/pointer"
-
 	"github.com/danielfoehrkn/kubeswitch/pkg/config/migration"
 	"github.com/danielfoehrkn/kubeswitch/types"
+	"k8s.io/utils/ptr"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -50,24 +49,24 @@ var _ = Describe("ValidateConfig", func() {
 			{
 				Name: "name",
 				Type: "type",
-				Path: pointer.String("my-path"),
+				Path: ptr.To("my-path"),
 			},
 		}
 
 		new := types.Config{
 			Kind:              "SwitchConfig",
 			Version:           "v1alpha1",
-			KubeconfigName:    pointer.String("name"),
+			KubeconfigName:    ptr.To("name"),
 			RefreshIndexAfter: &refreshIndexAfter,
 			Hooks:             hooks,
 			KubeconfigStores: []types.KubeconfigStore{
 				{
-					ID:    pointer.String("default"),
+					ID:    ptr.To("default"),
 					Kind:  types.StoreKindFilesystem,
 					Paths: []string{"path", "other-path"},
 				},
 				{
-					ID:     pointer.String("default"),
+					ID:     ptr.To("default"),
 					Kind:   types.StoreKindVault,
 					Paths:  []string{"path", "other-path"},
 					Config: types.StoreConfigVault{VaultAPIAddress: "vault-api"},

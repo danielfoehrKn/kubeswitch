@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/danielfoehrkn/kubeswitch/pkg/config/validation"
 	"github.com/danielfoehrkn/kubeswitch/types"
@@ -176,13 +176,13 @@ var _ = Describe("ValidateConfig", func() {
 					Kind:              types.StoreKindVault,
 					RefreshIndexAfter: &minute,
 					Paths:             []string{"ab"},
-					ID:                pointer.String("id-one"),
+					ID:                ptr.To("id-one"),
 				},
 				{
 					Kind:              types.StoreKindVault,
 					RefreshIndexAfter: &minute,
 					Paths:             []string{"ab"},
-					ID:                pointer.String("id-two"),
+					ID:                ptr.To("id-two"),
 				},
 			},
 		}
@@ -220,14 +220,14 @@ var _ = Describe("ValidateConfig", func() {
 						Kind: types.StoreKindGardener,
 						Config: types.StoreConfigGardener{
 							GardenerAPIKubeconfigPath: "my-path-to-gardener-kubeconfig",
-							LandscapeName:             pointer.String("dev"),
+							LandscapeName:             ptr.To("dev"),
 						},
 					},
 					{
 						Kind: types.StoreKindGardener,
 						Config: types.StoreConfigGardener{
 							GardenerAPIKubeconfigPath: "my-path-to-gardener-kubeconfig",
-							LandscapeName:             pointer.String("canary"),
+							LandscapeName:             ptr.To("canary"),
 						},
 					},
 				},
@@ -355,7 +355,7 @@ var _ = Describe("ValidateConfig", func() {
 						Kind: types.StoreKindGardener,
 						Config: types.StoreConfigGardener{
 							GardenerAPIKubeconfigPath: "xy",
-							LandscapeName:             pointer.String(""),
+							LandscapeName:             ptr.To(""),
 						},
 					},
 				},
@@ -380,7 +380,7 @@ var _ = Describe("ValidateConfig", func() {
 					{
 						Name: "my-hooks",
 						Type: types.HookTypeExecutable,
-						Path: pointer.String("my-path"),
+						Path: ptr.To("my-path"),
 					},
 				},
 			}

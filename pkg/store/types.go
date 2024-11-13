@@ -211,3 +211,10 @@ type AkamaiStore struct {
 	Client          *linodego.Client
 	Config          *types.StoreConfigAkamai
 }
+
+type CapiStore struct {
+	Logger          *logrus.Entry
+	KubeconfigStore types.KubeconfigStore
+	Client          client.Client
+	Config          *types.StoreConfigCapi
+}
