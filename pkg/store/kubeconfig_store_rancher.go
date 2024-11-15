@@ -21,6 +21,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 
+	storetypes "github.com/danielfoehrkn/kubeswitch/pkg/store/types"
 	"github.com/danielfoehrkn/kubeswitch/types"
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 )
@@ -103,11 +104,11 @@ func (r *RancherStore) initClient() error {
 	return nil
 }
 
-func (r *RancherStore) StartSearch(channel chan SearchResult) {
+func (r *RancherStore) StartSearch(channel chan storetypes.SearchResult) {
 	r.Logger.Debug("Rancher: start search")
 
 	if err := r.initClient(); err != nil {
-		channel <- SearchResult{
+		channel <- storetypes.SearchResult{
 			KubeconfigPath: "",
 			Error:          fmt.Errorf("failed to initialize Rancher client: %w", err),
 		}
@@ -116,7 +117,7 @@ func (r *RancherStore) StartSearch(channel chan SearchResult) {
 
 	cluster, err := r.Client.Cluster.ListAll(nil)
 	if err != nil {
-		channel <- SearchResult{
+		channel <- storetypes.SearchResult{
 			KubeconfigPath: "",
 			Error:          err,
 		}
@@ -130,7 +131,7 @@ func (r *RancherStore) StartSearch(channel chan SearchResult) {
 			// As a workaround the id of the store is used for the local cluster
 			id = r.GetID()
 		}
-		channel <- SearchResult{
+		channel <- storetypes.SearchResult{
 			KubeconfigPath: id,
 			Error:          nil,
 		}

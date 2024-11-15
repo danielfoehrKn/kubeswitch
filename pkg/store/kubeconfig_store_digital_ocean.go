@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/danielfoehrkn/kubeswitch/pkg/store/doks"
+	storetypes "github.com/danielfoehrkn/kubeswitch/pkg/store/types"
 	"github.com/disiqueira/gotree"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -125,10 +126,10 @@ func (d *DigitalOceanStore) getDoClient(accessToken string) (*godo.Client, error
 }
 
 // StartSearch starts the search for Digital Ocean clusters
-func (d *DigitalOceanStore) StartSearch(channel chan SearchResult) {
+func (d *DigitalOceanStore) StartSearch(channel chan storetypes.SearchResult) {
 	if err := d.InitializeDigitalOceanStore(); err != nil {
 		err := fmt.Errorf("failed to initialize store: %w", err)
-		channel <- SearchResult{
+		channel <- storetypes.SearchResult{
 			Error: err,
 		}
 		return
@@ -139,14 +140,14 @@ func (d *DigitalOceanStore) StartSearch(channel chan SearchResult) {
 
 	for doctlContextName, doSvc := range d.ContextToKubernetesService {
 		// parallelize.
-		go func(resultChannel chan SearchResult, doctlCtxName string, svc do.KubernetesService) {
+		go func(resultChannel chan storetypes.SearchResult, doctlCtxName string, svc do.KubernetesService) {
 			// reading from this context is finished, decrease wait counter
 			defer wgResultChannel.Done()
 
 			d.Logger.Debugf("Digital Ocean: Start listing clusters for context %q", doctlCtxName)
 			clusters, err := svc.List()
 			if err != nil {
-				channel <- SearchResult{
+				channel <- storetypes.SearchResult{
 					Error: fmt.Errorf("error listing DOKS clusters for context %s: %w", doctlCtxName, err),
 				}
 				return
@@ -162,7 +163,7 @@ func (d *DigitalOceanStore) StartSearch(channel chan SearchResult) {
 				}
 				nodePools = fmt.Sprintf("%s]", nodePools)
 
-				channel <- SearchResult{
+				channel <- storetypes.SearchResult{
 					KubeconfigPath: kubeconfigPath,
 					Tags: map[string]string{
 						tagDOKSClusterID:    cluster.ID,

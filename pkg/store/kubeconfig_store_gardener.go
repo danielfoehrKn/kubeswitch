@@ -23,6 +23,7 @@ import (
 	"time"
 
 	gardenclient "github.com/danielfoehrkn/kubeswitch/pkg/store/gardener/copied_gardenctlv2"
+	storetypes "github.com/danielfoehrkn/kubeswitch/pkg/store/types"
 	kubeconfigutil "github.com/danielfoehrkn/kubeswitch/pkg/util/kubectx_copied"
 	"github.com/disiqueira/gotree"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -208,13 +209,13 @@ func writeGardenloginConfig(path string, config *GardenloginConfig) error {
 }
 
 // StartSearch starts the search for Shoots and Managed Seeds
-func (s *GardenerStore) StartSearch(channel chan SearchResult) {
+func (s *GardenerStore) StartSearch(channel chan storetypes.SearchResult) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if err := s.InitializeGardenerStore(); err != nil {
 		err := fmt.Errorf("failed to initialize store. This is most likely a problem with your provided kubeconfig: %v", err)
-		channel <- SearchResult{
+		channel <- storetypes.SearchResult{
 			Error: err,
 		}
 		return
@@ -241,7 +242,7 @@ func (s *GardenerStore) StartSearch(channel chan SearchResult) {
 
 		shoots, err := s.GardenClient.ListShoots(ctx, &listOptions)
 		if err != nil {
-			channel <- SearchResult{
+			channel <- storetypes.SearchResult{
 				Error: fmt.Errorf("failed to call list Shoots from the Gardener API for namespace %q: %v", path, err),
 			}
 			return
@@ -251,7 +252,7 @@ func (s *GardenerStore) StartSearch(channel chan SearchResult) {
 		listOptions.LabelSelector = selector
 		secrets := &corev1.SecretList{}
 		if err := s.Client.List(ctx, secrets, &listOptions); err != nil {
-			channel <- SearchResult{
+			channel <- storetypes.SearchResult{
 				Error: fmt.Errorf("failed to list CA secrets for namespace %q: %v", path, err),
 			}
 			return
@@ -556,7 +557,7 @@ func (s *GardenerStore) GetSearchPreview(path string, optionalTags map[string]st
 	}
 }
 
-func (s *GardenerStore) sendKubeconfigPaths(channel chan SearchResult, shoots []gardencorev1beta1.Shoot, managedSeeds []seedmanagementv1alpha1.ManagedSeed) {
+func (s *GardenerStore) sendKubeconfigPaths(channel chan storetypes.SearchResult, shoots []gardencorev1beta1.Shoot, managedSeeds []seedmanagementv1alpha1.ManagedSeed) {
 	var landscapeName = s.LandscapeIdentity
 
 	// first, send the garden context name configured in the switch config
@@ -564,7 +565,7 @@ func (s *GardenerStore) sendKubeconfigPaths(channel chan SearchResult, shoots []
 	// the kubeconfig from the filesystem (set in SwitchConfig for the GardenerStore) instead of
 	// from the Gardener API
 	gardenKubeconfigPath := gardenerstore.GetGardenKubeconfigPath(s.LandscapeIdentity)
-	channel <- SearchResult{
+	channel <- storetypes.SearchResult{
 		KubeconfigPath: gardenKubeconfigPath,
 		Error:          nil,
 	}
@@ -635,7 +636,7 @@ func (s *GardenerStore) sendKubeconfigPaths(channel chan SearchResult, shoots []
 			continue
 		}
 
-		channel <- SearchResult{
+		channel <- storetypes.SearchResult{
 			KubeconfigPath: kubeconfigPath,
 			Error:          nil,
 		}
@@ -646,7 +647,7 @@ func (s *GardenerStore) sendKubeconfigPaths(channel chan SearchResult, shoots []
 	// when populating the path. This avoids cache misses.
 	s.PathToManagedSeedLock.RLock()
 	for pathForSeed := range s.CachePathToManagedSeed {
-		channel <- SearchResult{
+		channel <- storetypes.SearchResult{
 			KubeconfigPath: pathForSeed,
 			Error:          nil,
 		}

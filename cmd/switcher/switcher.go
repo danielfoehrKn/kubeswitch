@@ -33,6 +33,7 @@ import (
 	switchconfig "github.com/danielfoehrkn/kubeswitch/pkg/config"
 	"github.com/danielfoehrkn/kubeswitch/pkg/config/validation"
 	"github.com/danielfoehrkn/kubeswitch/pkg/store"
+	storetypes "github.com/danielfoehrkn/kubeswitch/pkg/store/types"
 	"github.com/danielfoehrkn/kubeswitch/types"
 )
 
@@ -160,7 +161,7 @@ func setCommonFlags(command *cobra.Command) {
 		"path to the local directory used for storing internal state.")
 }
 
-func initialize() ([]store.KubeconfigStore, *types.Config, error) {
+func initialize() ([]storetypes.KubeconfigStore, *types.Config, error) {
 	if showDebugLogs {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
@@ -194,11 +195,11 @@ func initialize() ([]store.KubeconfigStore, *types.Config, error) {
 	}
 
 	var (
-		stores                          []store.KubeconfigStore
+		stores                          []storetypes.KubeconfigStore
 		digitalOceanStoreAddedViaConfig bool
 	)
 	for _, kubeconfigStoreFromConfig := range config.KubeconfigStores {
-		var s store.KubeconfigStore
+		var s storetypes.KubeconfigStore
 
 		if kubeconfigStoreFromConfig.KubeconfigName != nil && *kubeconfigStoreFromConfig.KubeconfigName != "" {
 			kubeconfigName = *kubeconfigStoreFromConfig.KubeconfigName

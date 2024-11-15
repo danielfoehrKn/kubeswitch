@@ -19,11 +19,11 @@ import (
 	"os"
 
 	"github.com/danielfoehrkn/kubeswitch/pkg/cache"
-	"github.com/danielfoehrkn/kubeswitch/pkg/store"
+	storetypes "github.com/danielfoehrkn/kubeswitch/pkg/store/types"
 	kubeconfigutil "github.com/danielfoehrkn/kubeswitch/pkg/util/kubectx_copied"
 )
 
-func Clean(stores []store.KubeconfigStore) error {
+func Clean(stores []storetypes.KubeconfigStore) error {
 	// cleanup temporary kubeconfig files
 	tempDir := os.ExpandEnv(kubeconfigutil.TemporaryKubeconfigDir)
 	files, _ := os.ReadDir(tempDir)
