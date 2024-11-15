@@ -18,18 +18,19 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/danielfoehrkn/kubeswitch/pkg/store"
+	"github.com/ktr0731/go-fuzzyfinder"
+	"github.com/sirupsen/logrus"
+
+	storetypes "github.com/danielfoehrkn/kubeswitch/pkg/store/types"
 	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/history/util"
 	setcontext "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/set-context"
 	kubeconfigutil "github.com/danielfoehrkn/kubeswitch/pkg/util/kubectx_copied"
 	"github.com/danielfoehrkn/kubeswitch/types"
-	"github.com/ktr0731/go-fuzzyfinder"
-	"github.com/sirupsen/logrus"
 )
 
 var logger = logrus.New()
 
-func SwitchToHistory(stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) (*string, *string, error) {
+func SwitchToHistory(stores []storetypes.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) (*string, *string, error) {
 	history, err := util.ReadHistory()
 	if err != nil {
 		return nil, nil, err
@@ -130,7 +131,7 @@ func setNamespace(ns string, tmpKubeconfigFile string) error {
 
 // SetPreviousContext sets the previously used context from the history (position 1)
 // does not add a history entry
-func SetPreviousContext(stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) (*string, *string, error) {
+func SetPreviousContext(stores []storetypes.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) (*string, *string, error) {
 	history, err := util.ReadHistory()
 	if err != nil {
 		return nil, nil, err
@@ -167,7 +168,7 @@ func SetPreviousContext(stores []store.KubeconfigStore, config *types.Config, st
 
 // SetLastContext sets the last used context from the history (position 0)
 // does not add a history entry
-func SetLastContext(stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) (*string, *string, error) {
+func SetLastContext(stores []storetypes.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) (*string, *string, error) {
 	history, err := util.ReadHistory()
 	if err != nil {
 		return nil, nil, err

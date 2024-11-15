@@ -19,13 +19,14 @@ import (
 	"os"
 	"sync"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/danielfoehrkn/kubeswitch/pkg/index"
-	"github.com/danielfoehrkn/kubeswitch/pkg/store"
+	storetypes "github.com/danielfoehrkn/kubeswitch/pkg/store/types"
 	aliasstate "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/alias/state"
 	aliasutil "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/alias/util"
 	"github.com/danielfoehrkn/kubeswitch/pkg/util"
 	"github.com/danielfoehrkn/kubeswitch/types"
-	"github.com/sirupsen/logrus"
 )
 
 type DiscoveredContext struct {
@@ -39,14 +40,14 @@ type DiscoveredContext struct {
 	// This metadata is later handed over in the getKubeconfigForPath() function when retrieving the kubeconfig bytes for the path
 	Tags map[string]string
 	// Store is a reference to the backing store that contains the kubeconfig
-	Store *store.KubeconfigStore
+	Store *storetypes.KubeconfigStore
 	// Error is an error that occured during the search
 	Error error
 }
 
 // DoSearch executes a concurrent search over the given kubeconfig stores
 // returns results from all stores on the return channel
-func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) (*chan DiscoveredContext, error) {
+func DoSearch(stores []storetypes.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) (*chan DiscoveredContext, error) {
 	// Silence STDOUT during search to not interfere with the search selection screen
 	// restore after search is over
 	originalSTDOUT := os.Stdout
@@ -102,7 +103,7 @@ func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir str
 		if readFromIndex {
 			logrus.Debugf("Reading from index for store %s with kind %s", kubeconfigStore.GetID(), kubeconfigStore.GetKind())
 
-			go func(store store.KubeconfigStore, index index.SearchIndex) {
+			go func(store storetypes.KubeconfigStore, index index.SearchIndex) {
 				// reading from this store is finished, decrease wait counter
 				defer wgResultChannel.Done()
 
@@ -129,15 +130,15 @@ func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir str
 		}
 
 		// otherwise, we need to query the backing store for the kubeconfig files
-		c := make(chan store.SearchResult)
-		go func(store store.KubeconfigStore, channel chan store.SearchResult) {
+		c := make(chan storetypes.SearchResult)
+		go func(store storetypes.KubeconfigStore, channel chan storetypes.SearchResult) {
 			// only close when directory search is over, otherwise send on closed resultChannel
 			defer close(channel)
 			store.GetLogger().Debugf("Starting search for store: %s", store.GetKind())
 			store.StartSearch(channel)
 		}(kubeconfigStore, c)
 
-		go func(store store.KubeconfigStore, storeSearchChannel chan store.SearchResult, index index.SearchIndex) {
+		go func(store storetypes.KubeconfigStore, storeSearchChannel chan storetypes.SearchResult, index index.SearchIndex) {
 			// remember the context to kubeconfig path mapping for this store
 			// to write it to the index. Do not use the global "ContextToPathMapping"
 			// as this contains contexts names from all stores combined
@@ -217,7 +218,7 @@ func DoSearch(stores []store.KubeconfigStore, config *types.Config, stateDir str
 	return &resultChannel, nil
 }
 
-func shouldReadFromIndex(searchIndex *index.SearchIndex, kubeconfigStore store.KubeconfigStore, config *types.Config) (bool, error) {
+func shouldReadFromIndex(searchIndex *index.SearchIndex, kubeconfigStore storetypes.KubeconfigStore, config *types.Config) (bool, error) {
 	// never write an index for the store from env variables and --kubeconfig-path command line falg
 	if kubeconfigStore.GetID() == fmt.Sprintf("%s.%s", types.StoreKindFilesystem, "env-and-flag") {
 		return false, nil

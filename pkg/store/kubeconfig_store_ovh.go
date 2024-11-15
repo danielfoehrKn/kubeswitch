@@ -21,6 +21,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 
+	storetypes "github.com/danielfoehrkn/kubeswitch/pkg/store/types"
 	"github.com/danielfoehrkn/kubeswitch/types"
 )
 
@@ -106,14 +107,14 @@ func (r *OVHStore) GetLogger() *logrus.Entry {
 	return r.Logger
 }
 
-func (r *OVHStore) StartSearch(channel chan SearchResult) {
+func (r *OVHStore) StartSearch(channel chan storetypes.SearchResult) {
 	r.Logger.Debug("OVH: start search")
 
 	projects := []string{}
 	// list OVH projects
 	err := r.Client.Get("/cloud/project", &projects)
 	if err != nil {
-		channel <- SearchResult{
+		channel <- storetypes.SearchResult{
 			KubeconfigPath: "",
 			Error:          err,
 		}
@@ -125,7 +126,7 @@ func (r *OVHStore) StartSearch(channel chan SearchResult) {
 		clustersID := []string{}
 		err := r.Client.Get(fmt.Sprintf("/cloud/project/%v/kube", project), &clustersID)
 		if err != nil {
-			channel <- SearchResult{
+			channel <- storetypes.SearchResult{
 				KubeconfigPath: "",
 				Error:          err,
 			}
@@ -136,7 +137,7 @@ func (r *OVHStore) StartSearch(channel chan SearchResult) {
 			var kube OVHKube
 			err := r.Client.Get(fmt.Sprintf("/cloud/project/%v/kube/%v", project, id), &kube)
 			if err != nil {
-				channel <- SearchResult{
+				channel <- storetypes.SearchResult{
 					KubeconfigPath: "",
 					Error:          err,
 				}
@@ -145,7 +146,7 @@ func (r *OVHStore) StartSearch(channel chan SearchResult) {
 			kube.Project = project
 			r.OVHKubeCache[kube.ID] = kube
 
-			channel <- SearchResult{
+			channel <- storetypes.SearchResult{
 				KubeconfigPath: kube.Name,
 				Error:          nil,
 			}

@@ -29,6 +29,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice"
+	storetypes "github.com/danielfoehrkn/kubeswitch/pkg/store/types"
 	"github.com/danielfoehrkn/kubeswitch/types"
 )
 
@@ -90,13 +91,13 @@ func (s *AzureStore) InitializeAzureStore() error {
 
 // StartSearch starts the search for AKS clusters
 // Limitation: Two seperate subscriptions should not have the same (resource_group, cluster-name) touple
-func (s *AzureStore) StartSearch(channel chan SearchResult) {
+func (s *AzureStore) StartSearch(channel chan storetypes.SearchResult) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if err := s.InitializeAzureStore(); err != nil {
 		err := fmt.Errorf("failed to initialize store: %w", err)
-		channel <- SearchResult{
+		channel <- storetypes.SearchResult{
 			Error: err,
 		}
 		return
@@ -140,25 +141,25 @@ func (s *AzureStore) StartSearch(channel chan SearchResult) {
 	s.Logger.Debugf("Search done for AKS")
 }
 
-func handleAzureError(channel chan SearchResult, err error) {
+func handleAzureError(channel chan storetypes.SearchResult, err error) {
 	if err, ok := err.(armcontainerservice.CloudError); ok && err.InnerError != nil {
 		// TODO: if 401 is returned, execute `az cli` to re-authenticate
 		// similar to gcp
-		channel <- SearchResult{
+		channel <- storetypes.SearchResult{
 			Error: fmt.Errorf("AKS returned an error listing AKS clusters: %w", err),
 		}
 		return
 	}
 
 	if err != nil {
-		channel <- SearchResult{
+		channel <- storetypes.SearchResult{
 			Error: fmt.Errorf("Failed to list AKS clusters: %w", err),
 		}
 		return
 	}
 }
 
-func (s *AzureStore) returnSearchResultsForClusters(channel chan SearchResult, managedClusters []*armcontainerservice.ManagedCluster) {
+func (s *AzureStore) returnSearchResultsForClusters(channel chan storetypes.SearchResult, managedClusters []*armcontainerservice.ManagedCluster) {
 	for _, cluster := range managedClusters {
 		s.Logger.Debugf("Found cluster with name %q and id %q", *cluster.Name, *cluster.ID)
 		if cluster.Name == nil {
@@ -190,7 +191,7 @@ func (s *AzureStore) returnSearchResultsForClusters(channel chan SearchResult, m
 		kubeconfigPath := getAzureKubeconfigPath(*resourceGroup, *cluster.Name)
 		s.insertIntoClusterCache(kubeconfigPath, cluster)
 
-		channel <- SearchResult{
+		channel <- storetypes.SearchResult{
 			KubeconfigPath: kubeconfigPath,
 			Error:          nil,
 		}

@@ -25,6 +25,7 @@ import (
 	"github.com/karrick/godirwalk"
 	"github.com/sirupsen/logrus"
 
+	storetypes "github.com/danielfoehrkn/kubeswitch/pkg/store/types"
 	"github.com/danielfoehrkn/kubeswitch/types"
 )
 
@@ -68,9 +69,9 @@ func (s *FilesystemStore) GetLogger() *logrus.Entry {
 	return s.Logger
 }
 
-func (s *FilesystemStore) StartSearch(channel chan SearchResult) {
+func (s *FilesystemStore) StartSearch(channel chan storetypes.SearchResult) {
 	for _, path := range s.kubeconfigFilepaths {
-		channel <- SearchResult{
+		channel <- storetypes.SearchResult{
 			KubeconfigPath: path,
 			Error:          nil,
 		}
@@ -87,7 +88,7 @@ func (s *FilesystemStore) StartSearch(channel chan SearchResult) {
 func (s *FilesystemStore) searchDirectory(
 	wg *sync.WaitGroup,
 	searchPath string,
-	channel chan SearchResult,
+	channel chan storetypes.SearchResult,
 ) {
 	defer wg.Done()
 
@@ -99,7 +100,7 @@ func (s *FilesystemStore) searchDirectory(
 				return err
 			}
 			if matched {
-				channel <- SearchResult{
+				channel <- storetypes.SearchResult{
 					KubeconfigPath: osPathname,
 					Error:          nil,
 				}
@@ -109,7 +110,7 @@ func (s *FilesystemStore) searchDirectory(
 		Unsorted:            false, // (optional) set true for faster yet non-deterministic enumeration
 		FollowSymbolicLinks: true,
 	}); err != nil {
-		channel <- SearchResult{
+		channel <- storetypes.SearchResult{
 			KubeconfigPath: "",
 			Error:          fmt.Errorf("failed to find kubeconfig files in directory: %v", err),
 		}

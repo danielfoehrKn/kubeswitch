@@ -18,18 +18,19 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/go-multierror"
+	"github.com/sirupsen/logrus"
+
 	"github.com/danielfoehrkn/kubeswitch/pkg"
-	"github.com/danielfoehrkn/kubeswitch/pkg/store"
+	storetypes "github.com/danielfoehrkn/kubeswitch/pkg/store/types"
 	historyutil "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/history/util"
 	kubeconfigutil "github.com/danielfoehrkn/kubeswitch/pkg/util/kubectx_copied"
 	"github.com/danielfoehrkn/kubeswitch/types"
-	"github.com/hashicorp/go-multierror"
-	"github.com/sirupsen/logrus"
 )
 
 var logger = logrus.New()
 
-func SetContext(desiredContext string, stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool, appendToHistory bool) (*string, *string, error) {
+func SetContext(desiredContext string, stores []storetypes.KubeconfigStore, config *types.Config, stateDir string, noIndex bool, appendToHistory bool) (*string, *string, error) {
 	c, err := pkg.DoSearch(stores, config, stateDir, noIndex)
 	if err != nil {
 		return nil, nil, err

@@ -32,6 +32,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 
+	storetypes "github.com/danielfoehrkn/kubeswitch/pkg/store/types"
 	"github.com/danielfoehrkn/kubeswitch/types"
 )
 
@@ -212,7 +213,7 @@ func (s *VaultStore) recursivePathTraversal(wg *sync.WaitGroup, ctx context.Cont
 	}
 }
 
-func (s *VaultStore) StartSearch(channel chan SearchResult) {
+func (s *VaultStore) StartSearch(channel chan storetypes.SearchResult) {
 	wg := sync.WaitGroup{}
 	// start multiple recursive searches from different root paths
 	for _, path := range s.vaultPaths {
@@ -231,7 +232,7 @@ func (s *VaultStore) StartSearch(channel chan SearchResult) {
 		go s.recursivePathTraversal(&wg, context.Background(), s.Client, secretsPath, func(path string, directory bool) error {
 			// found an actual secret, but remove "metadata/" from the path
 			rawPath := shimKVv2Metadata(path)
-			channel <- SearchResult{
+			channel <- storetypes.SearchResult{
 				KubeconfigPath: rawPath,
 				Error:          nil,
 			}

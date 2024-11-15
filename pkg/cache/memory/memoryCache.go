@@ -16,7 +16,7 @@ package memory
 
 import (
 	"github.com/danielfoehrkn/kubeswitch/pkg/cache"
-	"github.com/danielfoehrkn/kubeswitch/pkg/store"
+	storetypes "github.com/danielfoehrkn/kubeswitch/pkg/store/types"
 	"github.com/danielfoehrkn/kubeswitch/types"
 	"github.com/sirupsen/logrus"
 )
@@ -25,7 +25,7 @@ func init() {
 	cache.Register("memory", New)
 }
 
-func New(upstream store.KubeconfigStore, _ *types.Cache) (store.KubeconfigStore, error) {
+func New(upstream storetypes.KubeconfigStore, _ *types.Cache) (storetypes.KubeconfigStore, error) {
 	return &memoryCache{
 		upstream: upstream,
 		cache:    make(map[string][]byte),
@@ -33,7 +33,7 @@ func New(upstream store.KubeconfigStore, _ *types.Cache) (store.KubeconfigStore,
 }
 
 type memoryCache struct {
-	upstream store.KubeconfigStore
+	upstream storetypes.KubeconfigStore
 	cache    map[string][]byte
 }
 
@@ -70,7 +70,7 @@ func (c *memoryCache) VerifyKubeconfigPaths() error {
 	return c.upstream.VerifyKubeconfigPaths()
 }
 
-func (c *memoryCache) StartSearch(channel chan store.SearchResult) {
+func (c *memoryCache) StartSearch(channel chan storetypes.SearchResult) {
 	c.upstream.StartSearch(channel)
 }
 
@@ -83,7 +83,7 @@ func (c *memoryCache) GetStoreConfig() types.KubeconfigStore {
 }
 
 func (c *memoryCache) GetSearchPreview(path string, optionalTags map[string]string) (string, error) {
-	previewer, ok := c.upstream.(store.Previewer)
+	previewer, ok := c.upstream.(storetypes.Previewer)
 	if !ok {
 		// if the wrapped store is not a previewer, simply return an empty string, hence causing no visual distortion
 		return "", nil

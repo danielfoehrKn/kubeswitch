@@ -19,15 +19,16 @@ import (
 	"sort"
 
 	"github.com/becheran/wildmatch-go"
-	"github.com/danielfoehrkn/kubeswitch/pkg"
-	"github.com/danielfoehrkn/kubeswitch/pkg/store"
-	"github.com/danielfoehrkn/kubeswitch/types"
 	"github.com/sirupsen/logrus"
+
+	"github.com/danielfoehrkn/kubeswitch/pkg"
+	storetypes "github.com/danielfoehrkn/kubeswitch/pkg/store/types"
+	"github.com/danielfoehrkn/kubeswitch/types"
 )
 
 var logger = logrus.New()
 
-func ListContexts(pattern string, stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) ([]string, error) {
+func ListContexts(pattern string, stores []storetypes.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) ([]string, error) {
 	c, err := pkg.DoSearch(stores, config, stateDir, noIndex)
 	if err != nil {
 		return nil, fmt.Errorf("cannot list contexts: %v", err)

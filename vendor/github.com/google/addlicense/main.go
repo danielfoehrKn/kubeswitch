@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -46,6 +46,7 @@ The pattern argument can be provided multiple times, and may also refer
 to single files.
 
 Flags:
+
 `
 
 var (
@@ -57,13 +58,13 @@ var (
 	license   = flag.String("l", "apache", "license type: apache, bsd, mit, mpl")
 	licensef  = flag.String("f", "", "license file")
 	year      = flag.String("y", fmt.Sprint(time.Now().Year()), "copyright year(s)")
-	verbose   = flag.Bool("v", false, "verbose mode: print the name of the files that are modified")
+	verbose   = flag.Bool("v", false, "verbose mode: print the name of the files that are modified or were skipped")
 	checkonly = flag.Bool("check", false, "check only mode: verify presence of license headers and exit with non-zero code if missing")
 )
 
 func init() {
 	flag.Usage = func() {
-		fmt.Fprintln(os.Stderr, helpText)
+		fmt.Fprint(os.Stderr, helpText)
 		flag.PrintDefaults()
 	}
 	flag.Var(&skipExtensionFlags, "skip", "[deprecated: see -ignore] file extensions to skip, for example: -skip rb -skip go")
@@ -216,7 +217,9 @@ func walk(ch chan<- *file, start string) error {
 			return nil
 		}
 		if fileMatches(path, ignorePatterns) {
-			log.Printf("skipping: %s", path)
+			if *verbose {
+				log.Printf("skipping: %s", path)
+			}
 			return nil
 		}
 		ch <- &file{path, fi.Mode()}
@@ -277,19 +280,22 @@ func fileHasLicense(path string) (bool, error) {
 	return hasLicense(b) || isGenerated(b), nil
 }
 
+// licenseHeader populates the provided license template with data, and returns
+// it with the proper prefix for the file type specified by path. The file does
+// not need to actually exist, only its name is used to determine the prefix.
 func licenseHeader(path string, tmpl *template.Template, data licenseData) ([]byte, error) {
 	var lic []byte
 	var err error
-	switch fileExtension(path) {
-	default:
-		return nil, nil
+	base := strings.ToLower(filepath.Base(path))
+
+	switch fileExtension(base) {
 	case ".c", ".h", ".gv", ".java", ".scala", ".kt", ".kts":
 		lic, err = executeTemplate(tmpl, data, "/*", " * ", " */")
-	case ".js", ".mjs", ".cjs", ".jsx", ".tsx", ".css", ".scss", ".sass", ".tf", ".ts":
+	case ".js", ".mjs", ".cjs", ".jsx", ".tsx", ".css", ".scss", ".sass", ".ts":
 		lic, err = executeTemplate(tmpl, data, "/**", " * ", " */")
 	case ".cc", ".cpp", ".cs", ".go", ".hcl", ".hh", ".hpp", ".m", ".mm", ".proto", ".rs", ".swift", ".dart", ".groovy", ".v", ".sv":
 		lic, err = executeTemplate(tmpl, data, "", "// ", "")
-	case ".py", ".sh", ".yaml", ".yml", ".dockerfile", "dockerfile", ".rb", "gemfile", ".tcl", ".bzl":
+	case ".py", ".sh", ".yaml", ".yml", ".dockerfile", "dockerfile", ".rb", "gemfile", ".tcl", ".tf", ".bzl", ".pl", ".pp", "build":
 		lic, err = executeTemplate(tmpl, data, "", "# ", "")
 	case ".el", ".lisp":
 		lic, err = executeTemplate(tmpl, data, "", ";; ", "")
@@ -303,15 +309,22 @@ func licenseHeader(path string, tmpl *template.Template, data licenseData) ([]by
 		lic, err = executeTemplate(tmpl, data, "", "// ", "")
 	case ".ml", ".mli", ".mll", ".mly":
 		lic, err = executeTemplate(tmpl, data, "(**", "   ", "*)")
+	default:
+		// handle various cmake files
+		if base == "cmakelists.txt" || strings.HasSuffix(base, ".cmake.in") || strings.HasSuffix(base, ".cmake") {
+			lic, err = executeTemplate(tmpl, data, "", "# ", "")
+		}
 	}
 	return lic, err
 }
 
+// fileExtension returns the file extension of name, or the full name if there
+// is no extension.
 func fileExtension(name string) string {
 	if v := filepath.Ext(name); v != "" {
-		return strings.ToLower(v)
+		return v
 	}
-	return strings.ToLower(filepath.Base(name))
+	return name
 }
 
 var head = []string{

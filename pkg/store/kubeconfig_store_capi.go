@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	storetypes "github.com/danielfoehrkn/kubeswitch/pkg/store/types"
 	"github.com/danielfoehrkn/kubeswitch/types"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -108,7 +109,7 @@ func (s *CapiStore) getCapiClient() (client.Client, error) {
 }
 
 // StartSearch starts the search over the configured search paths
-func (s *CapiStore) StartSearch(channel chan SearchResult) {
+func (s *CapiStore) StartSearch(channel chan storetypes.SearchResult) {
 	s.Logger.Debug("CAPI: start search")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
@@ -116,7 +117,7 @@ func (s *CapiStore) StartSearch(channel chan SearchResult) {
 
 	// initialize CAPI client
 	if err := s.InitializeCapiStore(); err != nil {
-		channel <- SearchResult{
+		channel <- storetypes.SearchResult{
 			KubeconfigPath: "",
 			Error:          err,
 		}
@@ -127,7 +128,7 @@ func (s *CapiStore) StartSearch(channel chan SearchResult) {
 	clusters := &clusterv1beta1.ClusterList{}
 	err := s.Client.List(ctx, clusters)
 	if err != nil {
-		channel <- SearchResult{
+		channel <- storetypes.SearchResult{
 			KubeconfigPath: "",
 			Error:          err,
 		}
@@ -137,7 +138,7 @@ func (s *CapiStore) StartSearch(channel chan SearchResult) {
 	for _, cluster := range clusters.Items {
 		s.Logger.Debug("CAPI: found cluster", "name", cluster.Name, "namespace", cluster.Namespace)
 
-		channel <- SearchResult{
+		channel <- storetypes.SearchResult{
 			KubeconfigPath: fmt.Sprintf("%s-%s", cluster.Namespace, cluster.Name),
 			Error:          nil,
 			Tags: map[string]string{

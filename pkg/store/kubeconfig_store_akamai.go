@@ -26,9 +26,11 @@ import (
 	"golang.org/x/oauth2"
 	"gopkg.in/yaml.v3"
 
-	"github.com/danielfoehrkn/kubeswitch/types"
 	"github.com/linode/linodego"
 	"github.com/sirupsen/logrus"
+
+	storetypes "github.com/danielfoehrkn/kubeswitch/pkg/store/types"
+	"github.com/danielfoehrkn/kubeswitch/types"
 )
 
 func NewAkamaiStore(store types.KubeconfigStore) (*AkamaiStore, error) {
@@ -105,14 +107,14 @@ func (s *AkamaiStore) GetLogger() *logrus.Entry {
 	return s.Logger
 }
 
-func (s *AkamaiStore) StartSearch(channel chan SearchResult) {
+func (s *AkamaiStore) StartSearch(channel chan storetypes.SearchResult) {
 	s.Logger.Debug("Akamai: start search")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := s.InitializeAkamaiStore(); err != nil {
-		channel <- SearchResult{
+		channel <- storetypes.SearchResult{
 			KubeconfigPath: "",
 			Error:          err,
 		}
@@ -122,7 +124,7 @@ func (s *AkamaiStore) StartSearch(channel chan SearchResult) {
 	// list linode instances
 	instances, err := s.Client.ListLKEClusters(ctx, nil)
 	if err != nil {
-		channel <- SearchResult{
+		channel <- storetypes.SearchResult{
 			KubeconfigPath: "",
 			Error:          err,
 		}
@@ -130,7 +132,7 @@ func (s *AkamaiStore) StartSearch(channel chan SearchResult) {
 	}
 
 	for _, instance := range instances {
-		channel <- SearchResult{
+		channel <- storetypes.SearchResult{
 			KubeconfigPath: instance.Label,
 			Tags: map[string]string{
 				"clusterID": strconv.Itoa(instance.ID),

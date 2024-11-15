@@ -23,6 +23,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 
+	storetypes "github.com/danielfoehrkn/kubeswitch/pkg/store/types"
 	"github.com/danielfoehrkn/kubeswitch/types"
 )
 
@@ -114,12 +115,12 @@ func (s *ScalewayStore) GetLogger() *logrus.Entry {
 	return s.Logger
 }
 
-func (s *ScalewayStore) StartSearch(channel chan SearchResult) {
+func (s *ScalewayStore) StartSearch(channel chan storetypes.SearchResult) {
 	s.Logger.Debug("Scaleway: start search")
 
 	papi := account.NewProjectAPI(s.Client)
 	if papi == nil {
-		channel <- SearchResult{
+		channel <- storetypes.SearchResult{
 			KubeconfigPath: "",
 			Error:          fmt.Errorf("Failed to create scaleway project API"),
 		}
@@ -129,7 +130,7 @@ func (s *ScalewayStore) StartSearch(channel chan SearchResult) {
 		&account.ProjectAPIListProjectsRequest{},
 	)
 	if err != nil {
-		channel <- SearchResult{
+		channel <- storetypes.SearchResult{
 			KubeconfigPath: "",
 			Error:          fmt.Errorf("Could no list projects in Scaleway err: %w", err),
 		}
@@ -139,7 +140,7 @@ func (s *ScalewayStore) StartSearch(channel chan SearchResult) {
 
 	kapi := k8s.NewAPI(s.Client)
 	if kapi == nil {
-		channel <- SearchResult{
+		channel <- storetypes.SearchResult{
 			KubeconfigPath: "",
 			Error:          fmt.Errorf("Failed to create Kubernetes API instance for scaleway err: %w", err),
 		}
@@ -149,7 +150,7 @@ func (s *ScalewayStore) StartSearch(channel chan SearchResult) {
 	for _, project := range pres.Projects {
 		cres, err := kapi.ListClusters(&k8s.ListClustersRequest{ProjectID: &project.ID})
 		if err != nil {
-			channel <- SearchResult{
+			channel <- storetypes.SearchResult{
 				KubeconfigPath: "",
 				Error:          fmt.Errorf("Failed to retrieve Kubernetes cluster for project %v err: %w", project.Name, err),
 			}
@@ -161,7 +162,7 @@ func (s *ScalewayStore) StartSearch(channel chan SearchResult) {
 		}
 		for _, cluster := range cres.Clusters {
 			s.DiscoveredClusters[cluster.ID] = ScalewayKube{ID: cluster.ID, Name: cluster.Name, Project: project.ID}
-			channel <- SearchResult{
+			channel <- storetypes.SearchResult{
 				KubeconfigPath: cluster.Name,
 				Error:          nil,
 			}

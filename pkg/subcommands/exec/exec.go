@@ -22,13 +22,13 @@ import (
 	"github.com/sirupsen/logrus"
 	easy "github.com/t-tomalak/logrus-easy-formatter"
 
-	"github.com/danielfoehrkn/kubeswitch/pkg/store"
+	storetypes "github.com/danielfoehrkn/kubeswitch/pkg/store/types"
 	list_contexts "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/list-contexts"
 	setcontext "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/set-context"
 	"github.com/danielfoehrkn/kubeswitch/types"
 )
 
-func ExecuteCommand(pattern string, command []string, stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool, showDebugLogs bool) error {
+func ExecuteCommand(pattern string, command []string, stores []storetypes.KubeconfigStore, config *types.Config, stateDir string, noIndex bool, showDebugLogs bool) error {
 	contexts, err := list_contexts.ListContexts(pattern, stores, config, stateDir, noIndex)
 	if err != nil {
 		return err

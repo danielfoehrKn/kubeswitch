@@ -25,6 +25,7 @@ import (
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	awsekstypes "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/aws/smithy-go/logging"
+	storetypes "github.com/danielfoehrkn/kubeswitch/pkg/store/types"
 	"github.com/danielfoehrkn/kubeswitch/types"
 	"github.com/disiqueira/gotree"
 	"github.com/sirupsen/logrus"
@@ -148,13 +149,13 @@ func (s *EKSStore) VerifyKubeconfigPaths() error {
 	return nil
 }
 
-func (s *EKSStore) StartSearch(channel chan SearchResult) {
+func (s *EKSStore) StartSearch(channel chan storetypes.SearchResult) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if err := s.InitializeEKSStore(); err != nil {
 		err := fmt.Errorf("failed to initialize store. This is most likely a problem with your provided aws credentials: %v", err)
-		channel <- SearchResult{
+		channel <- storetypes.SearchResult{
 			Error: err,
 		}
 		return
@@ -166,7 +167,7 @@ func (s *EKSStore) StartSearch(channel chan SearchResult) {
 		s.GetLogger().Debugf("next page found")
 		resp, err := pager.NextPage(ctx)
 		if err != nil {
-			channel <- SearchResult{
+			channel <- storetypes.SearchResult{
 				Error: err,
 			}
 			return
@@ -177,7 +178,7 @@ func (s *EKSStore) StartSearch(channel chan SearchResult) {
 			// eks_<profile>--<region>--<eks-cluster-name>
 			kubeconfigPath := fmt.Sprintf("eks_%s--%s--%s", s.Config.Profile, *s.Config.Region, clusterName)
 
-			channel <- SearchResult{
+			channel <- storetypes.SearchResult{
 				KubeconfigPath: kubeconfigPath,
 				Error:          nil,
 			}

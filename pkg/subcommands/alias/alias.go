@@ -19,12 +19,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/danielfoehrkn/kubeswitch/pkg"
-	"github.com/danielfoehrkn/kubeswitch/pkg/store"
-	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/alias/state"
-	"github.com/danielfoehrkn/kubeswitch/types"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/sirupsen/logrus"
+
+	"github.com/danielfoehrkn/kubeswitch/pkg"
+	storetypes "github.com/danielfoehrkn/kubeswitch/pkg/store/types"
+	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/alias/state"
+	"github.com/danielfoehrkn/kubeswitch/types"
 )
 
 var logger = logrus.New()
@@ -128,7 +129,7 @@ func RemoveAlias(aliasToRemove, stateDir string) error {
 // Alias just maintains an alias record in the switch
 // state folder instead of renaming a context in the kubeconfig
 // this works independent of the backing store
-func Alias(aliasName, ctxNameToBeAliased string, stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) error {
+func Alias(aliasName, ctxNameToBeAliased string, stores []storetypes.KubeconfigStore, config *types.Config, stateDir string, noIndex bool) error {
 	if _, err := os.Stat(stateDir); os.IsNotExist(err) {
 		if err := os.Mkdir(stateDir, 0755); err != nil {
 			return err
