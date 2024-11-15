@@ -19,7 +19,7 @@ require (
 	github.com/gardener/gardener v1.84.0
 	github.com/gardener/gardener-extension-provider-openstack v1.38.2
 	github.com/go-cmd/cmd v1.4.2
-	github.com/google/addlicense v1.0.0
+	github.com/google/addlicense v1.1.1
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/vault/api v1.9.2
 	github.com/jedib0t/go-pretty/v6 v6.1.0

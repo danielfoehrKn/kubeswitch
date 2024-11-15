@@ -23,9 +23,6 @@ if [[ "$unformatted_files" ]]; then
 fi
 
 echo "Check for license headers"
-addlicense -check pkg/
-addlicense -check cmd/
-addlicense -check hooks/
-addlicense -check types/
+addlicense -check -ignore ".git/**" -ignore "vendor/**" -ignore "hack/**" -ignore "**/*.yaml" -ignore "**/*.yml" -ignore "resources/demo-config-files/**" -ignore "**/*.proto" .
 
 echo "All checks successful"
