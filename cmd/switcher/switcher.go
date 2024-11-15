@@ -316,6 +316,15 @@ func initialize() ([]storetypes.KubeconfigStore, *types.Config, error) {
 				return nil, nil, err
 			}
 			s = capiStore
+		case types.StoreKindPlugin:
+			pluginStore, err := store.NewPluginStore(kubeconfigStoreFromConfig)
+			if err != nil {
+				if kubeconfigStoreFromConfig.Required != nil && !*kubeconfigStoreFromConfig.Required {
+					continue
+				}
+				return nil, nil, err
+			}
+			s = pluginStore
 		default:
 			return nil, nil, fmt.Errorf("unknown store %q", kubeconfigStoreFromConfig.Kind)
 		}

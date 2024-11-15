@@ -164,3 +164,10 @@ type CapiStore struct {
 	Client          client.Client
 	Config          *types.StoreConfigCapi
 }
+
+type PluginStore struct {
+	Logger          *logrus.Entry
+	KubeconfigStore types.KubeconfigStore
+	Config          *types.StoreConfigPlugin
+	Client          plugins.Store
+}
