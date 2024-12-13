@@ -263,7 +263,7 @@ type StoreConfigAkamai struct {
 
 type StoreConfigCapi struct {
 	// KubeconfigPath is the path on the local filesystem pointing to the kubeconfig
-	// for the management cluster
+	// for the management cluster. If none is specified the current context will be used to look up clusters
 	KubeconfigPath string `yaml:"kubeconfigPath"`
 }
 

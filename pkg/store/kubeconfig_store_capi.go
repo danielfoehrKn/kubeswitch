@@ -55,18 +55,23 @@ func NewCapiStore(store types.KubeconfigStore, stateDir string) (*CapiStore, err
 
 func (s *CapiStore) InitializeCapiStore() error {
 	s.Logger.Info("Initializing CAPI client")
-	k8sclient, err := s.getCapiClient()
+	k8sClient, err := s.getCapiClient()
 	if err != nil {
 		return err
 	}
-	s.Client = k8sclient
+	s.Client = k8sClient
 
 	return nil
 }
 
 // GetID returns the unique store ID
 func (s *CapiStore) GetID() string {
-	return fmt.Sprintf("%s.%s", types.StoreKindCapi, *s.KubeconfigStore.ID)
+	id := "default"
+
+	if s.KubeconfigStore.ID != nil {
+		id = *s.KubeconfigStore.ID
+	}
+	return fmt.Sprintf("%s.%s", types.StoreKindCapi, id)
 }
 
 // GetKind returns the store kind
@@ -89,9 +94,13 @@ func (s *CapiStore) getCapiClient() (client.Client, error) {
 	utilruntime.Must(corev1.AddToScheme(scheme))
 	utilruntime.Must(clusterv1beta1.AddToScheme(scheme))
 
+	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
+	if s.Config.KubeconfigPath != "" {
+		loadingRules = &clientcmd.ClientConfigLoadingRules{ExplicitPath: s.Config.KubeconfigPath}
+	}
 	// client from s.Config.KubeconfigPath
 	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		&clientcmd.ClientConfigLoadingRules{ExplicitPath: s.Config.KubeconfigPath},
+		loadingRules,
 		&clientcmd.ConfigOverrides{})
 
 	restConfig, err := clientConfig.ClientConfig()
@@ -99,13 +108,13 @@ func (s *CapiStore) getCapiClient() (client.Client, error) {
 		return nil, fmt.Errorf("unable to create rest config: %v", err)
 	}
 
-	k8sclient, err := client.New(restConfig, client.Options{
+	k8sClient, err := client.New(restConfig, client.Options{
 		Scheme: scheme,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("unable to create client: %v", err)
 	}
-	return k8sclient, nil
+	return k8sClient, nil
 }
 
 // StartSearch starts the search over the configured search paths
@@ -128,9 +137,18 @@ func (s *CapiStore) StartSearch(channel chan storetypes.SearchResult) {
 	clusters := &clusterv1beta1.ClusterList{}
 	err := s.Client.List(ctx, clusters)
 	if err != nil {
+		// if kubeconfigPath for mgmt cluster is defined error out and return if the Cluster CRD is not installed
+		// otherwise silently fail as our current context might not have CAPI installed
+		if s.Config.KubeconfigPath != "" {
+			channel <- storetypes.SearchResult{
+				KubeconfigPath: "",
+				Error:          fmt.Errorf("unable to list clusters: %w", err),
+			}
+			return
+		}
+		s.Logger.Debug("CAPI: cannot listing v1beta1.Cluster resources, not currently connected to a cluster with CAPI installed")
 		channel <- storetypes.SearchResult{
 			KubeconfigPath: "",
-			Error:          err,
 		}
 		return
 	}
