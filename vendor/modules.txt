@@ -741,7 +741,7 @@ github.com/prometheus/common/model
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
-# github.com/rancher/norman v0.0.0-20240205154641-a6a6cf569608
+# github.com/rancher/norman v0.1.0
 ## explicit; go 1.20
 github.com/rancher/norman/clientbase
 github.com/rancher/norman/httperror
