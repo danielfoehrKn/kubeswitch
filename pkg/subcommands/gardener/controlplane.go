@@ -19,12 +19,14 @@ import (
 	"os"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/danielfoehrkn/kubeswitch/pkg/store"
 	gardenerstore "github.com/danielfoehrkn/kubeswitch/pkg/store/gardener"
+	storetypes "github.com/danielfoehrkn/kubeswitch/pkg/store/types"
 	historyutil "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/history/util"
 	kubeconfigutil "github.com/danielfoehrkn/kubeswitch/pkg/util/kubectx_copied"
 	"github.com/danielfoehrkn/kubeswitch/types"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -37,7 +39,7 @@ var (
 	kubeconfigPathFromEnv = os.Getenv("KUBECONFIG")
 )
 
-func SwitchToControlplane(stores []store.KubeconfigStore, kubeconfigPathFromFlag string) (*string, error) {
+func SwitchToControlplane(stores []storetypes.KubeconfigStore, kubeconfigPathFromFlag string) (*string, error) {
 	kubeconfig, err := getKubeconfig(kubeconfigPathFromFlag)
 	if err != nil {
 		return nil, err

@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/danielfoehrkn/kubeswitch/pkg/store"
+	storetypes "github.com/danielfoehrkn/kubeswitch/pkg/store/types"
 	"github.com/danielfoehrkn/kubeswitch/types"
 )
 
@@ -27,7 +27,7 @@ var (
 	caches   = make(map[string]CacheFactory)
 )
 
-type CacheFactory func(store store.KubeconfigStore, cfg *types.Cache) (store.KubeconfigStore, error)
+type CacheFactory func(store storetypes.KubeconfigStore, cfg *types.Cache) (storetypes.KubeconfigStore, error)
 
 func Register(kind string, creator CacheFactory) {
 	cachesMu.Lock()
@@ -35,7 +35,7 @@ func Register(kind string, creator CacheFactory) {
 	caches[kind] = creator
 }
 
-func New(kind string, store store.KubeconfigStore, cfg *types.Cache) (store.KubeconfigStore, error) {
+func New(kind string, store storetypes.KubeconfigStore, cfg *types.Cache) (storetypes.KubeconfigStore, error) {
 	cachesMu.RLock()
 	create, ok := caches[kind]
 	cachesMu.RUnlock()

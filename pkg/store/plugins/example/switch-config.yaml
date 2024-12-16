@@ -1,0 +1,6 @@
+kind: SwitchConfig
+version: v1alpha1
+kubeconfigStores:
+  - kind: plugin
+    config:
+      cmdPath: ./dumb-plugin

@@ -27,7 +27,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/danielfoehrkn/kubeswitch/pkg/index"
-	"github.com/danielfoehrkn/kubeswitch/pkg/store"
+	storetypes "github.com/danielfoehrkn/kubeswitch/pkg/store/types"
 	aliasutil "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/alias/util"
 	"github.com/danielfoehrkn/kubeswitch/pkg/util"
 	kubeconfigutil "github.com/danielfoehrkn/kubeswitch/pkg/util/kubectx_copied"
@@ -64,7 +64,7 @@ var (
 	logger = logrus.New()
 )
 
-func Switcher(stores []store.KubeconfigStore, config *types.Config, stateDir string, noIndex, showPreview bool) (*string, *string, error) {
+func Switcher(stores []storetypes.KubeconfigStore, config *types.Config, stateDir string, noIndex, showPreview bool) (*string, *string, error) {
 	c, err := DoSearch(stores, config, stateDir, noIndex)
 	if err != nil {
 		return nil, nil, err
@@ -108,7 +108,7 @@ func Switcher(stores []store.KubeconfigStore, config *types.Config, stateDir str
 	}(*c)
 
 	// remember the store for later kubeconfig retrieval
-	var kindToStore = map[string]store.KubeconfigStore{}
+	var kindToStore = map[string]storetypes.KubeconfigStore{}
 	for _, s := range stores {
 		kindToStore[s.GetID()] = s
 	}
@@ -180,7 +180,7 @@ func Switcher(stores []store.KubeconfigStore, config *types.Config, stateDir str
 
 // writeIndex tries to write the Index file for the kubeconfig store
 // if it fails to do so, it logs a warning, but does not panic
-func writeIndex(store store.KubeconfigStore, searchIndex *index.SearchIndex, ctxToPathMapping map[string]string, ctxToTagsMapping map[string]map[string]string) {
+func writeIndex(store storetypes.KubeconfigStore, searchIndex *index.SearchIndex, ctxToPathMapping map[string]string, ctxToTagsMapping map[string]map[string]string) {
 	index := types.Index{
 		Kind:                 store.GetKind(),
 		ContextToPathMapping: ctxToPathMapping,
@@ -202,7 +202,7 @@ func writeIndex(store store.KubeconfigStore, searchIndex *index.SearchIndex, ctx
 	}
 }
 
-func showFuzzySearch(storeIDToStore map[string]store.KubeconfigStore, showPreview bool) (string, string, error) {
+func showFuzzySearch(storeIDToStore map[string]storetypes.KubeconfigStore, showPreview bool) (string, string, error) {
 	// display selection dialog for all kubeconfig context names
 	idx, err := fuzzyfinder.Find(
 		&allKubeconfigContextNames,
@@ -224,7 +224,7 @@ func showFuzzySearch(storeIDToStore map[string]store.KubeconfigStore, showPrevie
 }
 
 // getFuzzyFinderOptions returns a list of fuzzy finder options
-func getFuzzyFinderOptions(storeIDToStore map[string]store.KubeconfigStore, showPreview bool) []fuzzyfinder.Option {
+func getFuzzyFinderOptions(storeIDToStore map[string]storetypes.KubeconfigStore, showPreview bool) []fuzzyfinder.Option {
 	options := []fuzzyfinder.Option{fuzzyfinder.WithHotReloadLock(hotReloadLock.RLocker())}
 
 	if showPreview {
@@ -245,7 +245,7 @@ func getFuzzyFinderOptions(storeIDToStore map[string]store.KubeconfigStore, show
 			kubeconfigStore := storeIDToStore[storeID]
 
 			var storeSpecificPreview *string
-			previewer, ok := kubeconfigStore.(store.Previewer)
+			previewer, ok := kubeconfigStore.(storetypes.Previewer)
 			if ok {
 				pr, err := previewer.GetSearchPreview(path, tags)
 				if err != nil {
@@ -278,7 +278,7 @@ func getFuzzyFinderOptions(storeIDToStore map[string]store.KubeconfigStore, show
 	return options
 }
 
-func getSanitizedKubeconfigForKubeconfigPath(kubeconfigStore store.KubeconfigStore, path string, tags map[string]string) (string, error) {
+func getSanitizedKubeconfigForKubeconfigPath(kubeconfigStore storetypes.KubeconfigStore, path string, tags map[string]string) (string, error) {
 	// during first run without index, the files are already read in the getContextsForKubeconfigPath and saved in-memory
 	kubeconfig := readFromPathToKubeconfig(path)
 	if len(kubeconfig) > 0 {

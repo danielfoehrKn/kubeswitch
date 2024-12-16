@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	apiv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 
+	storetypes "github.com/danielfoehrkn/kubeswitch/pkg/store/types"
 	"github.com/danielfoehrkn/kubeswitch/types"
 	"google.golang.org/api/cloudresourcemanager/v1"
 )
@@ -168,13 +169,13 @@ func (s *GKEStore) InitializeGKEStore() error {
 	return nil
 }
 
-func (s *GKEStore) StartSearch(channel chan SearchResult) {
+func (s *GKEStore) StartSearch(channel chan storetypes.SearchResult) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if err := s.InitializeGKEStore(); err != nil {
 		err := fmt.Errorf("failed to initialize store: %w", err)
-		channel <- SearchResult{
+		channel <- storetypes.SearchResult{
 			Error: err,
 		}
 		return
@@ -183,7 +184,7 @@ func (s *GKEStore) StartSearch(channel chan SearchResult) {
 	for projectName, projectId := range s.ProjectNameToID {
 		resp, err := s.GkeClient.Projects.Zones.Clusters.List(projectId, "-").Context(ctx).Do()
 		if err != nil {
-			channel <- SearchResult{
+			channel <- storetypes.SearchResult{
 				Error: fmt.Errorf("failed to list GKE clusters for project with ID %q: %w", projectId, err),
 			}
 			continue
@@ -199,7 +200,7 @@ func (s *GKEStore) StartSearch(channel chan SearchResult) {
 			// cache for when getting the kubeconfig for the unique path later
 			s.DiscoveredClusters[kubeconfigPath] = f
 
-			channel <- SearchResult{
+			channel <- storetypes.SearchResult{
 				KubeconfigPath: kubeconfigPath,
 				Error:          nil,
 			}
