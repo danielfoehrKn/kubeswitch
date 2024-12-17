@@ -24,6 +24,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/clientcmd"
@@ -139,7 +140,7 @@ func (s *CapiStore) StartSearch(channel chan storetypes.SearchResult) {
 	if err != nil {
 		// if kubeconfigPath for mgmt cluster is defined error out and return if the Cluster CRD is not installed
 		// otherwise silently fail as our current context might not have CAPI installed
-		if s.Config.KubeconfigPath != "" {
+		if s.Config.KubeconfigPath != "" || !meta.IsNoMatchError(err) {
 			channel <- storetypes.SearchResult{
 				KubeconfigPath: "",
 				Error:          fmt.Errorf("unable to list clusters: %w", err),
