@@ -12,5 +12,7 @@ version: v1alpha1
 kubeconfigStores:
 - kind: capi
   config:
-    kubeconfigPath: "/home/user/.kube/management.config"
+    # Optionally specify a kubeconfigPath for a management cluster, 
+    # if not specified your current kube context will be searched for any CAPI clusters
+    kubeconfigPath: "/home/user/.kube/management.config" 
 ```
