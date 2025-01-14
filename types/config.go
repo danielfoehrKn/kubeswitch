@@ -168,6 +168,9 @@ type StoreConfigGKE struct {
 	// ProjectID contains an optional list of projects that will be considered in the search for existing GKE clusters.
 	// If no projects are given, will discover clusters from every found project.
 	ProjectIDs []string `yaml:"projectIDs"`
+	// PreferPrivateEndpoint is a flag to indicate if the private endpoint should be preferred over the public endpoint.
+	// If not specified, the public endpoint will be used.
+	PreferPrivateEndpoint bool `yaml:"preferPrivateEndpoint"`
 }
 
 type StoreConfigAzure struct {
