@@ -305,6 +305,22 @@ func (s *GKEStore) GetKubeconfigForPath(path string, _ map[string]string) ([]byt
 		}
 	}
 
+	var endpoint string
+	if s.Config.PreferredEndpoint == nil {
+		endpoint = cluster.Endpoint
+	} else {
+		switch *s.Config.PreferredEndpoint {
+		case types.GkeDnsEndpoint:
+			endpoint = cluster.ControlPlaneEndpointsConfig.DnsEndpointConfig.Endpoint
+		case types.GkePrivateEndpoint:
+			endpoint = cluster.ControlPlaneEndpointsConfig.IpEndpointsConfig.PrivateEndpoint
+		case types.GkePublicEndpoint:
+			endpoint = cluster.ControlPlaneEndpointsConfig.IpEndpointsConfig.PublicEndpoint
+		default:
+			endpoint = cluster.Endpoint
+		}
+	}
+
 	kubeconfig := &types.KubeConfig{
 		TypeMeta: types.TypeMeta{
 			APIVersion: "v1",

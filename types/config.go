@@ -168,7 +168,17 @@ type StoreConfigGKE struct {
 	// ProjectID contains an optional list of projects that will be considered in the search for existing GKE clusters.
 	// If no projects are given, will discover clusters from every found project.
 	ProjectIDs []string `yaml:"projectIDs"`
+	// PreferredEndpoint is the preferred endpoint to use for the GKE API.
+	PreferredEndpoint *GKEPreferredEndpoint `yaml:"preferredEndpoint"`
 }
+
+type GKEPreferredEndpoint string
+
+const (
+	GkePrivateEndpoint GKEPreferredEndpoint = "private"
+	GkePublicEndpoint  GKEPreferredEndpoint = "public"
+	GkeDnsEndpoint     GKEPreferredEndpoint = "dns"
+)
 
 type StoreConfigAzure struct {
 	// SubscriptionID is the name of the Azure Subscription kubeswitch shall discover Azure clusters from
