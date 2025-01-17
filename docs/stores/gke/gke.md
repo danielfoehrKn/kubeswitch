@@ -23,6 +23,8 @@ kubeconfigStores:
       gcpAccount: my-gcp-account
       authentication:
         authenticationType: gcloud
+      # optionally prefer a specific type of endpoint: dns, private, public
+      preferredEndpoint: private
       # optionally limit to certain projects in account
       projectIDs:
         - project-1

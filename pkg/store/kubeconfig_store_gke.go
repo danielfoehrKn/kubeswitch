@@ -305,6 +305,22 @@ func (s *GKEStore) GetKubeconfigForPath(path string, _ map[string]string) ([]byt
 		}
 	}
 
+	var endpoint string
+	if s.Config.PreferredEndpoint == nil {
+		endpoint = cluster.Endpoint
+	} else {
+		switch *s.Config.PreferredEndpoint {
+		case types.GkeDnsEndpoint:
+			endpoint = cluster.ControlPlaneEndpointsConfig.DnsEndpointConfig.Endpoint
+		case types.GkePrivateEndpoint:
+			endpoint = cluster.ControlPlaneEndpointsConfig.IpEndpointsConfig.PrivateEndpoint
+		case types.GkePublicEndpoint:
+			endpoint = cluster.ControlPlaneEndpointsConfig.IpEndpointsConfig.PublicEndpoint
+		default:
+			endpoint = cluster.Endpoint
+		}
+	}
+
 	kubeconfig := &types.KubeConfig{
 		TypeMeta: types.TypeMeta{
 			APIVersion: "v1",
@@ -314,7 +330,7 @@ func (s *GKEStore) GetKubeconfigForPath(path string, _ map[string]string) ([]byt
 			Name: contextName,
 			Cluster: types.Cluster{
 				CertificateAuthorityData: cluster.MasterAuth.ClusterCaCertificate,
-				Server:                   fmt.Sprintf("https://%s", cluster.Endpoint),
+				Server:                   fmt.Sprintf("https://%s", endpoint),
 			},
 		}},
 		CurrentContext: contextName,
