@@ -330,7 +330,7 @@ func (s *GKEStore) GetKubeconfigForPath(path string, _ map[string]string) ([]byt
 			Name: contextName,
 			Cluster: types.Cluster{
 				CertificateAuthorityData: cluster.MasterAuth.ClusterCaCertificate,
-				Server:                   fmt.Sprintf("https://%s", cluster.Endpoint),
+				Server:                   fmt.Sprintf("https://%s", endpoint),
 			},
 		}},
 		CurrentContext: contextName,
