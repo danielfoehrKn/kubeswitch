@@ -17,6 +17,7 @@ Designed as a [drop-in replacement](#difference-to-kubectx) for [kubectx](https:
   - [Amazon Elastic Kubernetes Service (EKS)](docs/stores/eks/eks.md)
   - [Azure Kubernetes Service (AKS)](docs/stores/azure/azure.md)
   - [DigitalOcean Kubernetes (DOKS)](docs/stores/digitalocean/digitalocean.md)
+  - [Exoscale](docs/stores/exoscale/exoscale.md)
   - [Gardener](docs/stores/gardener/gardener.md)
   - [Google Kubernetes Engine (GKE)](docs/stores/gke/gke.md)
   - [Hashicorp Vault](docs/stores/vault/use_vault_store.md)

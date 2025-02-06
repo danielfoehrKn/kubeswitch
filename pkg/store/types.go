@@ -26,6 +26,7 @@ import (
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	eks "github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/digitalocean/doctl/do"
+	exoscale "github.com/exoscale/egoscale/v3"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	vaultapi "github.com/hashicorp/vault/api"
@@ -116,6 +117,13 @@ type AzureStore struct {
 	// when not using a search index
 	DiscoveredClusters map[string]*armcontainerservice.ManagedCluster
 	StateDirectory     string
+}
+
+type ExoscaleStore struct {
+	Logger             *logrus.Entry
+	KubeconfigStore    types.KubeconfigStore
+	Client             *exoscale.Client
+	DiscoveredClusters map[exoscale.UUID]ExoscaleKube
 }
 
 type RancherStore struct {
