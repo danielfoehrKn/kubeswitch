@@ -10,6 +10,7 @@ import (
 	"github.com/exoscale/egoscale/v3/credentials"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
+	"k8s.io/client-go/tools/clientcmd"
 
 	storetypes "github.com/danielfoehrkn/kubeswitch/pkg/store/types"
 	"github.com/danielfoehrkn/kubeswitch/types"
@@ -200,7 +201,58 @@ func (s *ExoscaleStore) GetKubeconfigForPath(path string, _ map[string]string) (
 		return nil, fmt.Errorf("failed to decode base64 kubeconfig for cluster %q: %w", path, err)
 	}
 
-	return rawKubeconfig, nil
+	// The code below renames the cluster and context in the kubeconfig before returning it.
+	// from cluster uuid to the cluster names
+
+	// Directly unmarshalling it into a clientcmdv1.Config (from k8s.io/client-go) seems to loose information so
+	//  load it into an unversioned *api.Config
+	cfg, err := clientcmd.Load(rawKubeconfig)
+	if err != nil {
+		return nil, fmt.Errorf("parse kubeconfig: %w", err)
+	}
+
+	// There's exactly one cluster in the config. For Exoscale,
+	// it’s the “name” keyunder `clusters[0].name: <UUID>`.
+	// Detect that old name, then rename the key in `cfg.Clusters`.
+	// Same for the context.
+
+	var oldClusterName string
+	for k := range cfg.Clusters {
+		oldClusterName = k
+		// We just pick the first/only if there's exactly one
+		break
+	}
+
+	// 1) Move cluster entry from old -> new
+	if c, ok := cfg.Clusters[oldClusterName]; ok {
+		cfg.Clusters[clusterName] = c
+		delete(cfg.Clusters, oldClusterName)
+	}
+
+	// 2) Move context entry from old -> new
+	if ctx, ok := cfg.Contexts[oldClusterName]; ok {
+		// The context struct references a cluster name and an auth info name:
+		//   ctx.Cluster = oldClusterName (by default)
+		//   ctx.AuthInfo = "default"
+		// If we’re renaming the cluster, we also have to update the `Cluster` field.
+		ctx.Cluster = clusterName
+
+		cfg.Contexts[clusterName] = ctx
+		delete(cfg.Contexts, oldClusterName)
+	}
+
+	// 3) If the current-context is set to the old name, rename it.
+	if cfg.CurrentContext == oldClusterName {
+		cfg.CurrentContext = clusterName
+	}
+
+	// Finally, write the config back to YAML.
+	modifiedBytes, err := clientcmd.Write(*cfg)
+	if err != nil {
+		return nil, fmt.Errorf("marshal updated kubeconfig: %w", err)
+	}
+
+	return modifiedBytes, nil
 }
 
 func (r *ExoscaleStore) VerifyKubeconfigPaths() error {
