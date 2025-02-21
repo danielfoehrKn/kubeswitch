@@ -261,6 +261,15 @@ func initialize() ([]storetypes.KubeconfigStore, *types.Config, error) {
 				return nil, nil, err
 			}
 			s = eksStore
+		case types.StoreKindExoscale:
+			exoscaleStore, err := store.NewExoscaleStore(kubeconfigStoreFromConfig)
+			if err != nil {
+				if kubeconfigStoreFromConfig.Required != nil && !*kubeconfigStoreFromConfig.Required {
+					continue
+				}
+				return nil, nil, err
+			}
+			s = exoscaleStore
 		case types.StoreKindRancher:
 			rancherStore, err := store.NewRancherStore(kubeconfigStoreFromConfig)
 			if err != nil {
