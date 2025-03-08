@@ -70,7 +70,6 @@ func DoSearch(stores []storetypes.KubeconfigStore, config *types.Config, stateDi
 
 	resultChannel := make(chan DiscoveredContext)
 	wgResultChannel := sync.WaitGroup{}
-	wgResultChannel.Add(len(stores))
 
 	for _, kubeconfigStore := range stores {
 		logger := kubeconfigStore.GetLogger()
@@ -138,7 +137,11 @@ func DoSearch(stores []storetypes.KubeconfigStore, config *types.Config, stateDi
 			store.StartSearch(channel)
 		}(kubeconfigStore, c)
 
+		wgResultChannel.Add(1)
 		go func(store storetypes.KubeconfigStore, storeSearchChannel chan storetypes.SearchResult, index index.SearchIndex) {
+
+			defer wgResultChannel.Done()
+
 			// remember the context to kubeconfig path mapping for this store
 			// to write it to the index. Do not use the global "ContextToPathMapping"
 			// as this contains contexts names from all stores combined
@@ -204,9 +207,6 @@ func DoSearch(stores []storetypes.KubeconfigStore, config *types.Config, stateDi
 			if len(localContextToPathMapping) > 0 {
 				writeIndex(store, &index, localContextToPathMapping, localContextToTagsMapping)
 			}
-
-			// reading from this store is finished, decrease wait counter
-			wgResultChannel.Done()
 		}(kubeconfigStore, c, *searchIndex)
 	}
 
