@@ -87,7 +87,11 @@ func (s *PluginStore) GetID() string {
 
 	id, err := s.Client.GetID(ctx)
 	if err != nil {
-		return fmt.Sprintf("%s.default", s.GetKind())
+		localID := "default"
+		if s.KubeconfigStore.ID != nil {
+			localID = *s.KubeconfigStore.ID
+		}
+		return fmt.Sprintf("%s.%s", s.GetKind(), localID)
 	}
 	return id
 }
