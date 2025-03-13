@@ -83,7 +83,13 @@ func (s *AkamaiStore) InitializeAkamaiStore() error {
 
 // GetID returns the unique store ID
 func (s *AkamaiStore) GetID() string {
-	return fmt.Sprintf("%s.default", s.GetKind())
+	id := "default"
+
+	if s.KubeconfigStore.ID != nil {
+		id = *s.KubeconfigStore.ID
+	}
+
+	return fmt.Sprintf("%s.%s", s.GetKind(), id)
 }
 
 func (s *AkamaiStore) GetKind() types.StoreKind {
