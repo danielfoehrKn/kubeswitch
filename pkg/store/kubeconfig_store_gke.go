@@ -306,12 +306,18 @@ func (s *GKEStore) GetKubeconfigForPath(path string, _ map[string]string) ([]byt
 	}
 
 	var endpoint string
+	var certificate string
+
+	certificate = cluster.MasterAuth.ClusterCaCertificate
+
 	if s.Config.PreferredEndpoint == nil {
 		endpoint = cluster.Endpoint
 	} else {
 		switch *s.Config.PreferredEndpoint {
 		case types.GkeDnsEndpoint:
 			endpoint = cluster.ControlPlaneEndpointsConfig.DnsEndpointConfig.Endpoint
+			// DNS Endpoint certificate is not signed this Certificate Authority
+			certificate = ""
 		case types.GkePrivateEndpoint:
 			endpoint = cluster.ControlPlaneEndpointsConfig.IpEndpointsConfig.PrivateEndpoint
 		case types.GkePublicEndpoint:
@@ -329,7 +335,7 @@ func (s *GKEStore) GetKubeconfigForPath(path string, _ map[string]string) ([]byt
 		Clusters: []types.KubeCluster{{
 			Name: contextName,
 			Cluster: types.Cluster{
-				CertificateAuthorityData: cluster.MasterAuth.ClusterCaCertificate,
+				CertificateAuthorityData: certificate,
 				Server:                   fmt.Sprintf("https://%s", endpoint),
 			},
 		}},
