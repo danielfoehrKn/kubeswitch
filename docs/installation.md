@@ -31,7 +31,7 @@ Next, follow [required: source the shell function](#required-source-the-shell-fu
 Download the switcher binary
 ```sh
 OS=linux                        # Pick the right os: linux, darwin (intel only)
-VERSION=0.8.0                   # Pick the current version.
+VERSION=0.9.3                   # Pick the current version.
 
 curl -L -o /usr/local/bin/switcher https://github.com/danielfoehrKn/kubeswitch/releases/download/${VERSION}/switcher_${OS}_amd64
 chmod +x /usr/local/bin/switcher
