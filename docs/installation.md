@@ -76,7 +76,7 @@ echo 'complete -o default -F __start_switcher s' >> ~/.bashrc
 echo 'source <(switcher init zsh)' >> ~/.zshrc
 
 # optionally use alias `s` instead of `switch`
-echo 'source <(alias s=switch)' >> ~/.zshrc
+echo 'alias s=switch' >> ~/.zshrc
 
 # optionally use command completion
 echo 'source <(switch completion zsh)' >> ~/.zshrc
