@@ -408,8 +408,8 @@ github.com/prometheus/common v0.55.0 h1:KEi6DK7lXW/m7Ig5i47x0vRzuBsHuvJdi5ee6Y3G
 github.com/prometheus/common v0.55.0/go.mod h1:2SECS4xJG1kd8XF9IcM1gMX6510RAEL65zxzNImwdc8=
 github.com/prometheus/procfs v0.15.1 h1:YagwOFzUgYfKKHX6Dr+sHT7km/hxC76UB0learggepc=
 github.com/prometheus/procfs v0.15.1/go.mod h1:fB45yRUv8NstnjriLhBQLuOUt+WW4BsoGhij/e3PBqk=
-github.com/rancher/norman v0.0.0-20240205154641-a6a6cf569608 h1:azL/n2grvuyGqmDvnpgRoH6mmpgodiGwjv1uZwiO7HE=
-github.com/rancher/norman v0.0.0-20240205154641-a6a6cf569608/go.mod h1:Sm2Xqai+aecgmJ86ygyEe+TdPMLkauEpykSstBAu4Ko=
+github.com/rancher/norman v0.1.0 h1:OuolmWm1Rh3da3MCyWKxat54EDpg1VJOjdetCppbIGk=
+github.com/rancher/norman v0.1.0/go.mod h1:Sm2Xqai+aecgmJ86ygyEe+TdPMLkauEpykSstBAu4Ko=
 github.com/rancher/rancher/pkg/client v0.0.0-20240416202124-a6da228939da h1:CVSBn8SZyjKQeAppBVzZuuh81qviOpK+MfJ2QVYX96c=
 github.com/rancher/rancher/pkg/client v0.0.0-20240416202124-a6da228939da/go.mod h1:oxtAx2+1kHbx21JlWy/SNeixhmv6sc+MhMvlflPexcM=
 github.com/rancher/wrangler v1.1.1-0.20230831050635-df1bd5aae9df h1:WJ+aaUICHPX8HeLmHE9JL/RFHhilMfcJlqmhgpc7gJU=

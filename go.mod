@@ -29,7 +29,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.19.1
 	github.com/onsi/gomega v1.34.0
 	github.com/pkg/errors v0.9.1
-	github.com/rancher/norman v0.0.0-20240205154641-a6a6cf569608
+	github.com/rancher/norman v0.1.0
 	github.com/rancher/rancher/pkg/client v0.0.0-20240416202124-a6da228939da
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.1
