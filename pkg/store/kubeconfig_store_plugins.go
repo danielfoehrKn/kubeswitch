@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os/exec"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -49,6 +50,22 @@ func NewPluginStore(store types.KubeconfigStore) (*PluginStore, error) {
 	}, nil
 }
 
+func convertLogrusLevelToHclogLevel(level logrus.Level) hclog.Level {
+	switch level {
+	case logrus.TraceLevel:
+		return hclog.Trace
+	case logrus.DebugLevel:
+		return hclog.Debug
+	case logrus.InfoLevel:
+		return hclog.Info
+	case logrus.WarnLevel:
+		return hclog.Warn
+	default:
+		// Default to Error level for any other logrus levels (e.g. Fatal or Panic)
+		return hclog.Error
+	}
+}
+
 // InitializePluginStore initializes the plugin store
 func (s *PluginStore) InitializePluginStore() error {
 
@@ -58,6 +75,11 @@ func (s *PluginStore) InitializePluginStore() error {
 		Cmd:             exec.Command(s.Config.CmdPath, s.Config.Args...),
 		AllowedProtocols: []plugin.Protocol{
 			plugin.ProtocolNetRPC, plugin.ProtocolGRPC},
+		Logger: hclog.New(&hclog.LoggerOptions{
+			Output: hclog.DefaultOutput,
+			Level:  convertLogrusLevelToHclogLevel(s.Logger.Level),
+			Name:   "plugin",
+		}),
 	})
 
 	// Connect via RPC
