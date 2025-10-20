@@ -182,7 +182,7 @@ func (s *GKEStore) StartSearch(channel chan storetypes.SearchResult) {
 	}
 
 	for projectName, projectId := range s.ProjectNameToID {
-		resp, err := s.GkeClient.Projects.Zones.Clusters.List(projectId, "-").Context(ctx).Do()
+		resp, err := s.GkeClient.Projects.Locations.Clusters.List(fmt.Sprintf("projects/%s/locations/-", projectId)).Context(ctx).Do()
 		if err != nil {
 			channel <- storetypes.SearchResult{
 				Error: fmt.Errorf("failed to list GKE clusters for project with ID %q: %w", projectId, err),
