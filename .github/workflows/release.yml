@@ -9,11 +9,11 @@ jobs:
     environment: Release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v6
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v6
         with:
-          go-version: '^1.21.0'
+          go-version-file: 'go.mod'
       - name: Build the binary-files
         id: build_binary_files
         run: |
