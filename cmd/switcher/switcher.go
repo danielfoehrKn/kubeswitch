@@ -98,28 +98,32 @@ var (
 				return currentContextCmd.RunE(cmd, args)
 			}
 
+			// Handle special cases first
 			if len(args) > 0 {
 				switch args[0] {
 				case "-":
 					return previousContextCmd.RunE(cmd, args[1:])
 				case ".":
 					return lastContextCmd.RunE(cmd, args[1:])
-				default:
-					return setContextCmd.RunE(cmd, args)
 				}
 			}
 
+			// Common path: initialize once, call Switcher with args[0] or ""
 			stores, config, err := initialize()
 			if err != nil {
 				return err
 			}
 
-			// config file setting overwrites the command line default (--showPreview true)
 			if showPreview && config.ShowPreview != nil && !*config.ShowPreview {
 				showPreview = false
 			}
 
-			kubeconfigPath, contextName, err := pkg.Switcher(stores, config, stateDirectory, noIndex, showPreview)
+			desiredContext := ""
+			if len(args) > 0 {
+				desiredContext = args[0]
+			}
+
+			kubeconfigPath, contextName, err := pkg.Switcher(stores, config, stateDirectory, noIndex, showPreview, desiredContext)
 			reportNewContext(kubeconfigPath, contextName)
 			return err
 		},

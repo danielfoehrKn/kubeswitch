@@ -64,7 +64,23 @@ var (
 	logger = logrus.New()
 )
 
-func Switcher(stores []storetypes.KubeconfigStore, config *types.Config, stateDir string, noIndex, showPreview bool) (*string, *string, error) {
+// waitForSearchResults waits for at least one search result or timeout
+func waitForSearchResults(timeout time.Duration) {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		allKubeconfigContextNamesLock.RLock()
+		count := len(allKubeconfigContextNames)
+		allKubeconfigContextNamesLock.RUnlock()
+		if count > 0 {
+			// Give more time for additional results
+			time.Sleep(300 * time.Millisecond)
+			return
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+}
+
+func Switcher(stores []storetypes.KubeconfigStore, config *types.Config, stateDir string, noIndex, showPreview bool, desiredContext string) (*string, *string, error) {
 	c, err := DoSearch(stores, config, stateDir, noIndex)
 	if err != nil {
 		return nil, nil, err
@@ -114,6 +130,116 @@ func Switcher(stores []storetypes.KubeconfigStore, config *types.Config, stateDi
 	}
 
 	defer logSearchErrors()
+
+	// If a desired context was provided, handle exact/partial matching
+	if desiredContext != "" {
+		// Wait for search results to populate
+		waitForSearchResults(10 * time.Second)
+
+		// Take a snapshot of current contexts and aliases
+		allKubeconfigContextNamesLock.RLock()
+		contextsCopy := make([]string, len(allKubeconfigContextNames))
+		copy(contextsCopy, allKubeconfigContextNames)
+		allKubeconfigContextNamesLock.RUnlock()
+
+		aliasToContextLock.RLock()
+		aliasesCopy := make(map[string]string, len(aliasToContext))
+		for k, v := range aliasToContext {
+			aliasesCopy[k] = v
+		}
+		aliasToContextLock.RUnlock()
+
+		// Check for exact match (case-sensitive) in contexts or aliases
+		exactMatch := ""
+		for _, name := range contextsCopy {
+			if name == desiredContext {
+				exactMatch = name
+				break
+			}
+		}
+		if exactMatch == "" {
+			for alias := range aliasesCopy {
+				if alias == desiredContext {
+					exactMatch = alias
+					break
+				}
+			}
+		}
+
+		// If exact match, switch immediately without showing picker
+		if exactMatch != "" {
+			kubeconfigPath := readFromContextToPathMapping(exactMatch)
+			storeID := readFromPathToStoreID(kubeconfigPath)
+			store := kindToStore[storeID]
+			tags := readFromPathToTagsMapping(kubeconfigPath)
+
+			kubeconfigData, err := store.GetKubeconfigForPath(kubeconfigPath, tags)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			kubeconfig, err := kubeconfigutil.NewKubeconfig(kubeconfigData)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to parse selected kubeconfig: %v", err)
+			}
+
+			selectedContext := exactMatch
+			contextForHistory := selectedContext
+
+			if len(store.GetContextPrefix(kubeconfigPath)) > 0 && strings.HasPrefix(selectedContext, store.GetContextPrefix(kubeconfigPath)) {
+				selectedContext = strings.TrimPrefix(selectedContext, fmt.Sprintf("%s/", store.GetContextPrefix(kubeconfigPath)))
+			}
+
+			if err := kubeconfig.SetContext(selectedContext, aliasutil.GetContextForAlias(selectedContext, aliasToContext), store.GetContextPrefix(kubeconfigPath)); err != nil {
+				return nil, nil, err
+			}
+
+			if err := kubeconfig.SetKubeswitchContext(contextForHistory); err != nil {
+				return nil, nil, err
+			}
+
+			tempKubeconfigPath, err := kubeconfig.WriteKubeconfigFile()
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to write temporary kubeconfig file: %v", err)
+			}
+
+			ns, err := kubeconfig.NamespaceOfContext(kubeconfig.GetCurrentContext())
+			if err != nil {
+				logger.Warnf("failed to get namespace: %v", err)
+			} else if err := historyutil.AppendToHistory(contextForHistory, ns); err != nil {
+				logger.Warnf("failed to append to history: %v", err)
+			}
+
+			return &tempKubeconfigPath, &selectedContext, nil
+		}
+
+		// No exact match - filter by substring (case-insensitive)
+		lowerDesired := strings.ToLower(desiredContext)
+		var partialMatches []string
+		seen := make(map[string]bool)
+
+		for _, name := range contextsCopy {
+			if strings.Contains(strings.ToLower(name), lowerDesired) {
+				partialMatches = append(partialMatches, name)
+				seen[name] = true
+			}
+		}
+
+		for alias := range aliasesCopy {
+			if strings.Contains(strings.ToLower(alias), lowerDesired) && !seen[alias] {
+				partialMatches = append(partialMatches, alias)
+			}
+		}
+
+		if len(partialMatches) == 0 {
+			return nil, nil, fmt.Errorf("no contexts matching %q", desiredContext)
+		}
+
+		// Replace global list with filtered matches for picker
+		allKubeconfigContextNamesLock.Lock()
+		allKubeconfigContextNames = partialMatches
+		allKubeconfigContextNamesLock.Unlock()
+	}
 
 	kubeconfigPath, selectedContext, err := showFuzzySearch(kindToStore, showPreview)
 	if err != nil {
