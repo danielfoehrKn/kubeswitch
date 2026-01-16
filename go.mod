@@ -28,6 +28,7 @@ require (
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/ginkgo/v2 v2.19.1
 	github.com/onsi/gomega v1.34.0
+	github.com/opentelekomcloud/gophertelekomcloud v0.9.3
 	github.com/pkg/errors v0.9.1
 	github.com/rancher/norman v0.0.0-20240205154641-a6a6cf569608
 	github.com/rancher/rancher/pkg/client v0.0.0-20240416202124-a6da228939da
@@ -48,6 +49,7 @@ require (
 require (
 	github.com/digitalocean/doctl v1.105.0
 	github.com/digitalocean/godo v1.113.0
+	github.com/exoscale/egoscale/v3 v3.1.9
 	github.com/hashicorp/go-plugin v1.6.2
 	github.com/linode/linodego v1.42.0
 	github.com/ovh/go-ovh v1.4.3
@@ -97,7 +99,6 @@ require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.1 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
-	github.com/exoscale/egoscale/v3 v3.1.9 // indirect
 	github.com/fatih/color v1.17.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect

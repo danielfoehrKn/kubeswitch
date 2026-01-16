@@ -24,7 +24,7 @@ import (
 type StoreKind string
 
 // ValidStoreKinds contains all valid store kinds
-var ValidStoreKinds = sets.NewString(string(StoreKindVault), string(StoreKindFilesystem), string(StoreKindGardener), string(StoreKindGKE), string(StoreKindAzure), string(StoreKindEKS), string(StoreKindExoscale), string(StoreKindRancher), string(StoreKindOVH), string(StoreKindScaleway), string(StoreKindDigitalOcean), string(StoreKindAkamai), string(StoreKindCapi), string(StoreKindPlugin))
+var ValidStoreKinds = sets.NewString(string(StoreKindVault), string(StoreKindFilesystem), string(StoreKindGardener), string(StoreKindGKE), string(StoreKindAzure), string(StoreKindEKS), string(StoreKindExoscale), string(StoreKindRancher), string(StoreKindOVH), string(StoreKindScaleway), string(StoreKindDigitalOcean), string(StoreKindAkamai), string(StoreKindCapi), string(StoreKindPlugin), string(StoreKindOTC))
 
 // ValidConfigVersions contains all valid config versions
 var ValidConfigVersions = sets.NewString("v1alpha1")
@@ -58,6 +58,7 @@ const (
 	StoreKindCapi StoreKind = "capi"
 	// StoreKindPlugin is an identifier for the Plugin store
 	StoreKindPlugin StoreKind = "plugin"
+	StoreKindOTC    StoreKind = "otc"
 )
 
 type Config struct {
@@ -205,6 +206,11 @@ type StoreConfigEKS struct {
 	Region *string `yaml:"region"`
 	// Profile is the named profile to authenticate with https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html
 	Profile string `yaml:"profile"`
+}
+
+type StoreConfigOTC struct {
+	Cloud         *string `yaml:"cloud"`
+	SelectContext *string `yaml:"selectContext"`
 }
 
 // GCPAuthenticationType

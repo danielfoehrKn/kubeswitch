@@ -741,6 +741,20 @@ github.com/opencontainers/image-spec/specs-go/v1
 # github.com/opencontainers/runc v1.1.14
 ## explicit; go 1.18
 github.com/opencontainers/runc/libcontainer/user
+# github.com/opentelekomcloud/gophertelekomcloud v0.9.3
+## explicit; go 1.20
+github.com/opentelekomcloud/gophertelekomcloud
+github.com/opentelekomcloud/gophertelekomcloud/internal/build
+github.com/opentelekomcloud/gophertelekomcloud/internal/extract
+github.com/opentelekomcloud/gophertelekomcloud/internal/multierr
+github.com/opentelekomcloud/gophertelekomcloud/openstack
+github.com/opentelekomcloud/gophertelekomcloud/openstack/cce/v3/clusters
+github.com/opentelekomcloud/gophertelekomcloud/openstack/identity/v3/catalog
+github.com/opentelekomcloud/gophertelekomcloud/openstack/identity/v3/domains
+github.com/opentelekomcloud/gophertelekomcloud/openstack/identity/v3/projects
+github.com/opentelekomcloud/gophertelekomcloud/openstack/identity/v3/tokens
+github.com/opentelekomcloud/gophertelekomcloud/openstack/utils
+github.com/opentelekomcloud/gophertelekomcloud/pagination
 # github.com/ovh/go-ovh v1.4.3
 ## explicit; go 1.18
 github.com/ovh/go-ovh/ovh

@@ -1,0 +1,9 @@
+linters-settings:
+  staticcheck:
+    checks:
+      - all
+      # Exclude some staticcheck messages
+      - '-SA1008' # "content-length" is not canonical, avoid OBS headers warnings
+      - '-SA1019' # deprecations, used to avoid Extract... deprecation warnings
+run:
+  timeout: 5m

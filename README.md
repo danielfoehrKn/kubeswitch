@@ -27,6 +27,7 @@ Designed as a [drop-in replacement](#difference-to-kubectx) for [kubectx](https:
   - Scaleway (documentation tbd)
   - [Akamai / Linode](docs/stores/akamai/akamai.md)
   - [Cluster API (capi)](docs/stores/capi/capi.md)
+  - [OpenTelekom Cloud (OTC)](docs/stores/otc/otc.md)
   - Your favorite Cloud Provider or Managed Kubernetes Platform is not supported yet? Looking for contributions!
 - **Change the namespace**
 - **Change to any context and namespace from the history**

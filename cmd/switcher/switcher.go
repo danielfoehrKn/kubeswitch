@@ -325,6 +325,15 @@ func initialize() ([]storetypes.KubeconfigStore, *types.Config, error) {
 				return nil, nil, err
 			}
 			s = capiStore
+		case types.StoreKindOTC:
+			capiStore, err := store.NewOTCStore(kubeconfigStoreFromConfig, stateDirectory)
+			if err != nil {
+				if kubeconfigStoreFromConfig.Required != nil && !*kubeconfigStoreFromConfig.Required {
+					continue
+				}
+				return nil, nil, err
+			}
+			s = capiStore
 		case types.StoreKindPlugin:
 			pluginStore, err := store.NewPluginStore(kubeconfigStoreFromConfig)
 			if err != nil {

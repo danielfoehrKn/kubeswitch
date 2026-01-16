@@ -15,6 +15,7 @@
 package store
 
 import (
+	golangsdk "github.com/opentelekomcloud/gophertelekomcloud"
 	"sync"
 
 	"github.com/danielfoehrkn/kubeswitch/pkg/store/doks"
@@ -178,4 +179,10 @@ type PluginStore struct {
 	KubeconfigStore types.KubeconfigStore
 	Config          *types.StoreConfigPlugin
 	Client          plugins.Store
+}
+type OTCStore struct {
+	Logger          *logrus.Entry
+	KubeconfigStore types.KubeconfigStore
+	Client          *golangsdk.ServiceClient
+	Config          *types.StoreConfigOTC
 }
