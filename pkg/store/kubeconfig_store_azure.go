@@ -115,7 +115,7 @@ func (s *AzureStore) StartSearch(channel chan storetypes.SearchResult) {
 
 			for pager.NextPage(ctx) {
 				s.Logger.Debugf("next page found for resource group %q", resourceGroup)
-				s.returnSearchResultsForClusters(channel, pager.PageResponse().ManagedClusterListResult.Value)
+				s.returnSearchResultsForClusters(channel, pager.PageResponse().Value)
 			}
 
 			if pager.Err() != nil {
@@ -136,7 +136,7 @@ func (s *AzureStore) StartSearch(channel chan storetypes.SearchResult) {
 
 	for pager.NextPage(ctx) {
 		s.Logger.Debugf("next page found")
-		s.returnSearchResultsForClusters(channel, pager.PageResponse().ManagedClusterListResult.Value)
+		s.returnSearchResultsForClusters(channel, pager.PageResponse().Value)
 	}
 	s.Logger.Debugf("Search done for AKS")
 }
@@ -153,7 +153,7 @@ func handleAzureError(channel chan storetypes.SearchResult, err error) {
 
 	if err != nil {
 		channel <- storetypes.SearchResult{
-			Error: fmt.Errorf("Failed to list AKS clusters: %w", err),
+			Error: fmt.Errorf("failed to list AKS clusters: %w", err),
 		}
 		return
 	}
@@ -166,8 +166,8 @@ func (s *AzureStore) returnSearchResultsForClusters(channel chan storetypes.Sear
 			continue
 		}
 
-		if cluster.Resource.Name == nil {
-			s.Logger.Debugf("Resource name for cluster %q not set", *cluster.Resource.Name)
+		if cluster.Name == nil {
+			s.Logger.Debugf("Resource name for cluster %q not set", *cluster.Name)
 			continue
 		}
 
@@ -181,7 +181,7 @@ func (s *AzureStore) returnSearchResultsForClusters(channel chan storetypes.Sear
 		//  - /subscriptions/<subscription-id>/resourcegroups/kubeswitch/providers/Microsoft.ContainerService/managedClusters/kubeswitch_test
 		split := strings.Split(*cluster.ID, "/")
 		if len(split) <= 4 {
-			s.Logger.Debugf("Unable to obtain resource group for cluster %q from cluster ID  %q", *cluster.Resource.Name, *cluster.ID)
+			s.Logger.Debugf("Unable to obtain resource group for cluster %q from cluster ID  %q", *cluster.Name, *cluster.ID)
 			continue
 		}
 

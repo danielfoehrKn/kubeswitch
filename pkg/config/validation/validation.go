@@ -22,6 +22,7 @@ import (
 
 	gardenerstore "github.com/danielfoehrkn/kubeswitch/pkg/store/gardener"
 	gkestore "github.com/danielfoehrkn/kubeswitch/pkg/store/gke"
+	skestore "github.com/danielfoehrkn/kubeswitch/pkg/store/ske"
 	"github.com/danielfoehrkn/kubeswitch/types"
 )
 
@@ -78,6 +79,11 @@ func ValidateConfig(config *types.Config) field.ErrorList {
 
 		if kubeconfigStore.Kind == types.StoreKindGKE {
 			errorList := gkestore.ValidateGKEStoreConfiguration(indexFieldPath, kubeconfigStore)
+			errors = append(errors, errorList...)
+		}
+
+		if kubeconfigStore.Kind == types.StoreKindSKE {
+			errorList := skestore.ValidateSKEStoreConfiguration(indexFieldPath, kubeconfigStore)
 			errors = append(errors, errorList...)
 		}
 

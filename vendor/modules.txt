@@ -412,6 +412,9 @@ github.com/gobuffalo/flect
 ## explicit; go 1.15
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
+# github.com/golang-jwt/jwt/v5 v5.3.1
+## explicit; go 1.21
+github.com/golang-jwt/jwt/v5
 # github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
 ## explicit
 github.com/golang/groupcache/lru
@@ -433,8 +436,8 @@ github.com/google/gnostic-models/extensions
 github.com/google/gnostic-models/jsonschema
 github.com/google/gnostic-models/openapiv2
 github.com/google/gnostic-models/openapiv3
-# github.com/google/go-cmp v0.6.0
-## explicit; go 1.13
+# github.com/google/go-cmp v0.7.0
+## explicit; go 1.21
 github.com/google/go-cmp/cmp
 github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
@@ -854,6 +857,17 @@ github.com/spf13/viper/internal/encoding/json
 github.com/spf13/viper/internal/encoding/toml
 github.com/spf13/viper/internal/encoding/yaml
 github.com/spf13/viper/internal/features
+# github.com/stackitcloud/stackit-sdk-go/core v0.22.0
+## explicit; go 1.21
+github.com/stackitcloud/stackit-sdk-go/core/auth
+github.com/stackitcloud/stackit-sdk-go/core/clients
+github.com/stackitcloud/stackit-sdk-go/core/config
+github.com/stackitcloud/stackit-sdk-go/core/oapierror
+github.com/stackitcloud/stackit-sdk-go/core/oidcadapters
+github.com/stackitcloud/stackit-sdk-go/core/utils
+# github.com/stackitcloud/stackit-sdk-go/services/ske v1.9.0
+## explicit; go 1.21
+github.com/stackitcloud/stackit-sdk-go/services/ske
 # github.com/subosito/gotenv v1.6.0
 ## explicit; go 1.18
 github.com/subosito/gotenv

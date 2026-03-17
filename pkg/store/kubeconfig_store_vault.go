@@ -20,14 +20,12 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path"
 	paths "path"
 	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
 
-	"github.com/hashicorp/vault/api"
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -148,7 +146,7 @@ func (s *VaultStore) GetLogger() *logrus.Entry {
 // and calls the `visit` functor for each of the directory and leaf paths.
 // Note: for kv-v2, a "metadata" path is expected and "metadata" paths will be
 // returned in the visit functor.
-func (s *VaultStore) recursivePathTraversal(wg *sync.WaitGroup, ctx context.Context, client *api.Client, path string, visit func(path string, directory bool) error) {
+func (s *VaultStore) recursivePathTraversal(wg *sync.WaitGroup, ctx context.Context, client *vaultapi.Client, path string, visit func(path string, directory bool) error) {
 	defer wg.Done()
 
 	resp, err := client.Logical().ListWithContext(ctx, path)
@@ -309,7 +307,7 @@ func (s *VaultStore) GetKubeconfigForPath(path string, _ map[string]string) ([]b
 		}
 	} else {
 		if secret.Data["data"] == nil {
-			return nil, fmt.Errorf("cannot read kubeconfig from %q. Secret is empty.", secretsPath)
+			return nil, fmt.Errorf("cannot read kubeconfig from %q. secret is empty", secretsPath)
 		}
 		value, ok := secret.Data["data"].(map[string]interface{})[s.VaultKeyKubeconfig]
 		if ok {
@@ -358,7 +356,7 @@ func (s *VaultStore) VerifyKubeconfigPaths() error {
 func shimKVv2Path(rawPath, mountPath string) string {
 	switch {
 	case rawPath == mountPath, rawPath == strings.TrimSuffix(mountPath, "/"):
-		return path.Join(mountPath, "data")
+		return paths.Join(mountPath, "data")
 	default:
 		p := strings.TrimPrefix(rawPath, mountPath)
 
@@ -367,7 +365,7 @@ func shimKVv2Path(rawPath, mountPath string) string {
 		if strings.HasPrefix(p, "data/") || strings.HasPrefix(p, "metadata/") {
 			return rawPath
 		}
-		return path.Join(mountPath, "data", p)
+		return paths.Join(mountPath, "data", p)
 	}
 }
 
@@ -376,21 +374,21 @@ func shimKVv2Path(rawPath, mountPath string) string {
 func shimKvV2ListPath(rawPath, mountPath string) string {
 	mountPath = strings.TrimSuffix(mountPath, "/")
 
-	if strings.HasPrefix(rawPath, path.Join(mountPath, "metadata")) {
+	if strings.HasPrefix(rawPath, paths.Join(mountPath, "metadata")) {
 		// It doesn't need modifying.
 		return rawPath
 	}
 
-	switch {
-	case rawPath == mountPath:
-		return path.Join(mountPath, "metadata")
+	switch rawPath {
+	case mountPath:
+		return paths.Join(mountPath, "metadata")
 	default:
 		rawPath = strings.TrimPrefix(rawPath, mountPath)
-		return path.Join(mountPath, "metadata", rawPath)
+		return paths.Join(mountPath, "metadata", rawPath)
 	}
 }
 
 // shimKVv2Metadata removes metadata/ from the path
 func shimKVv2Metadata(path string) string {
-	return strings.Replace(path, "metadata/", "", -1)
+	return strings.ReplaceAll(path, "metadata/", "")
 }

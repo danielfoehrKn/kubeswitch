@@ -35,7 +35,7 @@ func ReadHistory() ([]string, error) {
 		}
 		return nil, err
 	}
-	defer file.Close()
+	defer file.Close() //nolint:errcheck
 
 	var lines []string
 	scanner := bufio.NewScanner(file)
@@ -54,7 +54,7 @@ func AppendToHistory(context, namespace string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck
 
 	historyEntry := fmt.Sprintf("%s:: %s\n", context, namespace)
 
@@ -96,7 +96,7 @@ func getLastLineWithSeek(filepath string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("cannot open file: %v", err)
 	}
-	defer fileHandle.Close()
+	defer fileHandle.Close() //nolint:errcheck
 
 	line := ""
 	var cursor int64 = 0

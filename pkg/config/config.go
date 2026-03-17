@@ -65,7 +65,7 @@ func MigrateConfig(old types.ConfigOld, filename string) (*types.Config, error) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to migrate SwitchConfig file: %w", err)
 	}
-	defer file.Close()
+	defer file.Close() //nolint:errcheck
 
 	output, err := yaml.Marshal(old)
 	if err != nil {
@@ -83,7 +83,7 @@ func MigrateConfig(old types.ConfigOld, filename string) (*types.Config, error) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to migrate SwitchConfig file: %w", err)
 	}
-	defer fileNew.Close()
+	defer fileNew.Close() //nolint:errcheck
 
 	output, err = yaml.Marshal(new)
 	if err != nil {

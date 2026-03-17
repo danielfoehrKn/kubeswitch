@@ -49,7 +49,7 @@ func init() {
 	hookLsCmd.Flags().StringVar(
 		&configPath,
 		"config-path",
-		os.ExpandEnv("$HOME/.kube/switch-config.yaml"),
+		getDefaultConfigPath(),
 		"path on the local filesystem to the configuration file.")
 
 	hookLsCmd.Flags().StringVar(
@@ -63,7 +63,7 @@ func init() {
 	hookCmd.Flags().StringVar(
 		&configPath,
 		"config-path",
-		os.ExpandEnv("$HOME/.kube/switch-config.yaml"),
+		getDefaultConfigPath(),
 		"path on the local filesystem to the configuration file.")
 
 	hookCmd.Flags().StringVar(

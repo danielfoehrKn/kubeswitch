@@ -449,4 +449,147 @@ var _ = Describe("ValidateConfig", func() {
 			))
 		})
 	})
+
+	Context("SKE store", func() {
+		It("should successfully validate a minimal SKE store config", func() {
+			config := &types.Config{
+				Version: "v1alpha1",
+				KubeconfigStores: []types.KubeconfigStore{
+					{
+						Kind: types.StoreKindSKE,
+						Config: types.StoreConfigSKE{
+							ProjectID: "my-project-id",
+						},
+					},
+				},
+			}
+			errorList := validation.ValidateConfig(config)
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should successfully validate an SKE store config with all fields set", func() {
+			config := &types.Config{
+				Version: "v1alpha1",
+				KubeconfigStores: []types.KubeconfigStore{
+					{
+						Kind: types.StoreKindSKE,
+						Config: types.StoreConfigSKE{
+							ProjectID:         "my-project-id",
+							ProjectName:       "my-project",
+							Region:            "eu01",
+							UseStackitCLIAuth: true,
+						},
+					},
+				},
+			}
+			errorList := validation.ValidateConfig(config)
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should throw error - config is required", func() {
+			config := &types.Config{
+				Version: "v1alpha1",
+				KubeconfigStores: []types.KubeconfigStore{
+					{
+						Kind: types.StoreKindSKE,
+					},
+				},
+			}
+			errorList := validation.ValidateConfig(config)
+			Expect(errorList).ToNot(BeEmpty())
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("kubeconfigStores[0].config"),
+				})),
+			))
+		})
+
+		It("should throw error - projectID is required", func() {
+			config := &types.Config{
+				Version: "v1alpha1",
+				KubeconfigStores: []types.KubeconfigStore{
+					{
+						Kind:   types.StoreKindSKE,
+						Config: types.StoreConfigSKE{},
+					},
+				},
+			}
+			errorList := validation.ValidateConfig(config)
+			Expect(errorList).ToNot(BeEmpty())
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("kubeconfigStores[0].config.projectID"),
+				})),
+			))
+		})
+
+		It("should throw error - paths are not allowed", func() {
+			config := &types.Config{
+				Version: "v1alpha1",
+				KubeconfigStores: []types.KubeconfigStore{
+					{
+						Kind:  types.StoreKindSKE,
+						Paths: []string{"some/path"},
+						Config: types.StoreConfigSKE{
+							ProjectID: "my-project-id",
+						},
+					},
+				},
+			}
+			errorList := validation.ValidateConfig(config)
+			Expect(errorList).ToNot(BeEmpty())
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("kubeconfigStores[0].paths"),
+				})),
+			))
+		})
+
+		It("should throw error - config cannot be parsed", func() {
+			config := &types.Config{
+				Version: "v1alpha1",
+				KubeconfigStores: []types.KubeconfigStore{
+					{
+						Kind:   types.StoreKindSKE,
+						Config: []string{"wrong-config"},
+					},
+				},
+			}
+			errorList := validation.ValidateConfig(config)
+			Expect(errorList).ToNot(BeEmpty())
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("kubeconfigStores[0].config"),
+				})),
+			))
+		})
+
+		It("should throw error - multiple auth methods specified", func() {
+			config := &types.Config{
+				Version: "v1alpha1",
+				KubeconfigStores: []types.KubeconfigStore{
+					{
+						Kind: types.StoreKindSKE,
+						Config: types.StoreConfigSKE{
+							ProjectID:           "my-project-id",
+							UseStackitCLIAuth:   true,
+							ServiceAccountToken: "my-token",
+						},
+					},
+				},
+			}
+			errorList := validation.ValidateConfig(config)
+			Expect(errorList).ToNot(BeEmpty())
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("kubeconfigStores[0].config"),
+				})),
+			))
+		})
+	})
 })

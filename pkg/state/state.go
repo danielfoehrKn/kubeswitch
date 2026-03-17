@@ -59,7 +59,7 @@ func UpdateHookState(hookName, stateFileName string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer file.Close() //nolint:errcheck
 
 	state := &types.HookState{
 		HookName:          hookName,

@@ -1,0 +1,58 @@
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+version: 2
+
+project_name: switcher
+
+builds:
+  - id: switcher
+    main: ./cmd
+    # Binary is just "switcher"; the archive name_template below applies the
+    # platform suffix, matching the original naming: switcher_{os}_{arch}
+    binary: switcher
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -w
+        -X github.com/danielfoehrkn/kubeswitch/cmd/switcher.version={{.Version}}
+        -X github.com/danielfoehrkn/kubeswitch/cmd/switcher.buildDate={{.Date}}
+
+# Upload raw binaries (no archives/tarballs).
+# name_template matches the original release asset naming: switcher_{os}_{arch}
+# (goreleaser automatically appends .exe for windows)
+archives:
+  - formats:
+      - binary
+    name_template: "switcher_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+release:
+  # Upload switch.sh alongside the binaries
+  extra_files:
+    - glob: hack/switch/switch.sh
+
+snapshot:
+  version_template: "{{ .Tag }}-next"

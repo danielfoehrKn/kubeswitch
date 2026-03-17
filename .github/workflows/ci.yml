@@ -11,25 +11,55 @@
 # limitations under the License.
 
 name: Build
+
 on:
   push:
     branches:
       - master
   pull_request:
+
+# Cancel redundant runs on the same ref (e.g. rapid pushes to a PR branch).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Minimal read-only permissions; CI does not publish anything.
+permissions:
+  contents: read
+
 jobs:
   ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-    - name: Checkout
-      uses: actions/checkout@master
-    - name: Install Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: '^1.21.0'
-    - name: Run make check
-      run: |
-        export PATH=${PATH}:`go env GOPATH`/bin
-        go version
-        make check
-    - name: Run unit tests
-      run: go test ./...
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          # Reads the go directive from go.mod — no hard-coded version
+          go-version-file: go.mod
+          cache: true
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: latest
+          args: --timeout=10m --modules-download-mode=vendor
+
+      - name: Check license headers
+        run: |
+          go build -o "$(go env GOPATH)/bin/addlicense" github.com/google/addlicense
+          addlicense -check \
+            -ignore ".git/**" \
+            -ignore "vendor/**" \
+            -ignore "hack/**" \
+            -ignore "**/*.yaml" \
+            -ignore "**/*.yml" \
+            -ignore "resources/demo-config-files/**" \
+            -ignore "**/*.proto" \
+            .
+
+      - name: Test
+        run: go test ./...

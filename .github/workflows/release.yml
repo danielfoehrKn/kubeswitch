@@ -1,77 +1,75 @@
-name: releaser
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Release
 
 on:
   release:
     types:
       - published
+
+# Only allow one release workflow to run at a time; never cancel an in-flight
+# publish since that could leave a partial release.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+# Minimum permissions at workflow level; the release job declares what it needs.
+permissions:
+  contents: read
+
 jobs:
-  update_kubeswitch_in_homebrew_tap:
+  release:
+    name: Release
     environment: Release
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      # Required to upload release assets
+      contents: write
     steps:
-      - uses: actions/checkout@v2
-      - name: Install Go
-        uses: actions/setup-go@v2
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          go-version: '^1.21.0'
-      - name: Build the binary-files
-        id: build_binary_files
-        run: |
-          sudo apt-get update
-          sudo apt-get install make -y
-          export PATH=${PATH}:`go env GOPATH`/bin
-          make check
-          make build-switcher
-          echo ::set-output name=latest_release_filtered_tag::${GITHUB_REF##*/}
-      - name: Upload mac binaries to release
-        uses: AButler/upload-release-assets@v2.0
+          # goreleaser needs the full tag history to generate changelogs
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
-          files: 'hack/switch/switcher_darwin_amd64'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          release-tag: ${{ steps.build_binary_files.outputs.latest_release_filtered_tag }}
-      - name: Upload mac (ARM) binaries to release
-        uses: AButler/upload-release-assets@v2.0
+          # Reads the go directive from go.mod — no hard-coded version
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run goreleaser
+        uses: goreleaser/goreleaser-action@v7
         with:
-          files: 'hack/switch/switcher_darwin_arm64'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          release-tag: ${{ steps.build_binary_files.outputs.latest_release_filtered_tag }}
-      - name: Upload Linux binaries to release
-        uses: AButler/upload-release-assets@v2.0
-        with:
-          files: 'hack/switch/switcher_linux_amd64'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          release-tag: ${{ steps.build_binary_files.outputs.latest_release_filtered_tag }}
-      - name: Upload Linux (ARM) binaries to release
-        uses: AButler/upload-release-assets@v2.0
-        with:
-          files: 'hack/switch/switcher_linux_arm64'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          release-tag: ${{ steps.build_binary_files.outputs.latest_release_filtered_tag }}
-      - name: Upload Windows binaries to release
-        uses: AButler/upload-release-assets@v2.0
-        with:
-          files: 'hack/switch/switcher_windows_amd64.exe'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          release-tag: ${{ steps.build_binary_files.outputs.latest_release_filtered_tag }}
-      - name: Upload switch script to release
-        uses: AButler/upload-release-assets@v2.0
-        with:
-          files: 'hack/switch/switch.sh'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          release-tag: ${{ steps.build_binary_files.outputs.latest_release_filtered_tag }}
-      - name: Send update with latest versions to danielfoehrkn/homebrew-switch
+          version: latest
+          args: release --clean
         env:
-          ACCESS_TOKEN: ${{ secrets.KUBESWITCH_ACCESS_TOKEN }}
-        run: |
-          mac_sha256sum=$(sha256sum hack/switch/switcher_darwin_amd64 | awk '{print $1}')
-          mac_arm_sha256sum=$(sha256sum hack/switch/switcher_darwin_arm64 | awk '{print $1}')
-          linux_sha256sum=$(sha256sum hack/switch/switcher_linux_amd64 | awk '{print $1}')
-          linux_arm_sha256sum=$(sha256sum hack/switch/switcher_linux_arm64 | awk '{print $1}')
-          switch_script_sha256sum=$(sha256sum hack/switch/switch.sh | awk '{print $1}')
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Send update with latest versions to danielfoehrkn/homebrew-switch
+      #   env:
+      #     ACCESS_TOKEN: ${{ secrets.KUBESWITCH_ACCESS_TOKEN }}
+      #   run: |
+      #     mac_sha256sum=$(sha256sum hack/switch/switcher_darwin_amd64 | awk '{print $1}')
+      #     mac_arm_sha256sum=$(sha256sum hack/switch/switcher_darwin_arm64 | awk '{print $1}')
+      #     linux_sha256sum=$(sha256sum hack/switch/switcher_linux_amd64 | awk '{print $1}')
+      #     linux_arm_sha256sum=$(sha256sum hack/switch/switcher_linux_arm64 | awk '{print $1}')
+      #     switch_script_sha256sum=$(sha256sum hack/switch/switch.sh | awk '{print $1}')
 
-          echo '{"event_type": "update", "client_payload": { "tag": "'"${{ steps.build_binary_files.outputs.latest_release_filtered_tag }}"'", "mac_sha": "'"$mac_sha256sum"'", "mac_arm_sha": "'"$mac_arm_sha256sum"'", "linux_sha": "'"$linux_sha256sum"'", "linux_arm_sha": "'"$linux_arm_sha256sum"'", "switch_script_sha": "'"$switch_script_sha256sum"'"}}'
+      #     echo '{"event_type": "update", "client_payload": { "tag": "'"${{ steps.build_binary_files.outputs.latest_release_filtered_tag }}"'", "mac_sha": "'"$mac_sha256sum"'", "mac_arm_sha": "'"$mac_arm_sha256sum"'", "linux_sha": "'"$linux_sha256sum"'", "linux_arm_sha": "'"$linux_arm_sha256sum"'", "switch_script_sha": "'"$switch_script_sha256sum"'"}}'
 
-          curl -X POST https://api.github.com/repos/danielfoehrKn/homebrew-switch/dispatches \
-          -H 'Accept: application/vnd.github.everest-preview+json' \
-          -u "$ACCESS_TOKEN" \
-          --data '{"event_type": "update", "client_payload": { "tag": "'"${{ steps.build_binary_files.outputs.latest_release_filtered_tag }}"'", "mac_sha": "'"$mac_sha256sum"'", "mac_arm_sha": "'"$mac_arm_sha256sum"'", "linux_sha": "'"$linux_sha256sum"'", "linux_arm_sha": "'"$linux_arm_sha256sum"'", "switch_script_sha": "'"$switch_script_sha256sum"'"}}'
+      #     curl -X POST https://api.github.com/repos/danielfoehrKn/homebrew-switch/dispatches \
+      #     -H 'Accept: application/vnd.github.everest-preview+json' \
+      #     -u "$ACCESS_TOKEN" \
+      #     --data '{"event_type": "update", "client_payload": { "tag": "'"${{ steps.build_binary_files.outputs.latest_release_filtered_tag }}"'", "mac_sha": "'"$mac_sha256sum"'", "mac_arm_sha": "'"$mac_arm_sha256sum"'", "linux_sha": "'"$linux_sha256sum"'", "linux_arm_sha": "'"$linux_arm_sha256sum"'", "switch_script_sha": "'"$switch_script_sha256sum"'"}}'

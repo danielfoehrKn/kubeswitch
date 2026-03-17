@@ -1,0 +1,2 @@
+STACKIT Kubernetes SDK for Go
+Copyright 2024 - 2026 Schwarz IT KG

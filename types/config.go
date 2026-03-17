@@ -24,7 +24,7 @@ import (
 type StoreKind string
 
 // ValidStoreKinds contains all valid store kinds
-var ValidStoreKinds = sets.NewString(string(StoreKindVault), string(StoreKindFilesystem), string(StoreKindGardener), string(StoreKindGKE), string(StoreKindAzure), string(StoreKindEKS), string(StoreKindExoscale), string(StoreKindRancher), string(StoreKindOVH), string(StoreKindScaleway), string(StoreKindDigitalOcean), string(StoreKindAkamai), string(StoreKindCapi), string(StoreKindPlugin))
+var ValidStoreKinds = sets.NewString(string(StoreKindVault), string(StoreKindFilesystem), string(StoreKindGardener), string(StoreKindGKE), string(StoreKindAzure), string(StoreKindEKS), string(StoreKindExoscale), string(StoreKindRancher), string(StoreKindOVH), string(StoreKindScaleway), string(StoreKindDigitalOcean), string(StoreKindAkamai), string(StoreKindCapi), string(StoreKindPlugin), string(StoreKindSKE))
 
 // ValidConfigVersions contains all valid config versions
 var ValidConfigVersions = sets.NewString("v1alpha1")
@@ -58,6 +58,8 @@ const (
 	StoreKindCapi StoreKind = "capi"
 	// StoreKindPlugin is an identifier for the Plugin store
 	StoreKindPlugin StoreKind = "plugin"
+	// StoreKindSKE is an identifier for the STACKIT Kubernetes Engine store
+	StoreKindSKE StoreKind = "ske"
 )
 
 type Config struct {
@@ -287,4 +289,30 @@ type StoreConfigCapi struct {
 type StoreConfigPlugin struct {
 	CmdPath string   `yaml:"cmdPath"`
 	Args    []string `yaml:"args"`
+}
+
+type StoreConfigSKE struct {
+	// ProjectID is the STACKIT project ID to list SKE clusters from
+	ProjectID string `yaml:"projectID"`
+	// ProjectName is an optional human-readable label for the project.
+	// If set, it is used in the displayed context path instead of the project ID:
+	// ske/<projectName>/<clusterName>. Falls back to projectID if not set.
+	// + optional
+	ProjectName string `yaml:"projectName"`
+	// Region is the STACKIT region, e.g. "eu01" (default: "eu01")
+	// + optional
+	Region string `yaml:"region"`
+	// ServiceAccountToken is the STACKIT service account token used for authentication.
+	// If not set, will fall back to STACKIT_SERVICE_ACCOUNT_TOKEN env variable or
+	// the credentials configured in ServiceAccountKeyPath.
+	// + optional
+	ServiceAccountToken string `yaml:"serviceAccountToken"`
+	// ServiceAccountKeyPath is the path to a STACKIT service account key JSON file.
+	// + optional
+	ServiceAccountKeyPath string `yaml:"serviceAccountKeyPath"`
+	// UseStackitCLIAuth delegates authentication to the STACKIT CLI session.
+	// Requires the `stackit` CLI to be installed and the user to have run `stackit auth login`.
+	// The CLI transparently handles token refresh, so no manual credential management is needed.
+	// + optional
+	UseStackitCLIAuth bool `yaml:"useStackitCLIAuth"`
 }

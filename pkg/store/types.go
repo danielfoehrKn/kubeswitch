@@ -36,6 +36,7 @@ import (
 	managementClient "github.com/rancher/rancher/pkg/client/generated/management/v3"
 	"github.com/scaleway/scaleway-sdk-go/scw"
 	"github.com/sirupsen/logrus"
+	ske "github.com/stackitcloud/stackit-sdk-go/services/ske" //nolint:staticcheck
 	gkev1 "google.golang.org/api/container/v1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -178,4 +179,11 @@ type PluginStore struct {
 	KubeconfigStore types.KubeconfigStore
 	Config          *types.StoreConfigPlugin
 	Client          plugins.Store
+}
+
+type SKEStore struct {
+	Logger          *logrus.Entry
+	KubeconfigStore types.KubeconfigStore
+	Client          *ske.APIClient
+	Config          *types.StoreConfigSKE
 }

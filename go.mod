@@ -48,10 +48,13 @@ require (
 require (
 	github.com/digitalocean/doctl v1.105.0
 	github.com/digitalocean/godo v1.113.0
+	github.com/exoscale/egoscale/v3 v3.1.9
 	github.com/hashicorp/go-plugin v1.6.2
 	github.com/linode/linodego v1.42.0
 	github.com/ovh/go-ovh v1.4.3
 	github.com/scaleway/scaleway-sdk-go v1.0.0-beta.21
+	github.com/stackitcloud/stackit-sdk-go/core v0.22.0
+	github.com/stackitcloud/stackit-sdk-go/services/ske v1.9.0
 	github.com/t-tomalak/logrus-easy-formatter v0.0.0-20190827215021-c074f06c5816
 	golang.org/x/oauth2 v0.25.0
 	google.golang.org/grpc v1.69.2
@@ -97,7 +100,6 @@ require (
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.1 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
-	github.com/exoscale/egoscale/v3 v3.1.9 // indirect
 	github.com/fatih/color v1.17.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
@@ -118,10 +120,11 @@ require (
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/gobuffalo/flect v1.0.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
+	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20240525223248-4bfdf5a9a2af // indirect

@@ -194,7 +194,7 @@ func writeGardenloginConfig(path string, config *GardenloginConfig) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer file.Close() //nolint:errcheck
 
 	output, err := yaml.Marshal(config)
 	if err != nil {

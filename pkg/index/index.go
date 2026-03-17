@@ -141,7 +141,7 @@ func (i *SearchIndex) WriteState(toWrite types.IndexState) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer file.Close() //nolint:errcheck
 
 	output, err := yaml.Marshal(toWrite)
 	if err != nil {
@@ -162,7 +162,7 @@ func (i *SearchIndex) Write(toWrite types.Index) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer file.Close() //nolint:errcheck
 
 	output, err := yaml.Marshal(toWrite)
 	if err != nil {

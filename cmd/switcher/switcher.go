@@ -334,6 +334,15 @@ func initialize() ([]storetypes.KubeconfigStore, *types.Config, error) {
 				return nil, nil, err
 			}
 			s = pluginStore
+		case types.StoreKindSKE:
+			skeStore, err := store.NewSKEStore(kubeconfigStoreFromConfig)
+			if err != nil {
+				if kubeconfigStoreFromConfig.Required != nil && !*kubeconfigStoreFromConfig.Required {
+					continue
+				}
+				return nil, nil, err
+			}
+			s = skeStore
 		default:
 			return nil, nil, fmt.Errorf("unknown store %q", kubeconfigStoreFromConfig.Kind)
 		}
@@ -439,6 +448,13 @@ func getKubeconfigPathFromFlag() string {
 
 	// the flag sets a non-default kubeconfig path
 	return os.ExpandEnv(kubeconfigPath)
+}
+
+func getDefaultConfigPath() string {
+	if env := os.Getenv("KUBESWITCHCONFIG"); env != "" {
+		return env
+	}
+	return os.ExpandEnv("$HOME/.kube/switch-config.yaml")
 }
 
 // isDuplicatePath searches through all kubeconfig stores in the switch-config.yaml and checks if the
