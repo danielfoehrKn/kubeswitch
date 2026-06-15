@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>kswitch — The kubectx for operators</title>
+  <meta name="description" content="kswitch is a single pane of glass for all your kubeconfig files. Designed for operators of large-scale Kubernetes installations." />
+  <link rel="icon" type="image/png" href="../../resources/logo.png" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #080b10;
+      --surface:  #0f1117;
+      --surface2: #181c25;
+      --surface3: #1e2330;
+      --border:   #242832;
+      --accent:   #4f6ef7;
+      --accent2:  #7b92ff;
+      --green:    #3de8a0;
+      --yellow:   #f59e42;
+      --text:     #e8eaf2;
+      --muted:    #6b7484;
+      --radius:   12px;
+      --mono: 'JetBrains Mono','Fira Code','Cascadia Code',monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: inherit; }
+    code {
+      font-family: var(--mono);
+      font-size: .85em;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: .1em .4em;
+      color: var(--accent2);
+    }
+
+    /* ── NAV ───────────────────────────────────────────────────────── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+      height: 58px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem;
+      background: rgba(8,11,16,.9);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: .55rem;
+      text-decoration: none;
+    }
+    .nav-logo img { height: 28px; width: 28px; object-fit: contain; border-radius: 6px; }
+    .nav-logo-text { font-size: 1.1rem; font-weight: 800; letter-spacing: -.03em; color: var(--text); }
+    .nav-links { display: flex; gap: 1.8rem; list-style: none; }
+    .nav-links a { color: var(--muted); text-decoration: none; font-size: .88rem; transition: color .15s; }
+    .nav-links a:hover { color: var(--text); }
+    .nav-right { display: flex; align-items: center; gap: .75rem; }
+    .nav-gh {
+      display: flex; align-items: center; gap: .4rem;
+      color: var(--muted); text-decoration: none; font-size: .85rem;
+      border: 1px solid var(--border); border-radius: 6px;
+      padding: .35rem .8rem; transition: border-color .15s, color .15s;
+    }
+    .nav-gh:hover { border-color: var(--accent2); color: var(--text); }
+    .nav-cta {
+      display: inline-flex; align-items: center; gap: .4rem;
+      background: var(--accent); color: #fff;
+      padding: .4rem 1rem; border-radius: 6px;
+      text-decoration: none; font-size: .85rem; font-weight: 700;
+      transition: opacity .15s;
+    }
+    .nav-cta:hover { opacity: .85; }
+    @media(max-width:720px){ .nav-links{display:none;} }
+
+    /* ── HERO ──────────────────────────────────────────────────────── */
+    .hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center;
+      padding: 5rem 1.5rem 4rem;
+      position: relative; overflow: hidden;
+    }
+    .hero-radial {
+      position: absolute; inset: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 90% 55% at 50% -10%, rgba(79,110,247,.2) 0%, transparent 65%),
+        radial-gradient(ellipse 50% 35% at 85% 85%, rgba(61,232,160,.08) 0%, transparent 60%);
+    }
+    .hero-grid {
+      position: absolute; inset: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px);
+      background-size: 40px 40px;
+      mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, black 30%, transparent 80%);
+    }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: .45rem;
+      background: rgba(79,110,247,.1); border: 1px solid rgba(79,110,247,.25);
+      color: var(--accent2); border-radius: 100px;
+      padding: .3rem 1rem; font-size: .78rem; font-weight: 600; letter-spacing: .02em;
+      margin-bottom: 1.8rem;
+    }
+    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+    h1 {
+      font-size: clamp(2.8rem, 7vw, 5.5rem);
+      font-weight: 900; letter-spacing: -.05em; line-height: 1.05;
+      max-width: 880px;
+    }
+    h1 .g {
+      background: linear-gradient(120deg, #fff 20%, var(--accent2) 80%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    h1 .g2 {
+      background: linear-gradient(120deg, var(--green) 10%, var(--accent2) 80%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      max-width: 580px; color: var(--muted);
+      font-size: 1.1rem; line-height: 1.75;
+      margin: 1.3rem auto 0;
+    }
+    .hero-actions {
+      display: flex; gap: .9rem; flex-wrap: wrap; justify-content: center;
+      margin-top: 2.5rem;
+    }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: .5rem;
+      background: var(--accent); color: #fff;
+      padding: .75rem 2rem; border-radius: 8px;
+      text-decoration: none; font-weight: 700; font-size: .98rem;
+      box-shadow: 0 0 40px rgba(79,110,247,.35);
+      transition: transform .15s, box-shadow .15s;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 48px rgba(79,110,247,.5); }
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: .5rem;
+      background: var(--surface2); color: var(--text);
+      padding: .75rem 1.6rem; border-radius: 8px;
+      text-decoration: none; font-weight: 600; font-size: .98rem;
+      border: 1px solid var(--border); transition: border-color .2s;
+    }
+    .btn-ghost:hover { border-color: var(--accent2); }
+
+    /* ── BANNER ────────────────────────────────────────────────────── */
+    .banner-wrap {
+      margin-top: 3.5rem; width: 100%; max-width: 900px;
+      position: relative;
+    }
+    .banner-glow {
+      position: absolute; inset: -60px;
+      background: radial-gradient(ellipse at 50% 50%, rgba(79,110,247,.15), transparent 70%);
+      pointer-events: none;
+    }
+    .banner-wrap img {
+      width: 100%; border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: 0 32px 80px rgba(0,0,0,.7);
+    }
+
+    /* ── INSTALL BAR ───────────────────────────────────────────────── */
+    .install-bar {
+      display: flex; align-items: center; gap: .9rem;
+      margin-top: 2.5rem; flex-wrap: wrap; justify-content: center;
+    }
+    .install-pill {
+      display: flex; align-items: center; gap: .7rem;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: .5rem 1rem;
+      font-family: var(--mono); font-size: .83rem; color: var(--text);
+    }
+    .install-pill .dollar { color: var(--green); user-select: none; }
+    .copy-btn {
+      background: none; border: none; cursor: pointer; color: var(--muted);
+      display: flex; align-items: center; padding: .1rem; border-radius: 4px; transition: color .15s;
+    }
+    .copy-btn:hover { color: var(--text); }
+
+    /* ── STATS ─────────────────────────────────────────────────────── */
+    .stats-row {
+      display: flex; gap: 0; flex-wrap: wrap;
+      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    }
+    .stat {
+      flex: 1; min-width: 160px; text-align: center;
+      padding: 2.5rem 1.5rem;
+      border-right: 1px solid var(--border);
+    }
+    .stat:last-child { border-right: none; }
+    .stat-val { font-size: 2.2rem; font-weight: 900; letter-spacing: -.04em; color: var(--text); }
+    .stat-val span { color: var(--accent2); }
+    .stat-lbl { font-size: .78rem; color: var(--muted); margin-top: .3rem; letter-spacing: .04em; text-transform: uppercase; font-weight: 600; }
+
+    /* ── SECTIONS ──────────────────────────────────────────────────── */
+    section { padding: 6rem 1.5rem; }
+    .container { max-width: 1100px; margin: 0 auto; }
+    .section-eyebrow {
+      font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--accent2); margin-bottom: .8rem;
+    }
+    h2 {
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 900; letter-spacing: -.04em; line-height: 1.15;
+    }
+    .sub { color: var(--muted); font-size: 1.05rem; max-width: 560px; margin-top: .8rem; line-height: 1.7; }
+
+    /* ── FEATURES ──────────────────────────────────────────────────── */
+    .feat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+      gap: 1px; margin-top: 3.5rem;
+      background: var(--border); border-radius: var(--radius); overflow: hidden;
+    }
+    .feat {
+      background: var(--surface); padding: 2rem;
+      transition: background .2s;
+    }
+    .feat:hover { background: var(--surface2); }
+    .feat-icon {
+      width: 44px; height: 44px; border-radius: 10px;
+      background: rgba(79,110,247,.1); border: 1px solid rgba(79,110,247,.2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.25rem; margin-bottom: 1.1rem;
+    }
+    .feat h3 { font-size: 1rem; font-weight: 700; margin-bottom: .45rem; }
+    .feat p { font-size: .875rem; color: var(--muted); line-height: 1.7; }
+
+    /* ── PROVIDERS ─────────────────────────────────────────────────── */
+    .providers-bg { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .chip-grid { display: flex; flex-wrap: wrap; gap: .8rem; margin-top: 3rem; }
+    .chip {
+      display: inline-flex; align-items: center; gap: .55rem;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: .5rem 1rem;
+      font-size: .85rem; font-weight: 500;
+      transition: border-color .15s, transform .15s;
+    }
+    .chip:hover { border-color: var(--accent2); transform: translateY(-1px); }
+    .chip .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+    .chip.dim { opacity: .55; }
+    .chip.dim .dot { background: var(--muted); }
+
+    /* ── HOW IT WORKS ──────────────────────────────────────────────── */
+    .steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 2rem; margin-top: 3.5rem; }
+    .step-num { font-family: var(--mono); font-size: 2.8rem; font-weight: 900; color: rgba(79,110,247,.15); line-height: 1; margin-bottom: .5rem; }
+    .step h3 { font-size: .95rem; font-weight: 700; margin-bottom: .4rem; }
+    .step p { font-size: .85rem; color: var(--muted); line-height: 1.65; }
+
+    /* ── INSTALL SECTION ───────────────────────────────────────────── */
+    .install-bg { background: var(--surface); border-top: 1px solid var(--border); }
+    .install-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.25rem; margin-top: 3rem; }
+    .icard { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; }
+    .icard h3 { font-size: .9rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: .5rem; }
+    pre {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 1rem 1.1rem; overflow-x: auto;
+      font-family: var(--mono); font-size: .78rem; line-height: 1.8; color: var(--text);
+    }
+    pre .c  { color: var(--muted); }
+    pre .g  { color: var(--green); }
+    pre .a  { color: var(--accent2); }
+    pre .y  { color: var(--yellow); }
+
+    /* ── DOCS ──────────────────────────────────────────────────────── */
+    #docs { scroll-margin-top: 70px; }
+    .docs-layout {
+      display: grid; grid-template-columns: 240px 1fr;
+      gap: 2.5rem; margin-top: 3rem; align-items: start;
+    }
+    @media(max-width:800px){ .docs-layout { grid-template-columns: 1fr; } }
+
+    .docs-sidebar {
+      position: sticky; top: 72px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+    }
+    .docs-nav-item {
+      display: flex; align-items: center; gap: .6rem;
+      padding: .65rem 1rem; cursor: pointer;
+      font-size: .85rem; color: var(--muted);
+      border-left: 2px solid transparent;
+      transition: background .15s, color .15s, border-color .15s;
+      user-select: none;
+    }
+    .docs-nav-item:hover { background: var(--surface2); color: var(--text); }
+    .docs-nav-item.active { background: var(--surface2); color: var(--text); border-left-color: var(--accent); font-weight: 600; }
+    .docs-nav-icon { font-size: 1rem; }
+
+    .docs-search-wrap {
+      padding: .75rem; border-bottom: 1px solid var(--border);
+    }
+    .docs-search {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 6px; padding: .45rem .7rem;
+      color: var(--text); font-size: .83rem; font-family: inherit;
+      outline: none; transition: border-color .15s;
+    }
+    .docs-search::placeholder { color: var(--muted); }
+    .docs-search:focus { border-color: var(--accent2); }
+
+    .docs-panel { display: none; }
+    .docs-panel.active { display: block; }
+    .docs-content {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 2.5rem;
+      min-height: 400px;
+    }
+    .docs-content h1 { font-size: 1.7rem; font-weight: 800; margin-bottom: 1.2rem; letter-spacing: -.03em; }
+    .docs-content h2 { font-size: 1.2rem; font-weight: 700; margin: 2rem 0 .8rem; letter-spacing: -.02em; }
+    .docs-content h3 { font-size: 1rem; font-weight: 700; margin: 1.5rem 0 .6rem; color: var(--accent2); }
+    .docs-content p { font-size: .9rem; color: var(--muted); margin-bottom: .8rem; line-height: 1.75; }
+    .docs-content ul, .docs-content ol { padding-left: 1.5rem; margin-bottom: .8rem; }
+    .docs-content li { font-size: .9rem; color: var(--muted); margin-bottom: .3rem; line-height: 1.65; }
+    .docs-content a { color: var(--accent2); text-decoration: none; }
+    .docs-content a:hover { text-decoration: underline; }
+    .docs-content pre { margin: 1rem 0; }
+    .docs-content hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+    .docs-content strong { color: var(--text); font-weight: 700; }
+
+    /* search highlight */
+    mark { background: rgba(79,110,247,.25); color: var(--accent2); border-radius: 2px; padding: 0 2px; }
+    .no-results { color: var(--muted); font-size: .9rem; padding: 1rem 0; }
+
+    /* ── FOOTER ────────────────────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2.5rem 2rem;
+      display: flex; flex-wrap: wrap; gap: 1.5rem;
+      align-items: center; justify-content: space-between;
+    }
+    .footer-brand { display: flex; align-items: center; gap: .6rem; }
+    .footer-brand img { height: 22px; opacity: .65; }
+    .footer-brand span { font-size: .85rem; color: var(--muted); }
+    .footer-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .footer-links a { color: var(--muted); text-decoration: none; font-size: .82rem; transition: color .15s; }
+    .footer-links a:hover { color: var(--text); }
+  </style>
+</head>
+<body>
+
+<!-- ── NAV ──────────────────────────────────────────────────────────── -->
+<nav>
+  <a class="nav-logo" href="#">
+    <img src="../../resources/logo.png" alt="kswitch logo" />
+    <span class="nav-logo-text">kswitch</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#providers">Providers</a></li>
+    <li><a href="#how-it-works">How it works</a></li>
+    <li><a href="#install">Install</a></li>
+    <li><a href="#docs">Docs</a></li>
+  </ul>
+  <div class="nav-right">
+    <a class="nav-gh" href="https://github.com/MichaelSp/kswitch" target="_blank">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.165 6.839 9.489.5.092.682-.217.682-.483 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.031 1.531 1.031.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836a9.59 9.59 0 012.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.337 4.687-4.565 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .268.18.58.688.482A10.005 10.005 0 0022 12C22 6.477 17.523 2 12 2z"/></svg>
+      GitHub
+    </a>
+    <a class="nav-cta" href="https://github.com/MichaelSp/kswitch/releases" target="_blank">
+      ↓ v0.9.3
+    </a>
+  </div>
+</nav>
+
+<!-- ── HERO ─────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-radial"></div>
+  <div class="hero-grid"></div>
+
+  <div class="badge"><span class="live-dot"></span> Apache 2.0 · Open Source · v0.9.3</div>
+
+  <h1>
+    <span class="g">The kubectx</span><br/>
+    <span class="g2">for operators</span>
+  </h1>
+
+  <p class="hero-sub">
+    A single pane of glass for all your kubeconfig files.
+    Fuzzy search, terminal isolation, history, aliases, and 14+ cloud providers —
+    built for operators managing Kubernetes at scale.
+  </p>
+
+  <div class="hero-actions">
+    <a href="#install" class="btn-primary">
+      Get started
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </a>
+    <a href="#docs" class="btn-ghost">Read the docs →</a>
+    <a href="https://github.com/MichaelSp/kswitch" class="btn-ghost" target="_blank">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.165 6.839 9.489.5.092.682-.217.682-.483 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.031 1.531 1.031.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836a9.59 9.59 0 012.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.337 4.687-4.565 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .268.18.58.688.482A10.005 10.005 0 0022 12C22 6.477 17.523 2 12 2z"/></svg>
+      GitHub
+    </a>
+  </div>
+
+  <!-- Banner image -->
+  <div class="banner-wrap">
+    <div class="banner-glow"></div>
+    <img src="../../resources/banner.png" alt="kswitch banner — fuzzy kubeconfig switcher" />
+  </div>
+
+  <!-- Quick install pill -->
+  <div class="install-bar">
+    <div class="install-pill">
+      <span class="dollar">$</span>
+      <span id="install-text">brew install kswitch</span>
+      <button class="copy-btn" onclick="copyInstall()" title="Copy to clipboard" aria-label="Copy">
+        <svg id="copy-icon" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+      </button>
+    </div>
+    <a href="https://github.com/MichaelSp/kswitch/releases" class="btn-ghost" style="padding:.45rem 1rem;font-size:.83rem;" target="_blank">All install options →</a>
+  </div>
+</section>
+
+<!-- ── STATS ─────────────────────────────────────────────────────────── -->
+<div class="stats-row">
+  <div class="stat"><div class="stat-val">14<span>+</span></div><div class="stat-lbl">Cloud Providers</div></div>
+  <div class="stat"><div class="stat-val"><span>∞</span></div><div class="stat-lbl">Kubeconfig Files</div></div>
+  <div class="stat"><div class="stat-val">1</div><div class="stat-lbl">Command to Switch</div></div>
+  <div class="stat"><div class="stat-val">0</div><div class="stat-lbl">Config Overwrites</div></div>
+</div>
+
+<!-- ── FEATURES ──────────────────────────────────────────────────────── -->
+<section id="features">
+  <div class="container">
+    <div class="section-eyebrow">Features</div>
+    <h2>Everything an operator needs</h2>
+    <p class="sub">Designed for the reality of managing hundreds or thousands of Kubernetes clusters across multiple providers and locations.</p>
+    <div class="feat-grid">
+      <div class="feat">
+        <div class="feat-icon">🔍</div>
+        <h3>Unified Fuzzy Search</h3>
+        <p>Search all contexts across every provider and kubeconfig file in one instant fuzzy search — no more grepping dozens of files. Hot-reload adds new kubeconfigs on the fly.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">🪟</div>
+        <h3>Terminal Window Isolation</h3>
+        <p>Each terminal window targets a different cluster independently. kswitch never modifies the original kubeconfig — a temporary copy is created per terminal session.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">⏱️</div>
+        <h3>History Navigation</h3>
+        <p>Every <code>{context, namespace}</code> tuple is recorded. Jump back instantly with <code>kswitch .</code> or step through history with <code>kswitch -</code>.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">🏷️</div>
+        <h3>Context Aliases</h3>
+        <p>Give human-friendly names to cryptic generated context names without touching the underlying kubeconfig. Aliases are local, reversible, and listable.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">⚡</div>
+        <h3>Search Index Cache</h3>
+        <p>Local index for instant results even across massive directories or slow remote stores like Vault. Configure refresh intervals per-store for fine control.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">🪝</div>
+        <h3>Extensible Hooks</h3>
+        <p>Run arbitrary executables or inline commands before search — sync kubeconfigs from Git, refresh tokens, rotate credentials. Fully composable with your toolchain.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">🔐</div>
+        <h3>Sanitized Preview</h3>
+        <p>Live preview of the selected kubeconfig with credentials stripped, so you can verify the right cluster before switching. Disable it to reduce API traffic against Vault.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">🌐</div>
+        <h3>Namespace Switching</h3>
+        <p>Change namespace with <code>kswitch ns</code>, powered by a self-updating local cache for instant search across all available namespaces per cluster.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">🔁</div>
+        <h3>kubectx Drop-in</h3>
+        <p>Alias <code>kubectx=switch</code> and keep your muscle memory. kswitch is a compatible superset of kubectx, supporting all its basic usage patterns.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PROVIDERS ──────────────────────────────────────────────────────── -->
+<section class="providers-bg" id="providers">
+  <div class="container" style="padding:6rem 0;">
+    <div class="section-eyebrow">Kubeconfig Stores</div>
+    <h2>Search everywhere, at once</h2>
+    <p class="sub">Connect any combination of providers. kswitch merges them into one unified search experience — local files, remote APIs, secret stores.</p>
+    <div class="chip-grid">
+      <div class="chip"><span class="dot"></span> Amazon EKS</div>
+      <div class="chip"><span class="dot"></span> Azure AKS</div>
+      <div class="chip"><span class="dot"></span> Google GKE</div>
+      <div class="chip"><span class="dot"></span> Gardener</div>
+      <div class="chip"><span class="dot"></span> Hashicorp Vault</div>
+      <div class="chip"><span class="dot"></span> Local Filesystem</div>
+      <div class="chip"><span class="dot"></span> DigitalOcean DOKS</div>
+      <div class="chip"><span class="dot"></span> Rancher</div>
+      <div class="chip"><span class="dot"></span> Exoscale</div>
+      <div class="chip"><span class="dot"></span> OVH</div>
+      <div class="chip"><span class="dot"></span> Akamai / Linode</div>
+      <div class="chip"><span class="dot"></span> Cluster API (CAPI)</div>
+      <div class="chip dim"><span class="dot"></span> Scaleway (coming soon)</div>
+      <a href="https://github.com/MichaelSp/kswitch/issues" class="chip dim" target="_blank" style="text-decoration:none;color:inherit;"><span class="dot"></span> Your provider — contribute ↗</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── HOW IT WORKS ───────────────────────────────────────────────────── -->
+<section id="how-it-works">
+  <div class="container">
+    <div class="section-eyebrow">How it works</div>
+    <h2>Simple by design</h2>
+    <p class="sub">A thin shell wrapper and a Go binary. No daemons, no servers, no cloud sign-in required.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <h3>Source the shell function</h3>
+        <p>Add <code>source &lt;(kswitch init zsh)</code> to your <code>.zshrc</code>. This installs the <code>switch</code> function and tab completion automatically.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <h3>Type <code>switch</code></h3>
+        <p>kswitch discovers all configured kubeconfig stores and builds a combined list of context names from local files, Vault, cloud APIs, and more.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <h3>Fuzzy search &amp; select</h3>
+        <p>Type to filter by any part of the context name or parent directory. A sanitized preview pane shows the kubeconfig live. Press Enter to confirm.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <h3>Isolated context exported</h3>
+        <p>kswitch writes a temporary copy of the kubeconfig and exports <code>KUBECONFIG</code> into your shell — never modifying the original file.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── INSTALL ────────────────────────────────────────────────────────── -->
+<section class="install-bg" id="install">
+  <div class="container" style="padding:6rem 0;">
+    <div class="section-eyebrow">Install</div>
+    <h2>Up and running in 60 seconds</h2>
+    <p class="sub">Install the binary, source the shell function, and you're ready to switch.</p>
+
+    <div class="install-grid">
+      <div class="icard">
+        <h3>🍺 Homebrew</h3>
+        <pre><span class="g">$</span> brew install kswitch</pre>
+      </div>
+      <div class="icard">
+        <h3>📦 GitHub Releases</h3>
+        <pre><span class="c"># Pick your OS: linux | darwin</span>
+<span class="g">$</span> curl -L -o /usr/local/bin/kswitch \
+    https://github.com/MichaelSp/kswitch/\
+releases/download/v0.9.3/kswitch_linux_amd64
+<span class="g">$</span> chmod +x /usr/local/bin/kswitch</pre>
+      </div>
+      <div class="icard">
+        <h3>🐹 From source</h3>
+        <pre><span class="g">$</span> go install \
+    github.com/MichaelSp/kswitch@latest</pre>
+      </div>
+    </div>
+
+    <div style="margin-top:2.5rem;">
+      <h3 style="font-size:.9rem; color:var(--muted); font-weight:600; margin-bottom:1.2rem; text-transform:uppercase; letter-spacing:.08em;">Then source the shell function</h3>
+      <div class="install-grid">
+        <div class="icard">
+          <h3>🐚 Zsh</h3>
+          <pre><span class="g">$</span> echo 'source &lt;(kswitch init zsh)' >> ~/.zshrc
+<span class="c"># optional: use kswitch instead of switch</span>
+<span class="g">$</span> echo 'alias kswitch=switch'     >> ~/.zshrc
+<span class="g">$</span> source ~/.zshrc</pre>
+        </div>
+        <div class="icard">
+          <h3>🐚 Bash</h3>
+          <pre><span class="g">$</span> echo 'source &lt;(kswitch init bash)' >> ~/.bashrc
+<span class="g">$</span> echo 'alias kswitch=switch'      >> ~/.bashrc
+<span class="g">$</span> source ~/.bashrc</pre>
+        </div>
+        <div class="icard">
+          <h3>🐟 Fish</h3>
+          <pre><span class="g">$</span> echo 'kswitch init fish | source' \
+    >> ~/.config/fish/config.fish</pre>
+        </div>
+        <div class="icard">
+          <h3>🪟 PowerShell</h3>
+          <pre><span class="g">></span> kswitch_windows_amd64.exe init powershell >> $PROFILE
+<span class="g">></span> . $PROFILE</pre>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:2.5rem;">
+      <a href="#docs" onclick="openDoc('installation')" class="btn-ghost">Full installation guide →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── DOCS ───────────────────────────────────────────────────────────── -->
+<section id="docs">
+  <div class="container">
+    <div class="section-eyebrow">Documentation</div>
+    <h2>Everything you need to know</h2>
+    <p class="sub">Comprehensive guides for installation, configuration, and advanced usage. Search across all docs instantly.</p>
+
+    <div class="docs-layout">
+      <!-- sidebar -->
+      <div class="docs-sidebar">
+        <div class="docs-search-wrap">
+          <input class="docs-search" id="docs-search" type="search" placeholder="Search docs…" oninput="searchDocs(this.value)" autocomplete="off" />
+        </div>
+        <div id="docs-nav">
+          <div class="docs-nav-item active" data-doc="overview" onclick="openDoc('overview')"><span class="docs-nav-icon">📖</span> Overview</div>
+          <div class="docs-nav-item" data-doc="installation" onclick="openDoc('installation')"><span class="docs-nav-icon">📦</span> Installation</div>
+          <div class="docs-nav-item" data-doc="how-it-works" onclick="openDoc('how-it-works')"><span class="docs-nav-icon">⚙️</span> How it works</div>
+          <div class="docs-nav-item" data-doc="stores" onclick="openDoc('stores')"><span class="docs-nav-icon">🗄️</span> Kubeconfig stores</div>
+          <div class="docs-nav-item" data-doc="search-index" onclick="openDoc('search-index')"><span class="docs-nav-icon">🔎</span> Search index</div>
+          <div class="docs-nav-item" data-doc="cache" onclick="openDoc('cache')"><span class="docs-nav-icon">💾</span> Kubeconfig cache</div>
+          <div class="docs-nav-item" data-doc="hooks" onclick="openDoc('hooks')"><span class="docs-nav-icon">🪝</span> Hooks</div>
+          <div class="docs-nav-item" data-doc="completion" onclick="openDoc('completion')"><span class="docs-nav-icon">✨</span> Command completion</div>
+          <div class="docs-nav-item" data-doc="alias" onclick="openDoc('alias')"><span class="docs-nav-icon">🏷️</span> Aliases</div>
+          <div class="docs-nav-item" data-doc="exec" onclick="openDoc('exec')"><span class="docs-nav-icon">▶️</span> Execute commands</div>
+        </div>
+      </div>
+
+      <!-- content panels -->
+      <div id="docs-content-area">
+        <div id="docs-search-results" class="docs-content" style="display:none;"></div>
+
+        <div id="doc-overview" class="docs-panel active docs-content">
+          <h1>kswitch Documentation</h1>
+          <p>kswitch is the single pane of glass for all of your kubeconfig files. Caters to operators of large scale Kubernetes installations and is designed as a <strong>drop-in replacement for kubectx</strong>.</p>
+          <hr/>
+          <h2>Quick Start</h2>
+          <p>After installation, simply type <code>switch</code> (or <code>kswitch</code> if you set the alias) in any terminal to open the fuzzy context switcher.</p>
+          <pre><span class="c"># Switch context interactively</span>
+<span class="g">$</span> switch
+
+<span class="c"># Switch to last-used context</span>
+<span class="g">$</span> switch .
+
+<span class="c"># Switch to previous context</span>
+<span class="g">$</span> switch -
+
+<span class="c"># Change namespace interactively</span>
+<span class="g">$</span> switch ns
+
+<span class="c"># List all contexts (with optional wildcard filter)</span>
+<span class="g">$</span> switch list-contexts "*-dev-?"</pre>
+          <hr/>
+          <h2>Key Concepts</h2>
+          <ul>
+            <li><strong>Terminal isolation</strong> — each terminal window has its own copy of the active kubeconfig; switching in one window never affects another.</li>
+            <li><strong>SwitchConfig</strong> — a YAML file at <code>~/.kube/switch-config.yaml</code> that defines which kubeconfig stores to search.</li>
+            <li><strong>Hooks</strong> — executables or inline commands run before search to keep kubeconfigs fresh.</li>
+            <li><strong>Search index</strong> — optional local cache of context names for instant search, even against remote stores.</li>
+          </ul>
+          <hr/>
+          <h2>Difference to kubectx</h2>
+          <p>kubectx is great for a handful of kubeconfigs but lacks support for large Kubernetes installations where clusters spin up on demand or are stored in various stores (e.g., Vault).</p>
+          <p>kswitch is built for a world where Kubernetes clusters are treated as cattle, not pets. It adds:</p>
+          <ul>
+            <li>Unified search over multiple providers</li>
+            <li>Terminal window isolation (no shared <code>current-context</code>)</li>
+            <li>Context history navigation</li>
+            <li>Improved search for cryptic context names (parent directory shown)</li>
+            <li>Aliases without modifying kubeconfig files</li>
+            <li>Search index for large-scale installations</li>
+            <li>Hooks for custom integration</li>
+          </ul>
+        </div>
+
+        <div id="doc-installation" class="docs-panel docs-content">
+          <h1>Installation</h1>
+          <p>The kswitch installation consists of the <code>kswitch</code> binary and a shell function that must be sourced. <strong>Always invoke kswitch via the shell function</strong> — not the binary directly — so that <code>KUBECONFIG</code> is exported into your current shell session.</p>
+          <hr/>
+          <h2>Option 1 — Homebrew</h2>
+          <pre><span class="g">$</span> brew install kswitch</pre>
+          <h2>Option 2 — GitHub Release</h2>
+          <pre><span class="c"># Replace OS and VERSION as needed</span>
+OS=linux   <span class="c"># linux | darwin</span>
+VERSION=v0.9.3
+<span class="g">$</span> curl -L -o /usr/local/bin/kswitch \
+    https://github.com/MichaelSp/kswitch/releases/download/${VERSION}/kswitch_${OS}_amd64
+<span class="g">$</span> chmod +x /usr/local/bin/kswitch</pre>
+          <h2>Option 3 — From source</h2>
+          <pre><span class="g">$</span> go install github.com/MichaelSp/kswitch@latest</pre>
+          <hr/>
+          <h2>Source the shell function</h2>
+          <h3>Zsh</h3>
+          <pre><span class="g">$</span> echo 'source &lt;(kswitch init zsh)' >> ~/.zshrc
+<span class="g">$</span> echo 'alias s=switch'            >> ~/.zshrc      <span class="c"># optional short alias</span>
+<span class="g">$</span> echo 'alias kswitch=switch'      >> ~/.zshrc      <span class="c"># optional kswitch alias</span>
+<span class="g">$</span> source ~/.zshrc</pre>
+          <h3>Bash</h3>
+          <pre><span class="g">$</span> echo 'source &lt;(kswitch init bash)' >> ~/.bashrc
+<span class="g">$</span> echo 'alias s=switch'             >> ~/.bashrc
+<span class="g">$</span> source ~/.bashrc</pre>
+          <h3>Fish</h3>
+          <pre><span class="g">$</span> echo 'kswitch init fish | source' >> ~/.config/fish/config.fish</pre>
+          <h3>PowerShell</h3>
+          <pre><span class="g">></span> kswitch_windows_amd64.exe init powershell >> $PROFILE
+<span class="g">></span> Register-ArgumentCompleter -CommandName 'kswitch' -ScriptBlock $__kswitchCompleterBlock >> $PROFILE
+<span class="g">></span> . $PROFILE</pre>
+          <hr/>
+          <h2>Verify installation</h2>
+          <p>Open a new terminal (or re-source your config file) and run <code>switch</code> (zsh/bash) or <code>kswitch</code> (fish/powershell). You should see the fuzzy context picker.</p>
+          <p>If you see <em>"Error: you need to point kswitch to a kubeconfig file"</em>, set up your <a href="#" onclick="openDoc('stores');return false;">kubeconfig stores</a>.</p>
+        </div>
+
+        <div id="doc-how-it-works" class="docs-panel docs-content">
+          <h1>How it works</h1>
+          <p>kswitch consists of two components working together:</p>
+          <ul>
+            <li><strong>switch.sh</strong> — a shell function (<code>switch()</code>) that is the user-facing entry point.</li>
+            <li><strong>kswitch binary</strong> — a Go binary that handles context discovery, fuzzy search, and kubeconfig manipulation.</li>
+          </ul>
+          <hr/>
+          <h2>Execution flow</h2>
+          <ol>
+            <li>User runs <code>$ switch</code> (the sourced shell function).</li>
+            <li>The shell function discovers and executes the <code>kswitch</code> binary from <code>$PATH</code>.</li>
+            <li>kswitch searches for kubeconfigs in the configured <a href="#" onclick="openDoc('stores');return false;">kubeconfig stores</a>.</li>
+            <li>kswitch displays a fuzzy search over all context names.</li>
+            <li>The user selects a context.</li>
+            <li>kswitch creates a <strong>temporary copy</strong> of the selected kubeconfig, sets <code>current-context</code>, and writes it to <code>~/.kube/switch_tmp</code>.</li>
+            <li>kswitch writes the path to the temporary kubeconfig to stdout.</li>
+            <li>The shell function captures the path and runs <code>export KUBECONFIG=&lt;path&gt;</code> — making the change visible only to the current terminal.</li>
+          </ol>
+          <p>This design means each terminal window operates on its own copy of the kubeconfig, achieving <strong>terminal window isolation</strong> without modifying the original file.</p>
+        </div>
+
+        <div id="doc-stores" class="docs-panel docs-content">
+          <h1>Kubeconfig Stores</h1>
+          <p>kswitch can search over multiple directories, files, and Kubeconfig stores. Without configuration it defaults to <code>~/.kube/config</code>.</p>
+          <p>The <strong>SwitchConfig</strong> file is expected at <code>~/.kube/switch-config.yaml</code> or can be set via <code>--config-path</code>.</p>
+          <hr/>
+          <h2>Supported stores</h2>
+          <ul>
+            <li><strong>filesystem</strong> — local filesystem, recursive directory search</li>
+            <li><strong>vault</strong> — Hashicorp Vault secret store</li>
+            <li><strong>gardener</strong> — Gardener landscapes</li>
+            <li><strong>rancher</strong> — Rancher clusters</li>
+            <li>EKS, GKE, AKS, DOKS, Exoscale, OVH, Akamai/Linode, CAPI, and more</li>
+          </ul>
+          <hr/>
+          <h2>Basic filesystem config</h2>
+          <pre><span class="c"># ~/.kube/switch-config.yaml</span>
+<span class="y">kind</span>: SwitchConfig
+<span class="y">version</span>: v1alpha1
+<span class="y">kubeconfigStores</span>:
+  - <span class="y">kind</span>: filesystem
+    <span class="y">kubeconfigName</span>: "config*"
+    <span class="y">paths</span>:
+      - ~/.kube</pre>
+          <h2>Combined multi-store search</h2>
+          <pre><span class="y">kind</span>: SwitchConfig
+<span class="y">version</span>: v1alpha1
+<span class="y">kubeconfigStores</span>:
+  - <span class="y">kind</span>: filesystem
+    <span class="y">paths</span>:
+      - ~/.kube/static-kubeconfigs/
+  - <span class="y">kind</span>: vault
+    <span class="y">paths</span>:
+      - "path/in/vault"</pre>
+          <h2>Optional stores</h2>
+          <p>Mark a store as <code>required: false</code> to suppress errors when it is unreachable (e.g., a VPN-only cluster not always accessible).</p>
+          <pre><span class="y">kind</span>: SwitchConfig
+<span class="y">kubeconfigStores</span>:
+  - <span class="y">kind</span>: filesystem
+    <span class="y">required</span>: false
+    <span class="y">paths</span>:
+      - ~/vpn-clusters/</pre>
+          <h2>Disable context name prefix</h2>
+          <p>By default each store prepends a prefix (e.g., the parent directory). Disable it with <code>showPrefix: false</code>.</p>
+          <pre><span class="y">kind</span>: SwitchConfig
+<span class="y">kubeconfigStores</span>:
+  - <span class="y">kind</span>: filesystem
+    <span class="y">showPrefix</span>: false
+    <span class="y">paths</span>:
+      - ~/.kube/static-kubeconfigs/</pre>
+        </div>
+
+        <div id="doc-search-index" class="docs-panel docs-content">
+          <h1>Search Index</h1>
+          <p>The search index is a local file that maps context names to their kubeconfig paths, allowing kswitch to bypass querying the store on each invocation. Especially useful for:</p>
+          <ul>
+            <li>Large directories where filesystem traversal is slow</li>
+            <li>Remote stores (Vault, Gardener) to reduce API requests and latency</li>
+          </ul>
+          <p>Index files are stored at <code>~/.kube/switch-state/switch.&lt;store&gt;.&lt;id&gt;.index</code>.</p>
+          <hr/>
+          <h2>Enable for all stores</h2>
+          <p>The <code>refreshIndexAfter</code> field sets the TTL for the index of every configured store.</p>
+          <pre><span class="y">kind</span>: SwitchConfig
+<span class="y">refreshIndexAfter</span>: 1h
+<span class="y">kubeconfigStores</span>:
+  - <span class="y">kind</span>: filesystem
+    <span class="y">paths</span>:
+      - ~/.kube/my-kubeconfigs/</pre>
+          <h2>Enable per store</h2>
+          <pre><span class="y">kind</span>: SwitchConfig
+<span class="y">kubeconfigStores</span>:
+  - <span class="y">kind</span>: filesystem
+    <span class="y">id</span>: unique-1
+    <span class="y">refreshIndexAfter</span>: 3h
+    <span class="y">paths</span>:
+      - ~/.kube/static-kubeconfigs/</pre>
+          <h2>Skip index for one request</h2>
+          <pre><span class="g">$</span> switch --no-index</pre>
+        </div>
+
+        <div id="doc-cache" class="docs-panel docs-content">
+          <h1>Kubeconfig Cache</h1>
+          <p>For remote kubeconfig stores, kswitch downloads the kubeconfig file on each invocation. The <strong>cache</strong> stores a local copy so subsequent invocations are faster and require fewer API requests.</p>
+          <p>Note: the search index and the kubeconfig cache are independent. Configure both for best performance with remote stores.</p>
+          <hr/>
+          <h2>Enable filesystem cache</h2>
+          <pre><span class="y">kind</span>: SwitchConfig
+<span class="y">version</span>: v1alpha1
+<span class="y">refreshIndexAfter</span>: 10h
+<span class="y">kubeconfigStores</span>:
+  - <span class="y">kind</span>: vault
+    <span class="y">id</span>: example
+    <span class="c">  # ... vault config ...</span>
+    <span class="y">cache</span>:
+      <span class="y">kind</span>: filesystem
+      <span class="y">config</span>:
+        <span class="y">path</span>: ~/kubetest/cache</pre>
+          <p>Cache files are named by content hash and store kind, e.g. <code>08df4a6d.vault.example.cache</code>. It is safe to point multiple stores at the same directory.</p>
+          <p><strong>Note:</strong> cache files are not encrypted. Protect the directory with appropriate filesystem permissions.</p>
+          <hr/>
+          <h2>Clean the cache</h2>
+          <pre><span class="g">$</span> switch clean
+
+Cleaned 3 files from temporary kubeconfig directory.
+Cleaned 15 files of vault.example cache</pre>
+        </div>
+
+        <div id="doc-hooks" class="docs-panel docs-content">
+          <h1>Hooks</h1>
+          <p>Hooks allow kswitch to call arbitrary executables or inline shell commands <strong>before</strong> the fuzzy search opens. Think of them like Git pre-commit hooks — composable scripts that keep your kubeconfigs up to date.</p>
+          <hr/>
+          <h2>List configured hooks</h2>
+          <pre><span class="g">$</span> switch hooks ls
+
++---------------------------+------------+----------+----------------+
+| NAME                      | TYPE       | INTERVAL | NEXT EXECUTION |
++---------------------------+------------+----------+----------------+
+| sync-dev-landscape        | Executable | 6h0m0s   | 4h39m0s        |
+| sync-live-landscape       | Executable | 24h0m0s  | 3h47m0s        |
++---------------------------+------------+----------+----------------+</pre>
+          <h2>Run a hook manually</h2>
+          <pre><span class="g">$</span> switch hooks --hook-name=sync-dev-landscape</pre>
+          <hr/>
+          <h2>Hook calling an executable</h2>
+          <pre><span class="y">kind</span>: SwitchConfig
+<span class="y">hooks</span>:
+  - <span class="y">name</span>: sync-dev-landscape
+    <span class="y">type</span>: Executable
+    <span class="y">path</span>: ~/bin/gardener-landscape-sync
+    <span class="y">arguments</span>:
+      - "sync"
+      - "--landscape-name"
+      - "dev"
+    <span class="y">execution</span>:
+      <span class="y">interval</span>: 6h</pre>
+          <h2>Inline command hook</h2>
+          <pre><span class="y">kind</span>: SwitchConfig
+<span class="y">hooks</span>:
+  - <span class="y">name</span>: garbage-collect
+    <span class="y">type</span>: InlineCommand
+    <span class="y">execution</span>:
+      <span class="y">interval</span>: 6h
+    <span class="y">arguments</span>:
+      - "switch clean && echo 'GC complete.'"</pre>
+          <p>Hook execution state is stored in <code>~/.kube/switch-state</code> (configurable with <code>--state-directory</code>).</p>
+        </div>
+
+        <div id="doc-completion" class="docs-panel docs-content">
+          <h1>Command Completion</h1>
+          <p>Command completion is included automatically when you source the shell function via <code>kswitch init &lt;shell&gt;</code>. The manual steps below are only needed if you want to install completion separately.</p>
+          <hr/>
+          <h2>Zsh</h2>
+          <pre><span class="g">$</span> echo 'source &lt;(switch completion zsh)' >> ~/.zshrc</pre>
+          <h2>Bash</h2>
+          <pre><span class="g">$</span> echo 'source &lt;(switch completion bash)' >> ~/.bashrc</pre>
+          <h2>Fish</h2>
+          <pre><span class="g">$</span> echo 'kswitch completion fish | source' >> ~/.config/fish/config.fish</pre>
+          <h2>PowerShell</h2>
+          <pre><span class="g">></span> echo 'kswitch completion powershell'                                         >> $PROFILE
+<span class="g">></span> Register-ArgumentCompleter -CommandName 'kswitch' -ScriptBlock $__kswitchCompleterBlock >> $PROFILE
+<span class="g">></span> . $PROFILE</pre>
+        </div>
+
+        <div id="doc-alias" class="docs-panel docs-content">
+          <h1>Aliases</h1>
+          <p>Aliases let you assign a human-friendly name to any context without modifying the underlying kubeconfig file. Aliases are local to your machine and can be removed at any time.</p>
+          <hr/>
+          <h2>Create an alias</h2>
+          <pre><span class="c"># alias NAME=FULL_CONTEXT_NAME</span>
+<span class="g">$</span> switch mediathekview=gke_mediathekviewmobile-real_europe-west1-c_mediathekviewmobile
+
+<span class="c"># alias for the current context</span>
+<span class="g">$</span> switch alias prod-us=.</pre>
+          <h2>List aliases</h2>
+          <pre><span class="g">$</span> switch alias ls
+
++---------------+-------------------------------------------------------------------------------+
+| ALIAS         | CONTEXT                                                                       |
++---------------+-------------------------------------------------------------------------------+
+| mediathekview | mediathekview/gke_mediathekviewmobile-real_europe-west1-c_mediathekviewmobile |
++---------------+-------------------------------------------------------------------------------+
+| TOTAL         | 1                                                                             |
++---------------+-------------------------------------------------------------------------------+</pre>
+          <h2>Remove an alias</h2>
+          <pre><span class="g">$</span> switch alias rm mediathekview</pre>
+        </div>
+
+        <div id="doc-exec" class="docs-panel docs-content">
+          <h1>Execute Commands</h1>
+          <p>Use wildcard search to run any command against a set of matching clusters simultaneously. Powerful for quickly running a command across a landscape and comparing output.</p>
+          <hr/>
+          <h2>Basic exec</h2>
+          <pre><span class="c"># Run against all clusters matching "*-dev-?"</span>
+<span class="g">$</span> switch exec "*-dev-?" -- kubectl get ns</pre>
+          <h2>Run a script</h2>
+          <pre><span class="g">$</span> switch exec "*-dev-?" -- bash ./check-health.sh</pre>
+          <h2>Inline shell commands</h2>
+          <p>Specify a default shell in your SwitchConfig, then use inline commands:</p>
+          <pre><span class="c"># ~/.kube/switch-config.yaml</span>
+<span class="y">kind</span>: SwitchConfig
+<span class="y">execShell</span>: "/bin/bash"</pre>
+          <pre><span class="g">$</span> switch exec "*-dev-?" -- 'for i in 1 2 3; do echo "cluster: $i"; done'</pre>
+          <h2>Wildcard syntax</h2>
+          <ul>
+            <li><code>?</code> — matches exactly one character</li>
+            <li><code>*</code> — matches any number of characters (including zero)</li>
+          </ul>
+          <pre><span class="g">$</span> switch list-contexts "*-prod-eu*"</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ─────────────────────────────────────────────────────────── -->
+<footer>
+  <div class="footer-brand">
+    <img src="../../resources/logo.png" alt="kswitch" />
+    <span>kswitch — Apache 2.0 License</span>
+  </div>
+  <div class="footer-links">
+    <a href="https://github.com/MichaelSp/kswitch" target="_blank">GitHub</a>
+    <a href="https://github.com/MichaelSp/kswitch/releases" target="_blank">Releases</a>
+    <a href="https://github.com/MichaelSp/kswitch/issues" target="_blank">Issues</a>
+    <a href="https://github.com/MichaelSp/kswitch/blob/main/LICENSE" target="_blank">License</a>
+  </div>
+</footer>
+
+<script>
+  // ── copy install command ───────────────────────────────────────────
+  function copyInstall() {
+    navigator.clipboard.writeText('brew install kswitch').then(() => {
+      const el = document.getElementById('copy-icon');
+      el.innerHTML = '<path d="M20 6L9 17l-5-5" stroke-width="2.5"/>';
+      setTimeout(() => {
+        el.innerHTML = '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>';
+      }, 2000);
+    });
+  }
+
+  // ── docs navigation ───────────────────────────────────────────────
+  function openDoc(id) {
+    document.querySelectorAll('.docs-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.docs-nav-item').forEach(n => n.classList.remove('active'));
+    const panel = document.getElementById('doc-' + id);
+    const navItem = document.querySelector('[data-doc="' + id + '"]');
+    if (panel) panel.classList.add('active');
+    if (navItem) navItem.classList.add('active');
+    document.getElementById('docs-search-results').style.display = 'none';
+    document.getElementById('docs-search').value = '';
+  }
+
+  // ── docs search ───────────────────────────────────────────────────
+  const DOC_TITLES = {
+    'overview':     'Overview',
+    'installation': 'Installation',
+    'how-it-works': 'How it works',
+    'stores':       'Kubeconfig stores',
+    'search-index': 'Search index',
+    'cache':        'Kubeconfig cache',
+    'hooks':        'Hooks',
+    'completion':   'Command completion',
+    'alias':        'Aliases',
+    'exec':         'Execute commands',
+  };
+
+  function getDocText(id) {
+    const el = document.getElementById('doc-' + id);
+    return el ? el.innerText : '';
+  }
+
+  function esc(s) { return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+  function highlight(text, query) {
+    if (!query) return esc(text);
+    const re = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+    return esc(text).replace(re.source, '<mark>$1</mark>');
+  }
+
+  function searchDocs(q) {
+    const sr = document.getElementById('docs-search-results');
+    if (!q || q.length < 2) {
+      sr.style.display = 'none';
+      document.querySelectorAll('.docs-panel').forEach(p => {
+        if (p.classList.contains('was-active')) { p.classList.add('active'); p.classList.remove('was-active'); }
+      });
+      return;
+    }
+
+    // hide panels, show results
+    document.querySelectorAll('.docs-panel').forEach(p => {
+      if (p.classList.contains('active')) { p.classList.add('was-active'); p.classList.remove('active'); }
+    });
+    document.querySelectorAll('.docs-nav-item').forEach(n => n.classList.remove('active'));
+    sr.style.display = 'block';
+
+    const lower = q.toLowerCase();
+    let html = '<h2 style="margin-bottom:1.2rem;">Search results for "<span style=\'color:var(--accent2)\'>' + esc(q) + '</span>"</h2>';
+    let found = 0;
+
+    Object.keys(DOC_TITLES).forEach(id => {
+      const text = getDocText(id);
+      if (!text.toLowerCase().includes(lower)) return;
+      found++;
+
+      // extract a snippet around the match
+      const idx = text.toLowerCase().indexOf(lower);
+      const start = Math.max(0, idx - 80);
+      const end = Math.min(text.length, idx + 200);
+      const snippet = (start > 0 ? '…' : '') + text.slice(start, end) + (end < text.length ? '…' : '');
+
+      html += `<div style="margin-bottom:1.5rem; padding-bottom:1.5rem; border-bottom:1px solid var(--border)">
+        <div style="font-size:.75rem;color:var(--muted);margin-bottom:.3rem;text-transform:uppercase;letter-spacing:.06em">${esc(DOC_TITLES[id])}</div>
+        <a href="#" onclick="openDoc('${id}');return false;" style="font-size:1rem;font-weight:700;color:var(--accent2);text-decoration:none;">${highlight(DOC_TITLES[id], q)}</a>
+        <p style="margin-top:.4rem;font-size:.85rem;color:var(--muted);line-height:1.65;">${highlight(snippet, q)}</p>
+      </div>`;
+    });
+
+    if (found === 0) html += '<p class="no-results">No results found for "' + esc(q) + '".</p>';
+    sr.innerHTML = html;
+  }
+</script>
+</body>
+</html>
