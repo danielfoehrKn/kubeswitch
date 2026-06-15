@@ -441,6 +441,17 @@ func getKubeconfigPathFromFlag() string {
 	return os.ExpandEnv(kubeconfigPath)
 }
 
+// getDefaultConfigPath returns the default path to the switch configuration file.
+// It can be overridden via the SWITCH_CONFIG_PATH environment variable, which is
+// useful for directory-based environment managers such as direnv. When the
+// environment variable is unset, it falls back to "$HOME/.kube/switch-config.yaml".
+func getDefaultConfigPath() string {
+	if env := os.Getenv("SWITCH_CONFIG_PATH"); env != "" {
+		return os.ExpandEnv(env)
+	}
+	return os.ExpandEnv("$HOME/.kube/switch-config.yaml")
+}
+
 // isDuplicatePath searches through all kubeconfig stores in the switch-config.yaml and checks if the
 // given path is already configured in any of these stores
 // returns true if it is already configureed

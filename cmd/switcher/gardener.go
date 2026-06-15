@@ -14,8 +14,6 @@
 package switcher
 
 import (
-	"os"
-
 	gardenercontrolplane "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/gardener"
 	"github.com/spf13/cobra"
 )
@@ -47,7 +45,7 @@ func init() {
 	controlplaneCmd.Flags().StringVar(
 		&configPath,
 		"config-path",
-		os.ExpandEnv("$HOME/.kube/switch-config.yaml"),
+		getDefaultConfigPath(),
 		"path on the local filesystem to the configuration file.")
 
 	gardenerCmd.AddCommand(controlplaneCmd)

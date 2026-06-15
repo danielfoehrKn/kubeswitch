@@ -4,7 +4,12 @@
 If you neither provide a flag or a `SwitchConfig` file, it will default to the file `~/.kube/config`.
 
 The `SwitchConfig` file is expected to be in the default location
-on the local filesystem at `~/.kube/switch-config.yaml` or set via flag `--config-path`.
+on the local filesystem at `~/.kube/switch-config.yaml`, set via flag `--config-path`,
+or set via the `SWITCH_CONFIG_PATH` environment variable. The flag takes precedence
+over the environment variable. Using `SWITCH_CONFIG_PATH` is handy with directory-based
+environment managers such as [direnv](https://direnv.net/) to select a per-directory
+configuration without shell aliases or wrapper scripts (e.g. add
+`export SWITCH_CONFIG_PATH=$PWD/switch-config.yaml` to a directory's `.envrc`).
 Example config files can be found [here](../resources/demo-config-files) but also in
 the documentation for each store (see below).
 
