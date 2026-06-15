@@ -15,7 +15,6 @@ package switcher
 
 import (
 	"fmt"
-	"os"
 
 	delete_context "github.com/danielfoehrkn/kubeswitch/pkg/subcommands/delete-context"
 	"github.com/danielfoehrkn/kubeswitch/pkg/subcommands/history"
@@ -247,7 +246,7 @@ func setFlagsForContextCommands(command *cobra.Command) {
 	command.Flags().StringVar(
 		&configPath,
 		"config-path",
-		os.ExpandEnv("$HOME/.kube/switch-config.yaml"),
+		getDefaultConfigPath(),
 		"path on the local filesystem to the configuration file.")
 	// not used for setContext command. Makes call in switch.sh script easier (no need to exclude flag from call)
 	command.Flags().BoolVar(
