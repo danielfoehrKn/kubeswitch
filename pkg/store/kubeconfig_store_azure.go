@@ -52,6 +52,10 @@ func NewAzureStore(store types.KubeconfigStore, stateDir string) (*AzureStore, e
 		}
 	}
 
+	if storeConfig.SubscriptionID == nil || strings.TrimSpace(*storeConfig.SubscriptionID) == "" {
+		return nil, fmt.Errorf("Azure store requires config.subscriptionID in the switch configuration file")
+	}
+
 	return &AzureStore{
 		Logger:             logrus.New().WithField("store", types.StoreKindAzure),
 		KubeconfigStore:    store,
