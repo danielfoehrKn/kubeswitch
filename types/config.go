@@ -185,7 +185,7 @@ const (
 type StoreConfigAzure struct {
 	// SubscriptionID is the name of the Azure Subscription kubeswitch shall discover Azure clusters from
 	// Please create on store per subscription
-	// + optional
+	// + required
 	SubscriptionID *string `yaml:"subscriptionID"`
 	// Endpoint is the base URL for Azure.
 	// Defaults to the public cloud endpoint "https://management.azure.com/"

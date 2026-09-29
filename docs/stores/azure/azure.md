@@ -16,6 +16,7 @@ Please make sure the `az` tool is installed and on your `PATH` if you are
 not setting credentials via environment variables.
 
 Next, create the Azure store configuration in the `kubeswitch` configuration file.
+Each Azure store must specify a non-empty `config.subscriptionID`.
 
 Search over all AKS clusters for a subscription:
 ```
